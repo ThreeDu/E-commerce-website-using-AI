@@ -3,6 +3,6 @@ import App from './App';
 
 test('renders home page title', () => {
   render(<App />);
-  const titleElement = screen.getByText(/trang chu website ban hang/i);
+  const titleElement = screen.getByText(/trang chủ website bán hàng/i);
   expect(titleElement).toBeInTheDocument();
 });

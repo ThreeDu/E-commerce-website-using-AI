@@ -2,10 +2,10 @@ function HomePage() {
   return (
     <main className="container page-content">
       <section className="hero-card">
-        <h2>Trang chu website ban hang</h2>
+        <h2>Trang chủ website bán hàng</h2>
         <p>
-          Chao mung ban den voi AI Shop. Nguoi dung co the xem san pham, dang ky,
-          dang nhap va mua hang.
+          Chào mừng bạn đến với AI Shop. Người dùng có thể xem sản phẩm, đăng ký,
+          đăng nhập và mua hàng.
         </p>
       </section>
     </main>

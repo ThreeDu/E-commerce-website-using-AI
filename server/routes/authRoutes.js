@@ -21,23 +21,23 @@ const createToken = (user) => {
 
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
       return res
         .status(400)
-        .json({ message: "Name, email and password are required." });
+        .json({ message: "Họ tên, email và mật khẩu là bắt buộc." });
     }
 
     if (password.length < 6) {
       return res
         .status(400)
-        .json({ message: "Password must be at least 6 characters." });
+        .json({ message: "Mật khẩu phải có ít nhất 6 ký tự." });
     }
 
     const existedUser = await User.findOne({ email });
     if (existedUser) {
-      return res.status(409).json({ message: "Email already exists." });
+      return res.status(409).json({ message: "Email đã tồn tại." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -45,11 +45,11 @@ router.post("/register", async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: role === "admin" ? "admin" : "user",
+      role: "user",
     });
 
     return res.status(201).json({
-      message: "Register successful.",
+      message: "Đăng ký thành công.",
       user: {
         id: newUser._id,
         name: newUser.name,
@@ -69,23 +69,23 @@ router.post("/login", async (req, res) => {
     if (!email || !password) {
       return res
         .status(400)
-        .json({ message: "Email and password are required." });
+        .json({ message: "Email và mật khẩu là bắt buộc." });
     }
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ message: "Invalid credentials." });
+      return res.status(401).json({ message: "Thông tin đăng nhập không hợp lệ." });
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
-      return res.status(401).json({ message: "Invalid credentials." });
+      return res.status(401).json({ message: "Thông tin đăng nhập không hợp lệ." });
     }
 
     const token = createToken(user);
 
     return res.json({
-      message: "Login successful.",
+      message: "Đăng nhập thành công.",
       token,
       user: {
         id: user._id,

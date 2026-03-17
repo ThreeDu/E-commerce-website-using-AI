@@ -9,14 +9,13 @@ function Header() {
       <div className="container nav-wrap">
         <h1 className="brand">AI Shop</h1>
         <nav className="nav-menu">
-          <Link to="/">Trang chu</Link>
-          <Link to="/products">San pham</Link>
-          {!auth && <Link to="/login">Dang nhap</Link>}
-          {!auth && <Link to="/register">Dang ky</Link>}
-          {auth?.user?.role === "admin" && <Link to="/admin/dashboard">Dashboard</Link>}
+          <Link to="/">Trang chủ</Link>
+          <Link to="/products">Sản phẩm</Link>
+          {!auth && <Link to="/login">Đăng nhập</Link>}
+          {auth?.user?.role === "admin" && <Link to="/admin/dashboard">Bảng điều khiển</Link>}
           {auth && (
             <button type="button" className="logout-btn" onClick={logout}>
-              Dang xuat
+              Đăng xuất
             </button>
           )}
         </nav>

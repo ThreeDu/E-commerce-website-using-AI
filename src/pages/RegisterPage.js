@@ -8,7 +8,6 @@ function RegisterPage() {
     name: "",
     email: "",
     password: "",
-    role: "user",
   });
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,7 +24,7 @@ function RegisterPage() {
 
     try {
       const data = await registerUser(formData);
-      setMessage(data.message || "Dang ky thanh cong. Moi ban dang nhap.");
+      setMessage(data.message || "Đăng ký thành công. Mời bạn đăng nhập.");
       setTimeout(() => navigate("/login"), 900);
     } catch (error) {
       setMessage(error.message);
@@ -37,9 +36,9 @@ function RegisterPage() {
   return (
     <main className="container page-content">
       <form className="auth-form" onSubmit={handleSubmit}>
-        <h2>Dang ky</h2>
+        <h2>Đăng ký</h2>
 
-        <label htmlFor="name">Ho ten</label>
+        <label htmlFor="name">Họ tên</label>
         <input
           id="name"
           name="name"
@@ -59,7 +58,7 @@ function RegisterPage() {
           required
         />
 
-        <label htmlFor="password">Mat khau</label>
+        <label htmlFor="password">Mật khẩu</label>
         <input
           id="password"
           name="password"
@@ -70,19 +69,13 @@ function RegisterPage() {
           required
         />
 
-        <label htmlFor="role">Loai tai khoan</label>
-        <select id="role" name="role" value={formData.role} onChange={handleChange}>
-          <option value="user">User</option>
-          <option value="admin">Admin</option>
-        </select>
-
         <button type="submit" disabled={loading}>
-          {loading ? "Dang xu ly..." : "Dang ky"}
+          {loading ? "Đang xử lý..." : "Đăng ký"}
         </button>
 
         {message && <p className="form-message">{message}</p>}
         <p>
-          Da co tai khoan? <Link to="/login">Dang nhap</Link>
+          Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
         </p>
       </form>
     </main>

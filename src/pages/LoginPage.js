@@ -23,7 +23,7 @@ function LoginPage() {
     try {
       const data = await loginUser(formData);
       login({ token: data.token, user: data.user });
-      setMessage("Dang nhap thanh cong.");
+      setMessage("Đăng nhập thành công.");
 
       if (data.user.role === "admin") {
         navigate("/admin/dashboard");
@@ -40,7 +40,7 @@ function LoginPage() {
   return (
     <main className="container page-content">
       <form className="auth-form" onSubmit={handleSubmit}>
-        <h2>Dang nhap</h2>
+        <h2>Đăng nhập</h2>
         <label htmlFor="email">Email</label>
         <input
           id="email"
@@ -51,7 +51,7 @@ function LoginPage() {
           required
         />
 
-        <label htmlFor="password">Mat khau</label>
+        <label htmlFor="password">Mật khẩu</label>
         <input
           id="password"
           name="password"
@@ -62,12 +62,12 @@ function LoginPage() {
         />
 
         <button type="submit" disabled={loading}>
-          {loading ? "Dang xu ly..." : "Dang nhap"}
+          {loading ? "Đang xử lý..." : "Đăng nhập"}
         </button>
 
         {message && <p className="form-message">{message}</p>}
         <p>
-          Chua co tai khoan? <Link to="/register">Dang ky ngay</Link>
+          Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
         </p>
       </form>
     </main>
