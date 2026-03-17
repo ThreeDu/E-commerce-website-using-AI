@@ -19,6 +19,44 @@ const createToken = (user) => {
   );
 };
 
+const getTokenFromHeader = (req) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+
+  return authHeader.split(" ")[1];
+};
+
+const verifyAdminRequest = async (req, res) => {
+  const token = getTokenFromHeader(req);
+  if (!token) {
+    res.status(401).json({ message: "Thiếu token xác thực." });
+    return null;
+  }
+
+  try {
+    const secret = process.env.JWT_SECRET || "dev_secret_change_me";
+    const decoded = jwt.verify(token, secret);
+    const user = await User.findById(decoded.userId).select("_id name email role");
+
+    if (!user) {
+      res.status(401).json({ message: "Tài khoản không tồn tại." });
+      return null;
+    }
+
+    if (user.role !== "admin") {
+      res.status(403).json({ message: "Bạn không có quyền admin." });
+      return null;
+    }
+
+    return user;
+  } catch (error) {
+    res.status(401).json({ message: "Token không hợp lệ hoặc đã hết hạn." });
+    return null;
+  }
+};
+
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -93,6 +131,138 @@ router.post("/login", async (req, res) => {
         email: user.email,
         role: user.role,
       },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/verify-admin", async (req, res) => {
+  try {
+    const adminUser = await verifyAdminRequest(req, res);
+    if (!adminUser) {
+      return;
+    }
+
+    return res.json({
+      message: "Xác thực admin thành công.",
+      user: adminUser,
+    });
+  } catch (error) {
+    return res.status(401).json({ message: "Token không hợp lệ hoặc đã hết hạn." });
+  }
+});
+
+router.get("/verify-token", async (req, res) => {
+  try {
+    const token = getTokenFromHeader(req);
+    if (!token) {
+      return res.status(401).json({ message: "Thiếu token xác thực." });
+    }
+
+    const secret = process.env.JWT_SECRET || "dev_secret_change_me";
+    const decoded = jwt.verify(token, secret);
+
+    const user = await User.findById(decoded.userId).select("_id name email role");
+    if (!user) {
+      return res.status(401).json({ message: "Tài khoản không tồn tại." });
+    }
+
+    return res.json({
+      message: "Token hợp lệ.",
+      user,
+    });
+  } catch (error) {
+    return res.status(401).json({ message: "Token không hợp lệ hoặc đã hết hạn." });
+  }
+});
+
+router.get("/admin/users", async (req, res) => {
+  const adminUser = await verifyAdminRequest(req, res);
+  if (!adminUser) {
+    return;
+  }
+
+  try {
+    const users = await User.find()
+      .select("_id name email role createdAt")
+      .sort({ createdAt: -1 });
+
+    return res.json({
+      message: "Lấy danh sách người dùng thành công.",
+      users,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.put("/admin/users/:id", async (req, res) => {
+  const adminUser = await verifyAdminRequest(req, res);
+  if (!adminUser) {
+    return;
+  }
+
+  try {
+    const { id } = req.params;
+    const { name, email, role } = req.body;
+
+    if (!name || !email || !role) {
+      return res
+        .status(400)
+        .json({ message: "Họ tên, email và vai trò là bắt buộc." });
+    }
+
+    if (!["user", "admin"].includes(role)) {
+      return res.status(400).json({ message: "Vai trò không hợp lệ." });
+    }
+
+    const existedEmail = await User.findOne({ email, _id: { $ne: id } });
+    if (existedEmail) {
+      return res.status(409).json({ message: "Email đã tồn tại." });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { name, email, role },
+      { new: true, runValidators: true }
+    ).select("_id name email role createdAt");
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "Không tìm thấy người dùng." });
+    }
+
+    return res.json({
+      message: "Cập nhật người dùng thành công.",
+      user: updatedUser,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.delete("/admin/users/:id", async (req, res) => {
+  const adminUser = await verifyAdminRequest(req, res);
+  if (!adminUser) {
+    return;
+  }
+
+  try {
+    const { id } = req.params;
+
+    if (String(adminUser._id) === String(id)) {
+      return res.status(400).json({ message: "Không thể tự xóa tài khoản admin hiện tại." });
+    }
+
+    const deletedUser = await User.findByIdAndDelete(id).select("_id name email role");
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: "Không tìm thấy người dùng." });
+    }
+
+    return res.json({
+      message: "Xóa người dùng thành công.",
+      user: deletedUser,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
