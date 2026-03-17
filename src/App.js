@@ -8,10 +8,8 @@ import HomePage from "./pages/HomePage";
 import ProductsPage from "./pages/ProductsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminCategoriesPage from "./pages/admin/AdminCategoriesPage";
-import AdminProductsPage from "./pages/admin/AdminProductsPage";
-import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import AdminDashboard from "./pages/AdminDashboard";
+import UserDashboard from "./pages/UserDashboard";
 
 function GuestRoute({ children }) {
   const { auth } = useAuth();
@@ -61,26 +59,10 @@ function App() {
               }
             />
             <Route
-              path="/admin/categories"
+              path="/user/dashboard"
               element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminCategoriesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/products"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminProductsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/users"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminUsersPage />
+                <ProtectedRoute requiredRole="user">
+                  <UserDashboard />
                 </ProtectedRoute>
               }
             />
