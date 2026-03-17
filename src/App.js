@@ -9,6 +9,7 @@ import ProductsPage from "./pages/ProductsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import AdminDashboard from "./pages/AdminDashboard";
+import UserDashboard from "./pages/UserDashboard";
 
 function GuestRoute({ children }) {
   const { auth } = useAuth();
@@ -54,6 +55,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/user/dashboard"
+              element={
+                <ProtectedRoute requiredRole="user">
+                  <UserDashboard />
                 </ProtectedRoute>
               }
             />
