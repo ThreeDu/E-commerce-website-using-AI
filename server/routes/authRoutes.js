@@ -19,6 +19,15 @@ const createToken = (user) => {
   );
 };
 
+const getTokenFromHeader = (req) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+
+  return authHeader.split(" ")[1];
+};
+
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -96,6 +105,58 @@ router.post("/login", async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/verify-admin", async (req, res) => {
+  try {
+    const token = getTokenFromHeader(req);
+    if (!token) {
+      return res.status(401).json({ message: "Thiếu token xác thực." });
+    }
+
+    const secret = process.env.JWT_SECRET || "dev_secret_change_me";
+    const decoded = jwt.verify(token, secret);
+
+    const user = await User.findById(decoded.userId).select("_id name email role");
+    if (!user) {
+      return res.status(401).json({ message: "Tài khoản không tồn tại." });
+    }
+
+    if (user.role !== "admin") {
+      return res.status(403).json({ message: "Bạn không có quyền admin." });
+    }
+
+    return res.json({
+      message: "Xác thực admin thành công.",
+      user,
+    });
+  } catch (error) {
+    return res.status(401).json({ message: "Token không hợp lệ hoặc đã hết hạn." });
+  }
+});
+
+router.get("/verify-token", async (req, res) => {
+  try {
+    const token = getTokenFromHeader(req);
+    if (!token) {
+      return res.status(401).json({ message: "Thiếu token xác thực." });
+    }
+
+    const secret = process.env.JWT_SECRET || "dev_secret_change_me";
+    const decoded = jwt.verify(token, secret);
+
+    const user = await User.findById(decoded.userId).select("_id name email role");
+    if (!user) {
+      return res.status(401).json({ message: "Tài khoản không tồn tại." });
+    }
+
+    return res.json({
+      message: "Token hợp lệ.",
+      user,
+    });
+  } catch (error) {
+    return res.status(401).json({ message: "Token không hợp lệ hoặc đã hết hạn." });
   }
 });
 

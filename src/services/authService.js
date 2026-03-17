@@ -31,3 +31,19 @@ export async function loginUser(payload) {
 
   return data;
 }
+
+export async function verifyAdminToken(token) {
+  const response = await fetch("/api/auth/verify-admin", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || "Xác thực admin thất bại");
+  }
+
+  return data;
+}
