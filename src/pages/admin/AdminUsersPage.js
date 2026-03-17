@@ -8,6 +8,7 @@ import {
 
 function AdminUsersPage() {
   const { auth } = useAuth();
+  const currentUserId = auth?.user?.id;
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -62,6 +63,11 @@ function AdminUsersPage() {
   };
 
   const handleDelete = async (userId) => {
+    if (String(userId) === String(currentUserId)) {
+      setMessage("Không thể xóa chính tài khoản admin đang sử dụng.");
+      return;
+    }
+
     const isConfirmed = window.confirm("Bạn có chắc chắn muốn xóa tài khoản này?");
     if (!isConfirmed) {
       return;
@@ -152,13 +158,19 @@ function AdminUsersPage() {
                           <button type="button" onClick={() => startEdit(user)}>
                             Sửa
                           </button>
-                          <button
-                            type="button"
-                            className="danger-btn"
-                            onClick={() => handleDelete(user._id)}
-                          >
-                            Xóa
-                          </button>
+                          {String(user._id) === String(currentUserId) ? (
+                            <button type="button" className="danger-btn" disabled>
+                              Tài khoản hiện tại
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="danger-btn"
+                              onClick={() => handleDelete(user._id)}
+                            >
+                              Xóa
+                            </button>
+                          )}
                         </div>
                       )}
                     </td>
