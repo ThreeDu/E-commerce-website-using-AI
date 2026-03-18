@@ -1,14 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { registerUser } from "../services/authService";
+import { loginUser } from "../../services/authService";
+import { useAuth } from "../../context/AuthContext";
 
-function RegisterPage() {
+function LoginPage() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-  });
+  const { login } = useAuth();
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -23,9 +21,15 @@ function RegisterPage() {
     setLoading(true);
 
     try {
-      const data = await registerUser(formData);
-      setMessage(data.message || "Đăng ký thành công. Mời bạn đăng nhập.");
-      setTimeout(() => navigate("/login"), 900);
+      const data = await loginUser(formData);
+      login({ token: data.token, user: data.user });
+      setMessage("Đăng nhập thành công.");
+
+      if (data.user.role === "admin") {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/");
+      }
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -36,18 +40,7 @@ function RegisterPage() {
   return (
     <main className="container page-content">
       <form className="auth-form" onSubmit={handleSubmit}>
-        <h2>Đăng ký</h2>
-
-        <label htmlFor="name">Họ tên</label>
-        <input
-          id="name"
-          name="name"
-          type="text"
-          value={formData.name}
-          onChange={handleChange}
-          required
-        />
-
+        <h2>Đăng nhập</h2>
         <label htmlFor="email">Email</label>
         <input
           id="email"
@@ -65,21 +58,20 @@ function RegisterPage() {
           type="password"
           value={formData.password}
           onChange={handleChange}
-          minLength={6}
           required
         />
 
         <button type="submit" disabled={loading}>
-          {loading ? "Đang xử lý..." : "Đăng ký"}
+          {loading ? "Đang xử lý..." : "Đăng nhập"}
         </button>
 
         {message && <p className="form-message">{message}</p>}
         <p>
-          Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
+          Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
         </p>
       </form>
     </main>
   );
 }
 
-export default RegisterPage;
+export default LoginPage;
