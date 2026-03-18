@@ -5,6 +5,7 @@ import {
   getAdminUsers,
   updateAdminUser,
 } from "../../services/authService";
+import "./AdminPages.css";
 
 function AdminUsersPage() {
   const { auth } = useAuth();
