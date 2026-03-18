@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import { createAdminProduct } from "../../services/authService";
-import "./AdminPages.css";
+import { useAuth } from "../../../context/AuthContext";
+import { createAdminProduct } from "../../../services/authService";
+import "../AdminPages.css";
 
 function AdminAddProductPage() {
   const navigate = useNavigate();

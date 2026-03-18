@@ -58,6 +58,16 @@
   cursor: pointer;
 }
 
+.table-link-btn {
+  display: inline-block;
+  text-decoration: none;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid #d0d9e4;
+  color: inherit;
+  background: #fff;
+}
+
 .table-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.7;
@@ -121,6 +131,18 @@
   gap: 6px;
 }
 
+.admin-image-preview-wrap {
+  margin-top: 4px;
+}
+
+.admin-image-preview {
+  width: 180px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #d6dfeb;
+}
+
 .add-form-actions {
   display: flex;
   gap: 10px;
@@ -142,4 +164,56 @@
 .add-form-actions .secondary-btn {
   background: #e8edf3;
   color: #0f2233;
+}
+
+.confirm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 17, 27, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 16px;
+}
+
+.confirm-modal {
+  width: min(460px, 100%);
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 18px 36px rgba(13, 29, 44, 0.22);
+}
+
+.confirm-modal h3 {
+  margin: 0 0 8px;
+}
+
+.confirm-modal p {
+  margin: 0 0 14px;
+}
+
+.confirm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.confirm-modal-actions button {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #d0d9e4;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.confirm-modal-actions .secondary-btn {
+  background: #e8edf3;
+  color: #0f2233;
+}
+
+.confirm-modal-actions .danger-btn {
+  background: #b42318;
+  color: #fff;
+  border-color: #b42318;
 }

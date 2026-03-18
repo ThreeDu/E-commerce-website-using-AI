@@ -10,8 +10,9 @@ import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminCategoriesPage from "./pages/admin/AdminCategoriesPage";
-import AdminProductsPage from "./pages/admin/AdminProductsPage";
-import AdminAddProductPage from "./pages/admin/AdminAddProductPage";
+import AdminListProductPage from "./pages/admin/product/AdminListProductPage";
+import AdminAddProductPage from "./pages/admin/product/AdminAddProductPage";
+import AdminEditProductPage from "./pages/admin/product/AdminEditProductPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 
 function GuestRoute({ children }) {
@@ -73,7 +74,7 @@ function App() {
               path="/admin/products"
               element={
                 <ProtectedRoute requiredRole="admin">
-                  <AdminProductsPage />
+                  <AdminListProductPage />
                 </ProtectedRoute>
               }
             />
@@ -82,6 +83,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminAddProductPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/products/edit/:id"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminEditProductPage />
                 </ProtectedRoute>
               }
             />

@@ -288,6 +288,29 @@ router.get("/admin/products", async (req, res) => {
   }
 });
 
+router.get("/admin/products/:id", async (req, res) => {
+  const adminUser = await verifyAdminRequest(req, res);
+  if (!adminUser) {
+    return;
+  }
+
+  try {
+    const { id } = req.params;
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm." });
+    }
+
+    return res.json({
+      message: "Lấy chi tiết sản phẩm thành công.",
+      product,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
 router.post("/admin/products", async (req, res) => {
   const adminUser = await verifyAdminRequest(req, res);
   if (!adminUser) {
@@ -336,6 +359,91 @@ router.post("/admin/products", async (req, res) => {
     return res.status(201).json({
       message: "Thêm sản phẩm thành công.",
       product: newProduct,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.put("/admin/products/:id", async (req, res) => {
+  const adminUser = await verifyAdminRequest(req, res);
+  if (!adminUser) {
+    return;
+  }
+
+  try {
+    const { id } = req.params;
+    const { name, imageUrl, price, discountPercent, stock, description } = req.body;
+
+    if (!name || !imageUrl || price === undefined || price === null) {
+      return res.status(400).json({ message: "Tên, ảnh và giá sản phẩm là bắt buộc." });
+    }
+
+    const numericPrice = Number(price);
+    const numericDiscount =
+      discountPercent === undefined || discountPercent === null
+        ? 0
+        : Number(discountPercent);
+    const numericStock = stock === undefined || stock === null ? 0 : Number(stock);
+
+    if (Number.isNaN(numericPrice) || numericPrice < 0) {
+      return res.status(400).json({ message: "Giá sản phẩm không hợp lệ." });
+    }
+
+    if (Number.isNaN(numericDiscount) || numericDiscount < 0 || numericDiscount > 100) {
+      return res.status(400).json({ message: "% giảm giá không hợp lệ." });
+    }
+
+    if (Number.isNaN(numericStock) || numericStock < 0) {
+      return res.status(400).json({ message: "Số lượng tồn không hợp lệ." });
+    }
+
+    const computedFinalPrice = Math.round(numericPrice * (1 - numericDiscount / 100));
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      {
+        name,
+        imageUrl,
+        price: numericPrice,
+        discountPercent: numericDiscount,
+        finalPrice: computedFinalPrice,
+        stock: numericStock,
+        description: description || "",
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedProduct) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm." });
+    }
+
+    return res.json({
+      message: "Cập nhật sản phẩm thành công.",
+      product: updatedProduct,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.delete("/admin/products/:id", async (req, res) => {
+  const adminUser = await verifyAdminRequest(req, res);
+  if (!adminUser) {
+    return;
+  }
+
+  try {
+    const { id } = req.params;
+    const deletedProduct = await Product.findByIdAndDelete(id);
+
+    if (!deletedProduct) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm." });
+    }
+
+    return res.json({
+      message: "Xóa sản phẩm thành công.",
+      product: deletedProduct,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });

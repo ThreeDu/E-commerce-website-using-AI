@@ -1,14 +1,17 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import { createAdminProduct } from "../../services/authService";
-import "./AdminPages.css";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../../../context/AuthContext";
+import { getAdminProductById, updateAdminProduct } from "../../../services/authService";
+import "../AdminPages.css";
 
-function AdminAddProductPage() {
+function AdminEditProductPage() {
   const navigate = useNavigate();
+  const { id } = useParams();
   const { auth } = useAuth();
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
   const [imageInputMode, setImageInputMode] = useState("url");
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [formData, setFormData] = useState({
@@ -32,6 +35,35 @@ function AdminAddProductPage() {
 
   const imagePreviewSrc = formData.imageUrl?.trim();
 
+  useEffect(() => {
+    const loadProductDetail = async () => {
+      if (!auth?.token || !id) {
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const data = await getAdminProductById(auth.token, id);
+        const product = data.product;
+
+        setFormData({
+          name: product.name || "",
+          imageUrl: product.imageUrl || "",
+          price: String(product.price ?? ""),
+          stock: String(product.stock ?? 0),
+          discountPercent: String(product.discountPercent ?? 0),
+          description: product.description || "",
+        });
+      } catch (error) {
+        setMessage(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProductDetail();
+  }, [auth?.token, id]);
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -41,7 +73,9 @@ function AdminAddProductPage() {
     const mode = event.target.value;
     setImageInputMode(mode);
     setUploadedFileName("");
-    setFormData((prev) => ({ ...prev, imageUrl: "" }));
+    if (mode === "upload") {
+      setFormData((prev) => ({ ...prev, imageUrl: "" }));
+    }
   };
 
   const handleImageUpload = (event) => {
@@ -61,10 +95,10 @@ function AdminAddProductPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setMessage("");
-    setLoading(true);
+    setSaving(true);
 
     try {
-      await createAdminProduct(auth.token, {
+      await updateAdminProduct(auth.token, id, {
         name: formData.name,
         imageUrl: formData.imageUrl,
         price: Number(formData.price),
@@ -74,30 +108,34 @@ function AdminAddProductPage() {
       });
 
       navigate("/admin/products", {
-        state: { successMessage: "Thêm sản phẩm thành công." },
+        state: { successMessage: "Cập nhật sản phẩm thành công." },
       });
     } catch (error) {
       setMessage(error.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <main className="container page-content">
+        <section className="hero-card">
+          <p>Đang tải thông tin sản phẩm...</p>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="container page-content">
       <section className="hero-card">
-        <h2>Thêm sản phẩm</h2>
+        <h2>Sửa sản phẩm</h2>
         {message && <p className="form-message">{message}</p>}
 
         <form className="admin-product-add-form" onSubmit={handleSubmit}>
           <label htmlFor="name">Tên sản phẩm</label>
-          <input
-            id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-          />
+          <input id="name" name="name" value={formData.name} onChange={handleChange} required />
 
           <label>Ảnh sản phẩm</label>
           <div className="image-mode-row">
@@ -192,8 +230,8 @@ function AdminAddProductPage() {
           <input id="finalPrice" value={finalPricePreview.toLocaleString("vi-VN")} readOnly />
 
           <div className="add-form-actions">
-            <button type="submit" disabled={loading}>
-              {loading ? "Đang thêm..." : "Thêm sản phẩm"}
+            <button type="submit" disabled={saving}>
+              {saving ? "Đang lưu..." : "Lưu cập nhật"}
             </button>
             <button type="button" className="secondary-btn" onClick={() => navigate("/admin/products")}>
               Quay lại
@@ -205,4 +243,4 @@ function AdminAddProductPage() {
   );
 }
 
-export default AdminAddProductPage;
+export default AdminEditProductPage;

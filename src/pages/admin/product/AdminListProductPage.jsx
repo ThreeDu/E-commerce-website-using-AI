@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import { deleteAdminProduct, getAdminProducts } from "../../services/authService";
-import "./AdminPages.css";
+import { useAuth } from "../../../context/AuthContext";
+import { deleteAdminProduct, getAdminProducts } from "../../../services/authService";
+import "../AdminPages.css";
 
-function AdminProductsPage() {
+function AdminListProductPage() {
   const location = useLocation();
   const { auth } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [productPendingDelete, setProductPendingDelete] = useState(null);
   const [message, setMessage] = useState(location.state?.successMessage || "");
 
   const loadProducts = useCallback(async () => {
@@ -31,18 +33,21 @@ function AdminProductsPage() {
     loadProducts();
   }, [loadProducts]);
 
-  const handleDelete = async (productId) => {
-    const isConfirmed = window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này?");
-    if (!isConfirmed) {
+  const handleDelete = async () => {
+    if (!productPendingDelete?._id) {
       return;
     }
 
     try {
-      await deleteAdminProduct(auth.token, productId);
-      setProducts((prev) => prev.filter((product) => product._id !== productId));
+      setDeleting(true);
+      await deleteAdminProduct(auth.token, productPendingDelete._id);
+      setProducts((prev) => prev.filter((product) => product._id !== productPendingDelete._id));
       setMessage("Xóa sản phẩm thành công.");
+      setProductPendingDelete(null);
     } catch (error) {
       setMessage(error.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -97,7 +102,7 @@ function AdminProductsPage() {
                         <button
                           type="button"
                           className="danger-btn"
-                          onClick={() => handleDelete(product._id)}
+                          onClick={() => setProductPendingDelete(product)}
                         >
                           Xóa
                         </button>
@@ -110,8 +115,32 @@ function AdminProductsPage() {
           </div>
         )}
       </section>
+
+      {productPendingDelete && (
+        <div className="confirm-modal-backdrop" role="presentation">
+          <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+            <h3 id="delete-title">Xác nhận xóa sản phẩm</h3>
+            <p>
+              Bạn có chắc chắn muốn xóa sản phẩm <strong>{productPendingDelete.name}</strong>?
+            </p>
+            <div className="confirm-modal-actions">
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => setProductPendingDelete(null)}
+                disabled={deleting}
+              >
+                Hủy
+              </button>
+              <button type="button" className="danger-btn" onClick={handleDelete} disabled={deleting}>
+                {deleting ? "Đang xóa..." : "Xóa"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
 
-export default AdminProductsPage;
+export default AdminListProductPage;
