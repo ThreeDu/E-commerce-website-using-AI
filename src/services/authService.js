@@ -97,3 +97,37 @@ export async function deleteAdminUser(token, userId) {
 
   return data;
 }
+
+export async function getAdminProducts(token) {
+  const response = await fetch("/api/auth/admin/products", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || "Không thể lấy danh sách sản phẩm");
+  }
+
+  return data;
+}
+
+export async function createAdminProduct(token, payload) {
+  const response = await fetch("/api/auth/admin/products", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || "Không thể thêm sản phẩm");
+  }
+
+  return data;
+}

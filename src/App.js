@@ -11,6 +11,7 @@ import RegisterPage from "./pages/auth/RegisterPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminCategoriesPage from "./pages/admin/AdminCategoriesPage";
 import AdminProductsPage from "./pages/admin/AdminProductsPage";
+import AdminAddProductPage from "./pages/admin/AdminAddProductPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 
 function GuestRoute({ children }) {
@@ -73,6 +74,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminProductsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/products/add"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminAddProductPage />
                 </ProtectedRoute>
               }
             />

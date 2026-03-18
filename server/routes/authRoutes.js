@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Product = require("../models/Product");
 
 const router = express.Router();
 
@@ -263,6 +264,78 @@ router.delete("/admin/users/:id", async (req, res) => {
     return res.json({
       message: "Xóa người dùng thành công.",
       user: deletedUser,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/admin/products", async (req, res) => {
+  const adminUser = await verifyAdminRequest(req, res);
+  if (!adminUser) {
+    return;
+  }
+
+  try {
+    const products = await Product.find().sort({ createdAt: -1 });
+
+    return res.json({
+      message: "Lấy danh sách sản phẩm thành công.",
+      products,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/admin/products", async (req, res) => {
+  const adminUser = await verifyAdminRequest(req, res);
+  if (!adminUser) {
+    return;
+  }
+
+  try {
+    const { name, imageUrl, price, discountPercent, category, stock, description } = req.body;
+
+    if (!name || !imageUrl || price === undefined || price === null) {
+      return res.status(400).json({ message: "Tên, ảnh và giá sản phẩm là bắt buộc." });
+    }
+
+    const numericPrice = Number(price);
+    const numericDiscount =
+      discountPercent === undefined || discountPercent === null
+        ? 0
+        : Number(discountPercent);
+    const numericStock = stock === undefined || stock === null ? 0 : Number(stock);
+
+    if (Number.isNaN(numericPrice) || numericPrice < 0) {
+      return res.status(400).json({ message: "Giá sản phẩm không hợp lệ." });
+    }
+
+    if (Number.isNaN(numericDiscount) || numericDiscount < 0 || numericDiscount > 100) {
+      return res.status(400).json({ message: "% giảm giá không hợp lệ." });
+    }
+
+    if (Number.isNaN(numericStock) || numericStock < 0) {
+      return res.status(400).json({ message: "Số lượng tồn không hợp lệ." });
+    }
+
+    const computedFinalPrice = Math.round(numericPrice * (1 - numericDiscount / 100));
+
+    const newProduct = await Product.create({
+      name,
+      imageUrl,
+      price: numericPrice,
+      discountPercent: numericDiscount,
+      finalPrice: computedFinalPrice,
+      category: category || "Chưa phân loại",
+      stock: numericStock,
+      description: description || "",
+    });
+
+    return res.status(201).json({
+      message: "Thêm sản phẩm thành công.",
+      product: newProduct,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });

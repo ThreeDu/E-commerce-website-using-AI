@@ -1,0 +1,145 @@
+.product-form {
+  margin: 16px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.product-form input,
+.product-form button {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #c7d3e0;
+}
+
+.product-form button {
+  background: #10375c;
+  color: #fff;
+  border: none;
+  font-weight: 600;
+}
+
+.users-table-wrap {
+  margin-top: 16px;
+  overflow-x: auto;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.users-table th,
+.users-table td {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid #e6edf5;
+}
+
+.table-input,
+.table-select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #c7d3e0;
+}
+
+.table-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.table-actions button {
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid #d0d9e4;
+  background: #fff;
+  cursor: pointer;
+}
+
+.table-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.table-actions .danger-btn {
+  border-color: #df6b6b;
+  color: #b42318;
+}
+
+.admin-page-toolbar {
+  margin: 12px 0 16px;
+}
+
+.primary-link-btn {
+  display: inline-block;
+  text-decoration: none;
+  background: #10375c;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.admin-product-thumb {
+  width: 54px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #d6dfeb;
+}
+
+.admin-product-add-form {
+  max-width: 700px;
+  display: grid;
+  gap: 10px;
+}
+
+.admin-product-add-form input {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #c7d3e0;
+}
+
+.admin-product-add-form textarea {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #c7d3e0;
+  resize: vertical;
+}
+
+.image-mode-row {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+
+.image-mode-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.add-form-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.add-form-actions button {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.add-form-actions button:first-child {
+  background: #10375c;
+  color: #fff;
+}
+
+.add-form-actions .secondary-btn {
+  background: #e8edf3;
+  color: #0f2233;
+}
