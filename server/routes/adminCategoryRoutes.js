@@ -4,6 +4,42 @@ const { verifyAdminRequest } = require("./helpers/authHelpers");
 
 const router = express.Router();
 
+const validateParentForThreeLevels = async (parentId, currentCategoryId = null) => {
+  const parentCategory = await Category.findById(parentId).select("_id parentId");
+  if (!parentCategory) {
+    return { errorStatus: 404, errorMessage: "Không tìm thấy danh mục cha." };
+  }
+
+  let depthFromRoot = 0;
+  let cursor = parentCategory;
+  const visited = new Set();
+
+  while (cursor) {
+    const cursorId = String(cursor._id);
+    if (visited.has(cursorId)) {
+      return { errorStatus: 400, errorMessage: "Cấu trúc danh mục không hợp lệ." };
+    }
+    visited.add(cursorId);
+
+    if (currentCategoryId && cursorId === String(currentCategoryId)) {
+      return { errorStatus: 400, errorMessage: "Không thể chọn danh mục con làm danh mục cha." };
+    }
+
+    if (!cursor.parentId) {
+      break;
+    }
+
+    depthFromRoot += 1;
+    cursor = await Category.findById(cursor.parentId).select("_id parentId");
+  }
+
+  if (depthFromRoot >= 2) {
+    return { errorStatus: 400, errorMessage: "Chỉ hỗ trợ tối đa 3 cấp danh mục." };
+  }
+
+  return { parentCategory };
+};
+
 router.get("/", async (req, res) => {
   const adminUser = await verifyAdminRequest(req, res);
   if (!adminUser) {
@@ -37,16 +73,14 @@ router.post("/", async (req, res) => {
 
     let normalizedParentId = null;
     if (parentId) {
-      const parentCategory = await Category.findById(parentId);
-      if (!parentCategory) {
-        return res.status(404).json({ message: "Không tìm thấy danh mục chính." });
+      const parentValidation = await validateParentForThreeLevels(parentId);
+      if (parentValidation.errorStatus) {
+        return res
+          .status(parentValidation.errorStatus)
+          .json({ message: parentValidation.errorMessage });
       }
 
-      if (parentCategory.parentId) {
-        return res.status(400).json({ message: "Chỉ hỗ trợ tối đa 2 cấp danh mục." });
-      }
-
-      normalizedParentId = parentCategory._id;
+      normalizedParentId = parentValidation.parentCategory._id;
     }
 
     const existedCategory = await Category.findOne({
@@ -92,20 +126,14 @@ router.put("/:id", async (req, res) => {
 
     let normalizedParentId = null;
     if (parentId) {
-      const parentCategory = await Category.findById(parentId);
-      if (!parentCategory) {
-        return res.status(404).json({ message: "Không tìm thấy danh mục chính." });
+      const parentValidation = await validateParentForThreeLevels(parentId, id);
+      if (parentValidation.errorStatus) {
+        return res
+          .status(parentValidation.errorStatus)
+          .json({ message: parentValidation.errorMessage });
       }
 
-      if (String(parentCategory._id) === String(id)) {
-        return res.status(400).json({ message: "Danh mục không thể là cha của chính nó." });
-      }
-
-      if (parentCategory.parentId) {
-        return res.status(400).json({ message: "Chỉ hỗ trợ tối đa 2 cấp danh mục." });
-      }
-
-      normalizedParentId = parentCategory._id;
+      normalizedParentId = parentValidation.parentCategory._id;
     }
 
     const existedCategory = await Category.findOne({
@@ -152,7 +180,7 @@ router.delete("/:id", async (req, res) => {
     const hasChildren = await Category.exists({ parentId: category._id });
     if (hasChildren) {
       return res.status(400).json({
-        message: "Danh mục chính đang có danh mục phụ. Vui lòng xóa danh mục phụ trước.",
+        message: "Danh mục đang có danh mục con. Vui lòng xóa danh mục con trước.",
       });
     }
 
