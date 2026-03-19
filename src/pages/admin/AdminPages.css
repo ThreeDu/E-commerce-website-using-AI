@@ -255,3 +255,56 @@
   border: none;
   font-weight: 600;
 }
+
+.category-create-form {
+  max-width: 620px;
+  display: grid;
+  gap: 10px;
+}
+
+.category-create-form label {
+  font-weight: 600;
+}
+
+.category-create-form input,
+.category-create-form select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #c7d3e0;
+}
+
+.category-level-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.category-level-badge.level-1 {
+  background: #e6f4ea;
+  color: #256d1b;
+}
+
+.category-level-badge.level-2 {
+  background: #fff4e6;
+  color: #8a4b00;
+}
+
+.category-level-badge.level-3 {
+  background: #e8f0fe;
+  color: #1f4ea5;
+}
+
+.category-path-cell {
+  color: #2b3d53;
+  min-width: 260px;
+}
+
+.category-name-cell {
+  font-weight: 600;
+  white-space: nowrap;
+}

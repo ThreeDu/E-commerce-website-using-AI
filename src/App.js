@@ -9,7 +9,8 @@ import ProductsPage from "./pages/ProductsPage";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminCategoriesPage from "./pages/admin/AdminCategoriesPage";
+import AdminListCategoriesPage from "./pages/admin/category/AdminListCategoriesPage";
+import AdminAddCategoryPage from "./pages/admin/category/AdminAddCategoryPage";
 import AdminListProductPage from "./pages/admin/product/AdminListProductPage";
 import AdminAddProductPage from "./pages/admin/product/AdminAddProductPage";
 import AdminEditProductPage from "./pages/admin/product/AdminEditProductPage";
@@ -66,7 +67,15 @@ function App() {
               path="/admin/categories"
               element={
                 <ProtectedRoute requiredRole="admin">
-                  <AdminCategoriesPage />
+                  <AdminListCategoriesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/categories/add"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminAddCategoryPage />
                 </ProtectedRoute>
               }
             />
