@@ -105,7 +105,7 @@ router.put("/:id", async (req, res) => {
 
   try {
     const { id } = req.params;
-    const { name, imageUrl, price, discountPercent, stock, description } = req.body;
+    const { name, imageUrl, price, discountPercent, category, stock, description } = req.body;
 
     if (!name || !imageUrl || price === undefined || price === null) {
       return res.status(400).json({ message: "Tên, ảnh và giá sản phẩm là bắt buộc." });
@@ -138,6 +138,7 @@ router.put("/:id", async (req, res) => {
         price: numericPrice,
         discountPercent: numericDiscount,
         finalPrice: computedFinalPrice,
+        category: category || "Chưa phân loại",
         stock: numericStock,
         description: description || "",
       },

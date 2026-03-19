@@ -112,6 +112,12 @@
   border: 1px solid #c7d3e0;
 }
 
+.admin-product-add-form select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #c7d3e0;
+}
+
 .admin-product-add-form textarea {
   padding: 10px;
   border-radius: 8px;
