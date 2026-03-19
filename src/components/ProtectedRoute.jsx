@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { verifyAdminToken } from "../services/authService";
+import { verifyAdminToken } from "../services/auth/authService";
 
 function ProtectedRoute({ children, requiredRole }) {
   const { auth, isAuthenticated, logout } = useAuth();

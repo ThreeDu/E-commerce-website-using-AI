@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
-import { deleteAdminProduct, getAdminProducts } from "../../../services/authService";
+import { deleteAdminProduct, getAdminProducts } from "../../../services/admin/productService";
 import "../AdminPages.css";
 
 function AdminListProductPage() {
@@ -72,6 +72,7 @@ function AdminListProductPage() {
                 <tr>
                   <th>Ảnh</th>
                   <th>Tên sản phẩm</th>
+                  <th>Danh mục</th>
                   <th>Giá</th>
                   <th>% giảm giá</th>
                   <th>Giá tiền</th>
@@ -90,6 +91,7 @@ function AdminListProductPage() {
                       />
                     </td>
                     <td>{product.name}</td>
+                    <td>{product.category || "Chưa phân loại"}</td>
                     <td>{Number(product.price).toLocaleString("vi-VN")} đ</td>
                     <td>{product.discountPercent ?? 0}%</td>
                     <td>{Number(product.finalPrice ?? product.price).toLocaleString("vi-VN")} đ</td>

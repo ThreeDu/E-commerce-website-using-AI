@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
-import { createAdminProduct } from "../../../services/authService";
+import { createAdminProduct } from "../../../services/admin/productService";
+import { getAdminCategories } from "../../../services/admin/categoryService";
 import "../AdminPages.css";
 
 function AdminAddProductPage() {
@@ -9,16 +10,39 @@ function AdminAddProductPage() {
   const { auth } = useAuth();
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [categories, setCategories] = useState([]);
   const [imageInputMode, setImageInputMode] = useState("url");
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [formData, setFormData] = useState({
     name: "",
+    category: "",
     imageUrl: "",
     price: "",
     stock: "",
     discountPercent: "0",
     description: "",
   });
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      if (!auth?.token) {
+        return;
+      }
+
+      try {
+        setLoadingCategories(true);
+        const data = await getAdminCategories(auth.token);
+        setCategories(data.categories || []);
+      } catch (error) {
+        setMessage(error.message);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    loadCategories();
+  }, [auth?.token]);
 
   const finalPricePreview = useMemo(() => {
     const price = Number(formData.price || 0);
@@ -31,6 +55,44 @@ function AdminAddProductPage() {
   }, [formData.price, formData.discountPercent]);
 
   const imagePreviewSrc = formData.imageUrl?.trim();
+
+  const categoriesById = useMemo(() => {
+    const map = new Map();
+    categories.forEach((item) => {
+      map.set(String(item._id), item);
+    });
+    return map;
+  }, [categories]);
+
+  const getCategoryPath = useCallback((category) => {
+    const path = [category.name];
+    let cursor = category;
+    const visited = new Set();
+
+    while (cursor?.parentId) {
+      const parentId = String(cursor.parentId);
+      if (visited.has(parentId)) {
+        break;
+      }
+
+      visited.add(parentId);
+      const parent = categoriesById.get(parentId);
+      if (!parent) {
+        break;
+      }
+
+      path.unshift(parent.name);
+      cursor = parent;
+    }
+
+    return path.join(" > ");
+  }, [categoriesById]);
+
+  const categoryOptions = useMemo(() => {
+    const sorted = [...categories];
+    sorted.sort((a, b) => getCategoryPath(a).localeCompare(getCategoryPath(b), "vi"));
+    return sorted;
+  }, [categories, getCategoryPath]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -66,6 +128,7 @@ function AdminAddProductPage() {
     try {
       await createAdminProduct(auth.token, {
         name: formData.name,
+        category: formData.category,
         imageUrl: formData.imageUrl,
         price: Number(formData.price),
         stock: Number(formData.stock || 0),
@@ -98,6 +161,23 @@ function AdminAddProductPage() {
             onChange={handleChange}
             required
           />
+
+          <label htmlFor="category">Danh mục</label>
+          <select
+            id="category"
+            name="category"
+            value={formData.category}
+            onChange={handleChange}
+            disabled={loadingCategories}
+            required
+          >
+            <option value="">{loadingCategories ? "Đang tải danh mục..." : "Chọn danh mục"}</option>
+            {categoryOptions.map((item) => (
+              <option key={item._id} value={getCategoryPath(item)}>
+                {getCategoryPath(item)}
+              </option>
+            ))}
+          </select>
 
           <label>Ảnh sản phẩm</label>
           <div className="image-mode-row">

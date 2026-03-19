@@ -112,6 +112,12 @@
   border: 1px solid #c7d3e0;
 }
 
+.admin-product-add-form select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #c7d3e0;
+}
+
 .admin-product-add-form textarea {
   padding: 10px;
   border-radius: 8px;
@@ -216,4 +222,95 @@
   background: #b42318;
   color: #fff;
   border-color: #b42318;
+}
+
+.category-manager-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.category-card {
+  border: 1px solid #e6edf5;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+}
+
+.category-card h3 {
+  margin: 0 0 10px;
+}
+
+.category-form {
+  display: grid;
+  gap: 8px;
+}
+
+.category-form input,
+.category-form select,
+.category-form button {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #c7d3e0;
+}
+
+.category-form button {
+  background: #10375c;
+  color: #fff;
+  border: none;
+  font-weight: 600;
+}
+
+.category-create-form {
+  max-width: 620px;
+  display: grid;
+  gap: 10px;
+}
+
+.category-create-form label {
+  font-weight: 600;
+}
+
+.category-create-form input,
+.category-create-form select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #c7d3e0;
+}
+
+.category-level-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.category-level-badge.level-1 {
+  background: #e6f4ea;
+  color: #256d1b;
+}
+
+.category-level-badge.level-2 {
+  background: #fff4e6;
+  color: #8a4b00;
+}
+
+.category-level-badge.level-3 {
+  background: #e8f0fe;
+  color: #1f4ea5;
+}
+
+.category-path-cell {
+  color: #2b3d53;
+  min-width: 260px;
+}
+
+.category-name-cell {
+  font-weight: 600;
+  white-space: nowrap;
 }
