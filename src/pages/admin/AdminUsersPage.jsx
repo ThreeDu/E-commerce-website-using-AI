@@ -4,7 +4,7 @@ import {
   deleteAdminUser,
   getAdminUsers,
   updateAdminUser,
-} from "../../services/authService";
+} from "../../services/admin/userService";
 import "./AdminPages.css";
 
 function AdminUsersPage() {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
-import { getAdminProductById, updateAdminProduct } from "../../../services/authService";
+import { getAdminProductById, updateAdminProduct } from "../../../services/admin/productService";
 import "../AdminPages.css";
 
 function AdminEditProductPage() {

@@ -5,7 +5,7 @@ import {
   deleteAdminCategory,
   getAdminCategories,
   updateAdminCategory,
-} from "../../services/authService";
+} from "../../services/admin/categoryService";
 import "./AdminPages.css";
 
 function AdminCategoriesPage() {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
-import { deleteAdminProduct, getAdminProducts } from "../../../services/authService";
+import { deleteAdminProduct, getAdminProducts } from "../../../services/admin/productService";
 import "../AdminPages.css";
 
 function AdminListProductPage() {
