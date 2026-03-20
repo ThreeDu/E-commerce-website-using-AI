@@ -15,7 +15,9 @@ import AdminListProductPage from "./pages/admin/product/AdminListProductPage";
 import AdminAddProductPage from "./pages/admin/product/AdminAddProductPage";
 import AdminEditProductPage from "./pages/admin/product/AdminEditProductPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
-import AdminDiscountsPage from "./pages/admin/AdminDiscountsPage";
+import AdminListDiscountsPage from "./pages/admin/discount/AdminListDiscountsPage";
+import AdminAddDiscountPage from "./pages/admin/discount/AdminAddDiscountPage";
+import AdminEditDiscountPage from "./pages/admin/discount/AdminEditDiscountPage";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 
 function GuestRoute({ children }) {
@@ -117,7 +119,23 @@ function App() {
               path="/admin/discounts"
               element={
                 <ProtectedRoute requiredRole="admin">
-                  <AdminDiscountsPage />
+                  <AdminListDiscountsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/discounts/add"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminAddDiscountPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/discounts/edit/:id"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminEditDiscountPage />
                 </ProtectedRoute>
               }
             />

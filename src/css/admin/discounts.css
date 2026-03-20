@@ -1,3 +1,9 @@
+.discount-form {
+  max-width: 760px;
+  display: grid;
+  gap: 10px;
+}
+
 .dashboard-surface {
   border-radius: 18px;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
@@ -45,6 +51,10 @@
   color: #0f2233;
 }
 
+.metric-card.success strong {
+  color: #166534;
+}
+
 .metric-card.warning strong {
   color: #b45309;
 }
@@ -55,21 +65,14 @@
 
 .dashboard-filter-bar {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  column-gap: 16px;
-  row-gap: 14px;
-  margin-bottom: 22px;
-  align-items: end;
+  grid-template-columns: 1.5fr repeat(3, minmax(170px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
 .filter-control {
   display: grid;
-  gap: 8px;
-  min-width: 0;
-}
-
-.search-control {
-  grid-column: span 2;
+  gap: 6px;
 }
 
 .filter-control label {
@@ -82,12 +85,11 @@
 
 .filter-control input,
 .filter-control select {
-  height: 42px;
+  height: 40px;
   border-radius: 10px;
   border: 1px solid #d7e1ed;
-  padding: 0 13px;
+  padding: 0 12px;
   background: #fff;
-  width: 100%;
 }
 
 .dashboard-table-card {
@@ -95,8 +97,23 @@
   border-radius: 16px;
   overflow: hidden;
   background: #fff;
-  width: 100%;
-  max-width: 100%;
+}
+
+.discount-form label {
+  font-weight: 600;
+}
+
+.discount-form input,
+.discount-form select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #c7d3e0;
+}
+
+.discount-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
 }
 
 .users-table-wrap {
@@ -118,17 +135,17 @@
 
 .dashboard-table th:nth-child(1),
 .dashboard-table td:nth-child(1) {
-  width: 90px;
+  width: 180px;
 }
 
 .dashboard-table th:nth-child(3),
 .dashboard-table td:nth-child(3) {
-  width: 220px;
+  width: 230px;
 }
 
 .dashboard-table th:nth-child(4),
 .dashboard-table td:nth-child(4) {
-  width: 170px;
+  width: 130px;
 }
 
 .dashboard-table th:nth-child(5),
@@ -199,29 +216,34 @@
   background: #e7f0ff;
 }
 
-.final-price-pill {
-  color: #166534;
-  background: #e7f9ef;
-}
-
 .stock-pill {
   color: #1f2937;
   background: #e8edf3;
 }
 
-.stock-pill.in-stock {
+.status-pill.success {
   color: #166534;
   background: #e7f9ef;
 }
 
-.stock-pill.low-stock {
+.status-pill.warning {
   color: #b45309;
   background: #fff3dd;
 }
 
-.stock-pill.out-stock {
+.status-pill.info {
+  color: #1d4ed8;
+  background: #e8f1ff;
+}
+
+.status-pill.danger {
   color: #b42318;
   background: #ffe8e8;
+}
+
+.status-pill.muted {
+  color: #475569;
+  background: #e8edf3;
 }
 
 .table-actions {
@@ -307,56 +329,6 @@
   box-shadow: 0 8px 18px rgba(16, 55, 92, 0.22);
 }
 
-.admin-product-thumb {
-  width: 44px;
-  height: 44px;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 1px solid #d6dfeb;
-}
-
-.admin-product-add-form {
-  max-width: 700px;
-  display: grid;
-  gap: 10px;
-}
-
-.admin-product-add-form input,
-.admin-product-add-form select,
-.admin-product-add-form textarea {
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #c7d3e0;
-}
-
-.admin-product-add-form textarea {
-  resize: vertical;
-}
-
-.image-mode-row {
-  display: flex;
-  gap: 18px;
-  align-items: center;
-}
-
-.image-mode-row label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.admin-image-preview-wrap {
-  margin-top: 4px;
-}
-
-.admin-image-preview {
-  width: 180px;
-  height: 180px;
-  object-fit: cover;
-  border-radius: 10px;
-  border: 1px solid #d6dfeb;
-}
-
 .add-form-actions {
   display: flex;
   gap: 10px;
@@ -437,10 +409,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .search-control {
-    grid-column: span 2;
-  }
-
   .dashboard-metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -454,10 +422,6 @@
 
   .dashboard-filter-bar {
     grid-template-columns: 1fr;
-  }
-
-  .search-control {
-    grid-column: span 1;
   }
 
   .dashboard-pagination {

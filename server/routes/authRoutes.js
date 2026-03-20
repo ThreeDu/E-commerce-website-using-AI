@@ -6,6 +6,7 @@ const { createToken, getTokenFromHeader, verifyAdminRequest } = require("./helpe
 const adminUserRoutes = require("./adminUserRoutes");
 const adminProductRoutes = require("./adminProductRoutes");
 const adminCategoryRoutes = require("./adminCategoryRoutes");
+const adminDiscountRoutes = require("./adminDiscountRoutes");
 
 const router = express.Router();
 
@@ -132,5 +133,6 @@ router.get("/verify-token", async (req, res) => {
 router.use("/admin/users", adminUserRoutes);
 router.use("/admin/products", adminProductRoutes);
 router.use("/admin/categories", adminCategoryRoutes);
+router.use("/admin/discounts", adminDiscountRoutes);
 
 module.exports = router;
