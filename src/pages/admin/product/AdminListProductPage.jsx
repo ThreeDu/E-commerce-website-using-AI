@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { deleteAdminProduct, getAdminProducts } from "../../../services/admin/productService";
-import "../../../css/admin-pages.css";
+import "../../../css/admin/products.css";
 
 function AdminListProductPage() {
   const location = useLocation();

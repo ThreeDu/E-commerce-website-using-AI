@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { createAdminCategory, getAdminCategories } from "../../../services/admin/categoryService";
-import "../../../css/admin-pages.css";
+import "../../../css/admin/categories.css";
 
 function AdminAddCategoryPage() {
   const navigate = useNavigate();
