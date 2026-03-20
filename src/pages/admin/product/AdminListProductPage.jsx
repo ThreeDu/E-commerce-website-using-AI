@@ -1,8 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { deleteAdminProduct, getAdminProducts } from "../../../services/admin/productService";
-import "../AdminPages.css";
+import "../../../css/admin/products.css";
+
+const ITEMS_PER_PAGE = 8;
+
+const PRICE_FILTERS = {
+  all: () => true,
+  under500k: (price) => price < 500000,
+  from500kTo2m: (price) => price >= 500000 && price <= 2000000,
+  over2m: (price) => price > 2000000,
+};
 
 function AdminListProductPage() {
   const location = useLocation();
@@ -12,6 +21,11 @@ function AdminListProductPage() {
   const [deleting, setDeleting] = useState(false);
   const [productPendingDelete, setProductPendingDelete] = useState(null);
   const [message, setMessage] = useState(location.state?.successMessage || "");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [priceFilter, setPriceFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const loadProducts = useCallback(async () => {
     if (!auth?.token) {
@@ -33,6 +47,74 @@ function AdminListProductPage() {
     loadProducts();
   }, [loadProducts]);
 
+  const categories = useMemo(() => {
+    const values = products
+      .map((product) => (product.category || "Chưa phân loại").trim())
+      .filter(Boolean);
+    return Array.from(new Set(values));
+  }, [products]);
+
+  const getStockStatus = useCallback((stock) => {
+    const numericStock = Number(stock || 0);
+    if (numericStock <= 0) {
+      return "out-stock";
+    }
+    if (numericStock <= 10) {
+      return "low-stock";
+    }
+    return "in-stock";
+  }, []);
+
+  const getStockStatusLabel = useCallback((stock) => {
+    const status = getStockStatus(stock);
+    if (status === "out-stock") {
+      return "Hết hàng";
+    }
+    if (status === "low-stock") {
+      return "Sắp hết";
+    }
+    return "Còn hàng";
+  }, [getStockStatus]);
+
+  const filteredProducts = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const priceMatcher = PRICE_FILTERS[priceFilter] || PRICE_FILTERS.all;
+
+    return products.filter((product) => {
+      const categoryName = product.category || "Chưa phân loại";
+      const finalPrice = Number(product.finalPrice ?? product.price ?? 0);
+      const stockStatus = getStockStatus(product.stock);
+
+      const matchesSearch =
+        !normalizedSearch ||
+        (product.name || "").toLowerCase().includes(normalizedSearch) ||
+        categoryName.toLowerCase().includes(normalizedSearch);
+
+      const matchesCategory = categoryFilter === "all" || categoryName === categoryFilter;
+      const matchesPrice = priceMatcher(finalPrice);
+      const matchesStatus = statusFilter === "all" || stockStatus === statusFilter;
+
+      return matchesSearch && matchesCategory && matchesPrice && matchesStatus;
+    });
+  }, [products, searchTerm, categoryFilter, priceFilter, statusFilter, getStockStatus]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categoryFilter, priceFilter, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredProducts, currentPage]);
+
   const handleDelete = async () => {
     if (!productPendingDelete?._id) {
       return;
@@ -53,67 +135,185 @@ function AdminListProductPage() {
 
   return (
     <main className="container page-content">
-      <section className="hero-card">
-        <h2>Quản lý sản phẩm</h2>
+      <section className="hero-card dashboard-surface">
+        <div className="dashboard-header-row">
+          <div>
+            <h2>Quản lý sản phẩm</h2>
+            <p className="dashboard-subtitle">Theo dõi kho hàng và giá bán trong một bảng điều khiển tập trung.</p>
+          </div>
+          <Link to="/admin/products/add" className="primary-link-btn">
+            + Thêm sản phẩm
+          </Link>
+        </div>
+
         {message && <p className="form-message">{message}</p>}
 
-        <div className="admin-page-toolbar">
-          <Link to="/admin/products/add" className="primary-link-btn">
-            Thêm sản phẩm
-          </Link>
+        <div className="dashboard-metric-grid">
+          <article className="metric-card">
+            <span>Tổng sản phẩm</span>
+            <strong>{products.length}</strong>
+          </article>
+          <article className="metric-card">
+            <span>Còn hàng</span>
+            <strong>{products.filter((item) => Number(item.stock || 0) > 10).length}</strong>
+          </article>
+          <article className="metric-card warning">
+            <span>Sắp hết</span>
+            <strong>{products.filter((item) => Number(item.stock || 0) > 0 && Number(item.stock || 0) <= 10).length}</strong>
+          </article>
+          <article className="metric-card danger">
+            <span>Hết hàng</span>
+            <strong>{products.filter((item) => Number(item.stock || 0) <= 0).length}</strong>
+          </article>
+        </div>
+
+        <div className="dashboard-filter-bar">
+          <div className="filter-control search-control">
+            <label htmlFor="product-search">Tìm kiếm</label>
+            <input
+              id="product-search"
+              type="text"
+              placeholder="Tên sản phẩm hoặc danh mục..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
+          </div>
+
+          <div className="filter-control">
+            <label htmlFor="product-category">Danh mục</label>
+            <select
+              id="product-category"
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+            >
+              <option value="all">Tất cả danh mục</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-control">
+            <label htmlFor="product-price">Khoảng giá</label>
+            <select id="product-price" value={priceFilter} onChange={(event) => setPriceFilter(event.target.value)}>
+              <option value="all">Tất cả mức giá</option>
+              <option value="under500k">Dưới 500.000 đ</option>
+              <option value="from500kTo2m">500.000 đ - 2.000.000 đ</option>
+              <option value="over2m">Trên 2.000.000 đ</option>
+            </select>
+          </div>
+
+          <div className="filter-control">
+            <label htmlFor="product-status">Trạng thái kho</label>
+            <select id="product-status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <option value="all">Tất cả trạng thái</option>
+              <option value="in-stock">Còn hàng</option>
+              <option value="low-stock">Sắp hết</option>
+              <option value="out-stock">Hết hàng</option>
+            </select>
+          </div>
         </div>
 
         {loading ? (
           <p>Đang tải danh sách sản phẩm...</p>
         ) : (
-          <div className="users-table-wrap">
-            <table className="users-table">
-              <thead>
-                <tr>
-                  <th>Ảnh</th>
-                  <th>Tên sản phẩm</th>
-                  <th>Danh mục</th>
-                  <th>Giá</th>
-                  <th>% giảm giá</th>
-                  <th>Giá tiền</th>
-                  <th>Tồn kho</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => (
-                  <tr key={product._id}>
-                    <td>
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="admin-product-thumb"
-                      />
-                    </td>
-                    <td>{product.name}</td>
-                    <td>{product.category || "Chưa phân loại"}</td>
-                    <td>{Number(product.price).toLocaleString("vi-VN")} đ</td>
-                    <td>{product.discountPercent ?? 0}%</td>
-                    <td>{Number(product.finalPrice ?? product.price).toLocaleString("vi-VN")} đ</td>
-                    <td>{product.stock ?? 0}</td>
-                    <td>
-                      <div className="table-actions">
-                        <Link to={`/admin/products/edit/${product._id}`} className="table-link-btn">
-                          Sửa
-                        </Link>
-                        <button
-                          type="button"
-                          className="danger-btn"
-                          onClick={() => setProductPendingDelete(product)}
-                        >
-                          Xóa
-                        </button>
-                      </div>
-                    </td>
+          <div className="dashboard-table-card">
+            <div className="users-table-wrap">
+              <table className="users-table dashboard-table">
+                <thead>
+                  <tr>
+                    <th>Ảnh</th>
+                    <th>Sản phẩm</th>
+                    <th>Giá & giảm</th>
+                    <th>Tồn kho</th>
+                    <th>Thao tác</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paginatedProducts.map((product) => (
+                    <tr key={product._id}>
+                      <td>
+                        <img src={product.imageUrl} alt={product.name} className="admin-product-thumb" />
+                      </td>
+                      <td>
+                        <div className="cell-title truncate-text" title={product.name}>
+                          {product.name}
+                        </div>
+                        <div className="cell-subtext truncate-text" title={product.category || "Chưa phân loại"}>
+                          {product.category || "Chưa phân loại"}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="price-stack">
+                          <span className="pill final-price-pill">
+                            {Number(product.finalPrice ?? product.price).toLocaleString("vi-VN")} đ
+                          </span>
+                          <span className="cell-subtext truncate-text" title={`Giá gốc: ${Number(product.price).toLocaleString("vi-VN")} đ`}>
+                            Giá gốc: {Number(product.price).toLocaleString("vi-VN")} đ
+                          </span>
+                          <span className="cell-subtext">Giảm: {product.discountPercent ?? 0}%</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`pill stock-pill ${getStockStatus(product.stock)}`}>
+                          {product.stock ?? 0} - {getStockStatusLabel(product.stock)}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="table-actions">
+                          <Link to={`/admin/products/edit/${product._id}`} className="table-link-btn">
+                            <span aria-hidden="true">✎</span> Sửa
+                          </Link>
+                          <button
+                            type="button"
+                            className="danger-btn"
+                            onClick={() => setProductPendingDelete(product)}
+                          >
+                            <span aria-hidden="true">🗑</span> Xóa
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {paginatedProducts.length === 0 && (
+                    <tr>
+                      <td colSpan="5" className="table-empty-cell">
+                        Không tìm thấy sản phẩm phù hợp bộ lọc.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="dashboard-pagination">
+              <p>
+                Hiển thị <strong>{paginatedProducts.length}</strong> / {filteredProducts.length} sản phẩm
+              </p>
+              <div className="pagination-actions">
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                >
+                  Trước
+                </button>
+                <span className="page-indicator">
+                  Trang {currentPage}/{totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                >
+                  Sau
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </section>

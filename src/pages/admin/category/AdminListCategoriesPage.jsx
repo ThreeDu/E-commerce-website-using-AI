@@ -6,7 +6,7 @@ import {
   getAdminCategories,
   updateAdminCategory,
 } from "../../../services/admin/categoryService";
-import "../AdminPages.css";
+import "../../../css/admin/categories.css";
 
 function AdminListCategoriesPage() {
   const location = useLocation();

@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import "./App.css";
+import "./css/app.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -15,6 +15,10 @@ import AdminListProductPage from "./pages/admin/product/AdminListProductPage";
 import AdminAddProductPage from "./pages/admin/product/AdminAddProductPage";
 import AdminEditProductPage from "./pages/admin/product/AdminEditProductPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import AdminListDiscountsPage from "./pages/admin/discount/AdminListDiscountsPage";
+import AdminAddDiscountPage from "./pages/admin/discount/AdminAddDiscountPage";
+import AdminEditDiscountPage from "./pages/admin/discount/AdminEditDiscountPage";
+import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 
 function GuestRoute({ children }) {
   const { auth } = useAuth();
@@ -108,6 +112,38 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminUsersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/discounts"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminListDiscountsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/discounts/add"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminAddDiscountPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/discounts/edit/:id"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminEditDiscountPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/orders"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminOrdersPage />
                 </ProtectedRoute>
               }
             />
