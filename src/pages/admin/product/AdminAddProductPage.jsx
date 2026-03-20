@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { createAdminProduct } from "../../../services/admin/productService";
 import { getAdminCategories } from "../../../services/admin/categoryService";
-import "../AdminPages.css";
+import "../../../css/admin-pages.css";
 
 function AdminAddProductPage() {
   const navigate = useNavigate();

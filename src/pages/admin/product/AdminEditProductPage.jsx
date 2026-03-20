@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { getAdminProductById, updateAdminProduct } from "../../../services/admin/productService";
 import { getAdminCategories } from "../../../services/admin/categoryService";
-import "../AdminPages.css";
+import "../../../css/admin-pages.css";
 
 function AdminEditProductPage() {
   const navigate = useNavigate();
