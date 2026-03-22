@@ -173,6 +173,15 @@
   padding: 20px;
 }
 
+.hero-card button:focus-visible,
+.hero-card a:focus-visible,
+.hero-card input:focus-visible,
+.hero-card select:focus-visible,
+.hero-card textarea:focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
 .add-form-actions {
   display: flex;
   gap: 10px;

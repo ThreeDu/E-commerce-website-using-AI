@@ -7,6 +7,7 @@ const adminUserRoutes = require("./adminUserRoutes");
 const adminProductRoutes = require("./adminProductRoutes");
 const adminCategoryRoutes = require("./adminCategoryRoutes");
 const adminDiscountRoutes = require("./adminDiscountRoutes");
+const adminSystemLogRoutes = require("./adminSystemLogRoutes");
 
 const router = express.Router();
 
@@ -134,5 +135,6 @@ router.use("/admin/users", adminUserRoutes);
 router.use("/admin/products", adminProductRoutes);
 router.use("/admin/categories", adminCategoryRoutes);
 router.use("/admin/discounts", adminDiscountRoutes);
+router.use("/admin/system-logs", adminSystemLogRoutes);
 
 module.exports = router;

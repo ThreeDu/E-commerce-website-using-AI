@@ -1,6 +1,7 @@
 const express = require("express");
 const Discount = require("../models/Discount");
 const { verifyAdminRequest } = require("./helpers/authHelpers");
+const { logAdminAction } = require("../utils/adminAuditLogger");
 
 const router = express.Router();
 
@@ -132,6 +133,19 @@ router.post("/", async (req, res) => {
       isActive: Boolean(isActive),
     });
 
+    logAdminAction({
+      req,
+      adminUser,
+      action: "create",
+      resource: "discount",
+      resourceId: discount._id,
+      details: {
+        code: discount.code,
+        type: discount.type,
+        isActive: discount.isActive,
+      },
+    });
+
     return res.status(201).json({
       message: "Thêm mã giảm giá thành công.",
       discount,
@@ -237,6 +251,19 @@ router.put("/:id", async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy mã giảm giá." });
     }
 
+    logAdminAction({
+      req,
+      adminUser,
+      action: "update",
+      resource: "discount",
+      resourceId: updatedDiscount._id,
+      details: {
+        code: updatedDiscount.code,
+        type: updatedDiscount.type,
+        isActive: updatedDiscount.isActive,
+      },
+    });
+
     return res.json({
       message: "Cập nhật mã giảm giá thành công.",
       discount: updatedDiscount,
@@ -259,6 +286,18 @@ router.delete("/:id", async (req, res) => {
     if (!deletedDiscount) {
       return res.status(404).json({ message: "Không tìm thấy mã giảm giá." });
     }
+
+    logAdminAction({
+      req,
+      adminUser,
+      action: "delete",
+      resource: "discount",
+      resourceId: deletedDiscount._id,
+      details: {
+        code: deletedDiscount.code,
+        type: deletedDiscount.type,
+      },
+    });
 
     return res.json({
       message: "Xóa mã giảm giá thành công.",

@@ -70,6 +70,9 @@ function Header() {
             <NavLink to="/admin/users" className={({ isActive }) => (isActive ? "active" : "")}>
               Quản lý người dùng
             </NavLink>
+            <NavLink to="/admin/system-logs" className={({ isActive }) => (isActive ? "active" : "")}> 
+              Log hệ thống
+            </NavLink>
           </nav>
 
           <div className="admin-sidebar-footer">
@@ -104,6 +107,7 @@ function Header() {
               <Link to="/admin/discounts">Quản lý mã giảm giá</Link>
               <Link to="/admin/orders">Quản lý đơn hàng</Link>
               <Link to="/admin/users">Quản lý người dùng</Link>
+              <Link to="/admin/system-logs">Log hệ thống</Link>
             </>
           ) : (
             <>

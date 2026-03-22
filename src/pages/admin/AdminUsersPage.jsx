@@ -143,9 +143,13 @@ function AdminUsersPage() {
 
   return (
     <main className="container page-content">
-      <section className="hero-card">
+      <section className="hero-card" aria-busy={loading || deleting}>
         <h2>Quản lý người dùng</h2>
-        {message && <p className="form-message">{message}</p>}
+        {message && (
+          <p className="form-message" role="status" aria-live="polite">
+            {message}
+          </p>
+        )}
 
         <div className="users-filter-bar">
           <div className="users-filter-control users-search-control">

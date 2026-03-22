@@ -1,0 +1,68 @@
+.system-log-filter-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.system-log-filter-control {
+  display: grid;
+  gap: 6px;
+}
+
+.system-log-filter-control label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7a8d;
+  font-weight: 700;
+}
+
+.system-log-filter-control input,
+.system-log-filter-control select {
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid #d7e1ed;
+  padding: 0 12px;
+  background: #fff;
+}
+
+.system-log-meta {
+  margin: 0 0 10px;
+  color: #61748c;
+}
+
+.system-log-path {
+  color: #0f3f84;
+  font-size: 13px;
+}
+
+.system-log-detail {
+  color: #52637a;
+  font-size: 13px;
+  margin-top: 3px;
+}
+
+.system-log-action {
+  text-transform: uppercase;
+}
+
+.system-log-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.system-log-pagination p {
+  margin: 0;
+  color: #607089;
+}
+
+@media (max-width: 720px) {
+  .system-log-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

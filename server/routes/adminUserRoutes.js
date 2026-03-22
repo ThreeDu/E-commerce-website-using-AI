@@ -1,6 +1,7 @@
 const express = require("express");
 const User = require("../models/User");
 const { verifyAdminRequest } = require("./helpers/authHelpers");
+const { logAdminAction } = require("../utils/adminAuditLogger");
 
 const router = express.Router();
 
@@ -59,6 +60,18 @@ router.put("/:id", async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy người dùng." });
     }
 
+    logAdminAction({
+      req,
+      adminUser,
+      action: "update",
+      resource: "user",
+      resourceId: updatedUser._id,
+      details: {
+        email: updatedUser.email,
+        role: updatedUser.role,
+      },
+    });
+
     return res.json({
       message: "Cập nhật người dùng thành công.",
       user: updatedUser,
@@ -86,6 +99,18 @@ router.delete("/:id", async (req, res) => {
     if (!deletedUser) {
       return res.status(404).json({ message: "Không tìm thấy người dùng." });
     }
+
+    logAdminAction({
+      req,
+      adminUser,
+      action: "delete",
+      resource: "user",
+      resourceId: deletedUser._id,
+      details: {
+        email: deletedUser.email,
+        role: deletedUser.role,
+      },
+    });
 
     return res.json({
       message: "Xóa người dùng thành công.",

@@ -365,7 +365,7 @@ function AdminListDiscountsPage() {
 
   return (
     <main className="container page-content">
-      <section className="hero-card dashboard-surface">
+      <section className="hero-card dashboard-surface" aria-busy={loading || deleting || bulkProcessing}>
         <div className="dashboard-header-row">
           <div>
             <h2>Quản lý mã giảm giá</h2>
@@ -376,7 +376,11 @@ function AdminListDiscountsPage() {
           </Link>
         </div>
 
-        {message && <p className="form-message">{message}</p>}
+        {message && (
+          <p className="form-message" role="status" aria-live="polite">
+            {message}
+          </p>
+        )}
 
         <div className="dashboard-metric-grid">
           <article className="metric-card">

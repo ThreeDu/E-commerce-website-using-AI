@@ -354,6 +354,21 @@
   cursor: not-allowed;
 }
 
+.dashboard-surface button:focus-visible,
+.dashboard-surface a:focus-visible,
+.dashboard-surface input:focus-visible,
+.dashboard-surface select:focus-visible,
+.dashboard-surface textarea:focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+.dashboard-surface button:disabled,
+.dashboard-surface input:disabled,
+.dashboard-surface select:disabled {
+  opacity: 0.7;
+}
+
 .dashboard-pagination {
   padding: 12px 16px;
   border-top: 1px solid #edf2f8;

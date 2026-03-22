@@ -1,6 +1,7 @@
 const express = require("express");
 const Category = require("../models/Category");
 const { verifyAdminRequest } = require("./helpers/authHelpers");
+const { logAdminAction } = require("../utils/adminAuditLogger");
 
 const router = express.Router();
 
@@ -96,6 +97,18 @@ router.post("/", async (req, res) => {
       parentId: normalizedParentId,
     });
 
+    logAdminAction({
+      req,
+      adminUser,
+      action: "create",
+      resource: "category",
+      resourceId: category._id,
+      details: {
+        name: category.name,
+        parentId: category.parentId ? String(category.parentId) : null,
+      },
+    });
+
     return res.status(201).json({
       message: "Thêm danh mục thành công.",
       category,
@@ -154,6 +167,18 @@ router.put("/:id", async (req, res) => {
       { new: true, runValidators: true }
     );
 
+    logAdminAction({
+      req,
+      adminUser,
+      action: "update",
+      resource: "category",
+      resourceId: updatedCategory._id,
+      details: {
+        name: updatedCategory.name,
+        parentId: updatedCategory.parentId ? String(updatedCategory.parentId) : null,
+      },
+    });
+
     return res.json({
       message: "Cập nhật danh mục thành công.",
       category: updatedCategory,
@@ -185,6 +210,18 @@ router.delete("/:id", async (req, res) => {
     }
 
     await Category.findByIdAndDelete(id);
+
+    logAdminAction({
+      req,
+      adminUser,
+      action: "delete",
+      resource: "category",
+      resourceId: category._id,
+      details: {
+        name: category.name,
+        parentId: category.parentId ? String(category.parentId) : null,
+      },
+    });
 
     return res.json({
       message: "Xóa danh mục thành công.",
