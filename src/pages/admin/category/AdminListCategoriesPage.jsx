@@ -6,6 +6,7 @@ import {
   getAdminCategories,
   updateAdminCategory,
 } from "../../../services/admin/categoryService";
+import { getErrorMessage } from "../../../utils/adminErrorUtils";
 import "../../../css/admin/categories.css";
 
 function AdminListCategoriesPage() {
@@ -17,6 +18,8 @@ function AdminListCategoriesPage() {
   const [categoryPendingDelete, setCategoryPendingDelete] = useState(null);
   const [message, setMessage] = useState(location.state?.successMessage || "");
   const [editingCategory, setEditingCategory] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [expandedCategoryIds, setExpandedCategoryIds] = useState(new Set());
 
   const loadCategories = useCallback(async () => {
     if (!auth?.token) {
@@ -28,7 +31,7 @@ function AdminListCategoriesPage() {
       const data = await getAdminCategories(auth.token);
       setCategories(data.categories || []);
     } catch (error) {
-      setMessage(error.message);
+      setMessage(getErrorMessage(error, "Không thể tải danh sách danh mục."));
     } finally {
       setLoading(false);
     }
@@ -37,6 +40,11 @@ function AdminListCategoriesPage() {
   useEffect(() => {
     loadCategories();
   }, [loadCategories]);
+
+  useEffect(() => {
+    const parentIds = new Set(categories.filter((item) => item.parentId).map((item) => String(item.parentId)));
+    setExpandedCategoryIds(parentIds);
+  }, [categories]);
 
   const categoriesById = useMemo(() => {
     const map = new Map();
@@ -113,15 +121,20 @@ function AdminListCategoriesPage() {
 
   const flatCategoryTree = useMemo(() => {
     const result = [];
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const isSearching = normalizedSearch.length > 0;
 
     const sortByName = (list) =>
       [...list].sort((a, b) => a.name.localeCompare(b.name, "vi", { sensitivity: "base" }));
 
     const traverse = (nodes, depth) => {
       sortByName(nodes).forEach((node) => {
-        result.push({ category: node, depth });
         const children = childrenByParentId.get(String(node._id)) || [];
-        if (children.length > 0) {
+        const hasChildren = children.length > 0;
+
+        result.push({ category: node, depth, hasChildren });
+
+        if (hasChildren && (isSearching || expandedCategoryIds.has(String(node._id)))) {
           traverse(children, depth + 1);
         }
       });
@@ -129,8 +142,17 @@ function AdminListCategoriesPage() {
 
     const roots = childrenByParentId.get("root") || [];
     traverse(roots, 0);
-    return result;
-  }, [childrenByParentId]);
+
+    if (!isSearching) {
+      return result;
+    }
+
+    return result.filter(({ category }) => {
+      const name = String(category.name || "").toLowerCase();
+      const path = getCategoryPath(category).toLowerCase();
+      return name.includes(normalizedSearch) || path.includes(normalizedSearch);
+    });
+  }, [childrenByParentId, expandedCategoryIds, searchTerm, getCategoryPath]);
 
   const parentOptionsForEdit = useMemo(() => {
     if (!editingCategory?._id) {
@@ -177,16 +199,42 @@ function AdminListCategoriesPage() {
       setCategoryPendingDelete(null);
       await loadCategories();
     } catch (error) {
-      setMessage(error.message);
+      setMessage(getErrorMessage(error, "Không thể xóa danh mục."));
     } finally {
       setDeleting(false);
     }
+  };
+
+  const toggleExpand = (categoryId) => {
+    setExpandedCategoryIds((prev) => {
+      const next = new Set(prev);
+      const key = String(categoryId);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
   };
 
   const handleSaveEdit = async () => {
     if (!editingCategory?.name?.trim()) {
       setMessage("Tên danh mục không được để trống.");
       return;
+    }
+
+    const hasParentChanged =
+      String(editingCategory.parentId || "") !== String(editingCategory.originalParentId || "");
+
+    if (hasParentChanged) {
+      const isConfirmed = window.confirm(
+        "Bạn đang thay đổi danh mục cha. Thao tác này có thể ảnh hưởng cấu trúc hiển thị danh mục con. Tiếp tục?"
+      );
+
+      if (!isConfirmed) {
+        return;
+      }
     }
 
     try {
@@ -199,9 +247,12 @@ function AdminListCategoriesPage() {
       setMessage("Cập nhật danh mục thành công.");
       await loadCategories();
     } catch (error) {
-      setMessage(error.message);
+      setMessage(getErrorMessage(error, "Không thể cập nhật danh mục."));
     }
   };
+
+  const hasParentChanged =
+    editingCategory && String(editingCategory.parentId || "") !== String(editingCategory.originalParentId || "");
 
   return (
     <main className="container page-content">
@@ -219,6 +270,23 @@ function AdminListCategoriesPage() {
           </Link>
         </div>
 
+        <div className="category-search-row">
+          <label htmlFor="category-search">Tìm kiếm danh mục</label>
+          <input
+            id="category-search"
+            type="text"
+            placeholder="Nhập tên hoặc đường dẫn danh mục..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+          />
+        </div>
+
+        {hasParentChanged && (
+          <p className="category-change-warning">
+            Bạn đang đổi danh mục cha. Vui lòng kiểm tra kỹ trước khi lưu để tránh ảnh hưởng cấu trúc cây.
+          </p>
+        )}
+
         {loading ? (
           <p>Đang tải danh sách danh mục...</p>
         ) : (
@@ -234,9 +302,10 @@ function AdminListCategoriesPage() {
                 </tr>
               </thead>
               <tbody>
-                {flatCategoryTree.map(({ category, depth }) => {
+                {flatCategoryTree.map(({ category, depth, hasChildren }) => {
                   const level = getCategoryLevel(category);
                   const isEditing = editingCategory?._id === category._id;
+                  const isExpanded = expandedCategoryIds.has(String(category._id));
                   const parentName = category.parentId
                     ? categoriesById.get(String(category.parentId))?.name || "Không rõ"
                     : "-";
@@ -253,10 +322,26 @@ function AdminListCategoriesPage() {
                             }
                           />
                         ) : (
-                          <span>
-                            {depth > 0 ? "- " : ""}
-                            {category.name}
-                          </span>
+                          <div className="category-name-wrap">
+                            {hasChildren ? (
+                              <button
+                                type="button"
+                                className="category-expand-btn"
+                                onClick={() => toggleExpand(category._id)}
+                                aria-label={isExpanded ? "Thu gọn danh mục" : "Mở rộng danh mục"}
+                              >
+                                {isExpanded ? "▾" : "▸"}
+                              </button>
+                            ) : (
+                              <span className="category-expand-placeholder" aria-hidden="true">
+                                •
+                              </span>
+                            )}
+                            <span>
+                              {depth > 0 ? "- " : ""}
+                              {category.name}
+                            </span>
+                          </div>
                         )}
                       </td>
                       <td>
@@ -308,6 +393,7 @@ function AdminListCategoriesPage() {
                                     _id: category._id,
                                     name: category.name,
                                     parentId: category.parentId || null,
+                                    originalParentId: category.parentId || null,
                                   })
                                 }
                               >
@@ -327,6 +413,13 @@ function AdminListCategoriesPage() {
                     </tr>
                   );
                 })}
+                {flatCategoryTree.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="table-empty-cell">
+                      Không tìm thấy danh mục phù hợp.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

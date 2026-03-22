@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { deleteAdminProduct, getAdminProducts } from "../../../services/admin/productService";
+import { getErrorMessage } from "../../../utils/adminErrorUtils";
 import "../../../css/admin/products.css";
 
 const ITEMS_PER_PAGE = 8;
@@ -20,6 +21,7 @@ function AdminListProductPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [productPendingDelete, setProductPendingDelete] = useState(null);
+  const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [message, setMessage] = useState(location.state?.successMessage || "");
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -37,7 +39,7 @@ function AdminListProductPage() {
       const data = await getAdminProducts(auth.token);
       setProducts(data.products || []);
     } catch (error) {
-      setMessage(error.message);
+      setMessage(getErrorMessage(error, "Không thể tải danh sách sản phẩm."));
     } finally {
       setLoading(false);
     }
@@ -115,19 +117,86 @@ function AdminListProductPage() {
     return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredProducts, currentPage]);
 
+  useEffect(() => {
+    const validIds = new Set(filteredProducts.map((item) => item._id));
+    setSelectedProductIds((prev) => prev.filter((id) => validIds.has(id)));
+  }, [filteredProducts]);
+
+  const selectedProducts = useMemo(
+    () => filteredProducts.filter((product) => selectedProductIds.includes(product._id)),
+    [filteredProducts, selectedProductIds]
+  );
+
+  const selectedIdsOnPage = useMemo(
+    () => paginatedProducts.map((product) => product._id).filter((id) => selectedProductIds.includes(id)),
+    [paginatedProducts, selectedProductIds]
+  );
+
+  const isAllOnPageSelected = paginatedProducts.length > 0 && selectedIdsOnPage.length === paginatedProducts.length;
+
+  const toggleProductSelect = (productId) => {
+    setSelectedProductIds((prev) =>
+      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
+    );
+  };
+
+  const toggleSelectAllOnPage = () => {
+    const pageIds = paginatedProducts.map((product) => product._id);
+    if (pageIds.length === 0) {
+      return;
+    }
+
+    setSelectedProductIds((prev) => {
+      if (isAllOnPageSelected) {
+        return prev.filter((id) => !pageIds.includes(id));
+      }
+
+      const merged = new Set([...prev, ...pageIds]);
+      return Array.from(merged);
+    });
+  };
+
   const handleDelete = async () => {
-    if (!productPendingDelete?._id) {
+    const bulkIds = productPendingDelete?.ids || [];
+    const isBulkDelete = bulkIds.length > 0;
+
+    if (!isBulkDelete && !productPendingDelete?._id) {
       return;
     }
 
     try {
       setDeleting(true);
-      await deleteAdminProduct(auth.token, productPendingDelete._id);
-      setProducts((prev) => prev.filter((product) => product._id !== productPendingDelete._id));
-      setMessage("Xóa sản phẩm thành công.");
+
+      if (isBulkDelete) {
+        const results = await Promise.allSettled(
+          bulkIds.map((productId) => deleteAdminProduct(auth.token, productId))
+        );
+
+        const succeededIds = results
+          .map((result, index) => (result.status === "fulfilled" ? bulkIds[index] : null))
+          .filter(Boolean);
+        const failedCount = bulkIds.length - succeededIds.length;
+
+        if (succeededIds.length > 0) {
+          setProducts((prev) => prev.filter((product) => !succeededIds.includes(product._id)));
+          setSelectedProductIds((prev) => prev.filter((id) => !succeededIds.includes(id)));
+        }
+
+        if (failedCount > 0) {
+          setMessage(`Đã xóa ${succeededIds.length} sản phẩm, ${failedCount} sản phẩm thất bại.`);
+        } else {
+          setMessage(`Đã xóa ${succeededIds.length} sản phẩm thành công.`);
+        }
+      } else {
+        await deleteAdminProduct(auth.token, productPendingDelete._id);
+        setProducts((prev) => prev.filter((product) => product._id !== productPendingDelete._id));
+        setSelectedProductIds((prev) => prev.filter((id) => id !== productPendingDelete._id));
+        setMessage("Xóa sản phẩm thành công.");
+      }
+
       setProductPendingDelete(null);
     } catch (error) {
-      setMessage(error.message);
+      setMessage(getErrorMessage(error, "Không thể xóa sản phẩm."));
     } finally {
       setDeleting(false);
     }
@@ -216,6 +285,35 @@ function AdminListProductPage() {
           </div>
         </div>
 
+        <div className="bulk-action-bar">
+          <p>
+            Đã chọn <strong>{selectedProducts.length}</strong> sản phẩm
+          </p>
+          <div className="bulk-action-buttons">
+            <button
+              type="button"
+              className="danger-btn"
+              disabled={selectedProducts.length === 0 || deleting}
+              onClick={() =>
+                setProductPendingDelete({
+                  ids: selectedProducts.map((item) => item._id),
+                  name: `${selectedProducts.length} sản phẩm đã chọn`,
+                })
+              }
+            >
+              Xóa đã chọn
+            </button>
+            <button
+              type="button"
+              className="secondary-btn"
+              disabled={selectedProducts.length === 0}
+              onClick={() => setSelectedProductIds([])}
+            >
+              Bỏ chọn
+            </button>
+          </div>
+        </div>
+
         {loading ? (
           <p>Đang tải danh sách sản phẩm...</p>
         ) : (
@@ -224,6 +322,14 @@ function AdminListProductPage() {
               <table className="users-table dashboard-table">
                 <thead>
                   <tr>
+                    <th>
+                      <input
+                        type="checkbox"
+                        aria-label="Chọn tất cả sản phẩm trong trang"
+                        checked={isAllOnPageSelected}
+                        onChange={toggleSelectAllOnPage}
+                      />
+                    </th>
                     <th>Ảnh</th>
                     <th>Sản phẩm</th>
                     <th>Giá & giảm</th>
@@ -234,6 +340,14 @@ function AdminListProductPage() {
                 <tbody>
                   {paginatedProducts.map((product) => (
                     <tr key={product._id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          aria-label={`Chọn sản phẩm ${product.name}`}
+                          checked={selectedProductIds.includes(product._id)}
+                          onChange={() => toggleProductSelect(product._id)}
+                        />
+                      </td>
                       <td>
                         <img src={product.imageUrl} alt={product.name} className="admin-product-thumb" />
                       </td>
@@ -279,7 +393,7 @@ function AdminListProductPage() {
                   ))}
                   {paginatedProducts.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="table-empty-cell">
+                      <td colSpan="6" className="table-empty-cell">
                         Không tìm thấy sản phẩm phù hợp bộ lọc.
                       </td>
                     </tr>
@@ -323,7 +437,7 @@ function AdminListProductPage() {
           <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title">
             <h3 id="delete-title">Xác nhận xóa sản phẩm</h3>
             <p>
-              Bạn có chắc chắn muốn xóa sản phẩm <strong>{productPendingDelete.name}</strong>?
+              Bạn có chắc chắn muốn xóa <strong>{productPendingDelete.name}</strong>?
             </p>
             <div className="confirm-modal-actions">
               <button
