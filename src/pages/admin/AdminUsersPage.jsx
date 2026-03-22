@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   deleteAdminUser,
@@ -9,6 +10,7 @@ import { getErrorMessage } from "../../utils/adminErrorUtils";
 import "../../css/admin/users.css";
 
 function AdminUsersPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { auth } = useAuth();
   const currentUserId = auth?.user?.id;
   const [users, setUsers] = useState([]);
@@ -17,9 +19,9 @@ function AdminUsersPage() {
   const [editingUserId, setEditingUserId] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [userPendingDelete, setUserPendingDelete] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("newest");
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
+  const [roleFilter, setRoleFilter] = useState(searchParams.get("role") || "all");
+  const [sortBy, setSortBy] = useState(searchParams.get("sort") || "newest");
   const [editForm, setEditForm] = useState({ name: "", email: "", role: "user" });
 
   const loadUsers = useCallback(async () => {
@@ -41,6 +43,24 @@ function AdminUsersPage() {
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams();
+
+    if (searchTerm.trim()) {
+      nextParams.set("q", searchTerm.trim());
+    }
+
+    if (roleFilter !== "all") {
+      nextParams.set("role", roleFilter);
+    }
+
+    if (sortBy !== "newest") {
+      nextParams.set("sort", sortBy);
+    }
+
+    setSearchParams(nextParams, { replace: true });
+  }, [searchTerm, roleFilter, sortBy, setSearchParams]);
 
   const startEdit = (user) => {
     setEditingUserId(user._id);

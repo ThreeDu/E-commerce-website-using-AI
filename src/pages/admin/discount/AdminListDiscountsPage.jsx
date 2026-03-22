@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import {
   deleteAdminDiscount,
@@ -20,7 +20,18 @@ const VALUE_FILTERS = {
 
 function AdminListDiscountsPage() {
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { auth } = useAuth();
+  const hasInitializedFilters = useRef(false);
+
+  const initialPage = useMemo(() => {
+    const parsed = Number(searchParams.get("page") || 1);
+    if (Number.isNaN(parsed) || parsed < 1) {
+      return 1;
+    }
+    return Math.floor(parsed);
+  }, [searchParams]);
+
   const [discounts, setDiscounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -28,13 +39,13 @@ function AdminListDiscountsPage() {
   const [discountPendingDelete, setDiscountPendingDelete] = useState(null);
   const [selectedDiscountIds, setSelectedDiscountIds] = useState([]);
   const [message, setMessage] = useState(location.state?.successMessage || "");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [valueFilter, setValueFilter] = useState("all");
-  const [activeFilter, setActiveFilter] = useState("all");
-  const [timeFilter, setTimeFilter] = useState("all");
-  const [remainingFilter, setRemainingFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
+  const [typeFilter, setTypeFilter] = useState(searchParams.get("type") || "all");
+  const [valueFilter, setValueFilter] = useState(searchParams.get("value") || "all");
+  const [activeFilter, setActiveFilter] = useState(searchParams.get("active") || "all");
+  const [timeFilter, setTimeFilter] = useState(searchParams.get("time") || "all");
+  const [remainingFilter, setRemainingFilter] = useState(searchParams.get("remaining") || "all");
+  const [currentPage, setCurrentPage] = useState(initialPage);
 
   const loadDiscounts = useCallback(async () => {
     if (!auth?.token) {
@@ -149,8 +160,56 @@ function AdminListDiscountsPage() {
   }, [discounts, searchTerm, typeFilter, valueFilter, activeFilter, timeFilter, remainingFilter]);
 
   useEffect(() => {
+    if (!hasInitializedFilters.current) {
+      hasInitializedFilters.current = true;
+      return;
+    }
+
     setCurrentPage(1);
   }, [searchTerm, typeFilter, valueFilter, activeFilter, timeFilter, remainingFilter]);
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams();
+
+    if (searchTerm.trim()) {
+      nextParams.set("q", searchTerm.trim());
+    }
+
+    if (typeFilter !== "all") {
+      nextParams.set("type", typeFilter);
+    }
+
+    if (valueFilter !== "all") {
+      nextParams.set("value", valueFilter);
+    }
+
+    if (activeFilter !== "all") {
+      nextParams.set("active", activeFilter);
+    }
+
+    if (timeFilter !== "all") {
+      nextParams.set("time", timeFilter);
+    }
+
+    if (remainingFilter !== "all") {
+      nextParams.set("remaining", remainingFilter);
+    }
+
+    if (currentPage > 1) {
+      nextParams.set("page", String(currentPage));
+    }
+
+    setSearchParams(nextParams, { replace: true });
+  }, [
+    searchTerm,
+    typeFilter,
+    valueFilter,
+    activeFilter,
+    timeFilter,
+    remainingFilter,
+    currentPage,
+    setSearchParams,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(filteredDiscounts.length / ITEMS_PER_PAGE));
 

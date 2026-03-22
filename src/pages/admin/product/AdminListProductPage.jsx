@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { deleteAdminProduct, getAdminProducts } from "../../../services/admin/productService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
@@ -16,18 +16,29 @@ const PRICE_FILTERS = {
 
 function AdminListProductPage() {
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { auth } = useAuth();
+  const hasInitializedFilters = useRef(false);
+
+  const initialPage = useMemo(() => {
+    const parsed = Number(searchParams.get("page") || 1);
+    if (Number.isNaN(parsed) || parsed < 1) {
+      return 1;
+    }
+    return Math.floor(parsed);
+  }, [searchParams]);
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [productPendingDelete, setProductPendingDelete] = useState(null);
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [message, setMessage] = useState(location.state?.successMessage || "");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [priceFilter, setPriceFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
+  const [categoryFilter, setCategoryFilter] = useState(searchParams.get("category") || "all");
+  const [priceFilter, setPriceFilter] = useState(searchParams.get("price") || "all");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all");
+  const [currentPage, setCurrentPage] = useState(initialPage);
 
   const loadProducts = useCallback(async () => {
     if (!auth?.token) {
@@ -101,8 +112,39 @@ function AdminListProductPage() {
   }, [products, searchTerm, categoryFilter, priceFilter, statusFilter, getStockStatus]);
 
   useEffect(() => {
+    if (!hasInitializedFilters.current) {
+      hasInitializedFilters.current = true;
+      return;
+    }
+
     setCurrentPage(1);
   }, [searchTerm, categoryFilter, priceFilter, statusFilter]);
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams();
+
+    if (searchTerm.trim()) {
+      nextParams.set("q", searchTerm.trim());
+    }
+
+    if (categoryFilter !== "all") {
+      nextParams.set("category", categoryFilter);
+    }
+
+    if (priceFilter !== "all") {
+      nextParams.set("price", priceFilter);
+    }
+
+    if (statusFilter !== "all") {
+      nextParams.set("status", statusFilter);
+    }
+
+    if (currentPage > 1) {
+      nextParams.set("page", String(currentPage));
+    }
+
+    setSearchParams(nextParams, { replace: true });
+  }, [searchTerm, categoryFilter, priceFilter, statusFilter, currentPage, setSearchParams]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
 
