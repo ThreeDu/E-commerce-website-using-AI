@@ -110,6 +110,12 @@
   border: 1px solid #c7d3e0;
 }
 
+.field-error {
+  margin: 4px 0 0;
+  color: #b42318;
+  font-size: 13px;
+}
+
 .discount-form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

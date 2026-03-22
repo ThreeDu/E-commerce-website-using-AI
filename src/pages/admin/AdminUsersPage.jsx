@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import {
   deleteAdminUser,
   getAdminUsers,
   updateAdminUser,
 } from "../../services/admin/userService";
+import { getErrorMessage } from "../../utils/adminErrorUtils";
 import "../../css/admin/users.css";
 
 function AdminUsersPage() {
@@ -14,6 +15,11 @@ function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [editingUserId, setEditingUserId] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [userPendingDelete, setUserPendingDelete] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
   const [editForm, setEditForm] = useState({ name: "", email: "", role: "user" });
 
   const loadUsers = useCallback(async () => {
@@ -26,7 +32,7 @@ function AdminUsersPage() {
       const data = await getAdminUsers(auth.token);
       setUsers(data.users || []);
     } catch (error) {
-      setMessage(error.message);
+      setMessage(getErrorMessage(error, "Không thể tải danh sách người dùng."));
     } finally {
       setLoading(false);
     }
@@ -59,35 +65,103 @@ function AdminUsersPage() {
       setMessage("Cập nhật người dùng thành công.");
       cancelEdit();
     } catch (error) {
-      setMessage(error.message);
+      setMessage(getErrorMessage(error, "Không thể cập nhật người dùng."));
     }
   };
 
-  const handleDelete = async (userId) => {
-    if (String(userId) === String(currentUserId)) {
+  const handleDelete = async () => {
+    if (!userPendingDelete?._id) {
+      return;
+    }
+
+    if (String(userPendingDelete._id) === String(currentUserId)) {
       setMessage("Không thể xóa chính tài khoản admin đang sử dụng.");
       return;
     }
 
-    const isConfirmed = window.confirm("Bạn có chắc chắn muốn xóa tài khoản này?");
-    if (!isConfirmed) {
-      return;
-    }
-
     try {
-      await deleteAdminUser(auth.token, userId);
-      setUsers((prev) => prev.filter((user) => user._id !== userId));
+      setDeleting(true);
+      await deleteAdminUser(auth.token, userPendingDelete._id);
+      setUsers((prev) => prev.filter((user) => user._id !== userPendingDelete._id));
       setMessage("Xóa người dùng thành công.");
+      setUserPendingDelete(null);
     } catch (error) {
-      setMessage(error.message);
+      setMessage(getErrorMessage(error, "Không thể xóa người dùng."));
+    } finally {
+      setDeleting(false);
     }
   };
+
+  const filteredUsers = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    const list = users.filter((user) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        (user.name || "").toLowerCase().includes(normalizedSearch) ||
+        (user.email || "").toLowerCase().includes(normalizedSearch);
+      const matchesRole = roleFilter === "all" || user.role === roleFilter;
+
+      return matchesSearch && matchesRole;
+    });
+
+    list.sort((a, b) => {
+      if (sortBy === "name-asc") {
+        return (a.name || "").localeCompare(b.name || "", "vi", { sensitivity: "base" });
+      }
+      if (sortBy === "name-desc") {
+        return (b.name || "").localeCompare(a.name || "", "vi", { sensitivity: "base" });
+      }
+
+      const timeA = new Date(a.createdAt || 0).getTime();
+      const timeB = new Date(b.createdAt || 0).getTime();
+      return sortBy === "oldest" ? timeA - timeB : timeB - timeA;
+    });
+
+    return list;
+  }, [users, searchTerm, roleFilter, sortBy]);
 
   return (
     <main className="container page-content">
       <section className="hero-card">
         <h2>Quản lý người dùng</h2>
         {message && <p className="form-message">{message}</p>}
+
+        <div className="users-filter-bar">
+          <div className="users-filter-control users-search-control">
+            <label htmlFor="users-search">Tìm kiếm</label>
+            <input
+              id="users-search"
+              type="text"
+              placeholder="Tìm theo tên hoặc email..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
+          </div>
+
+          <div className="users-filter-control">
+            <label htmlFor="users-role">Vai trò</label>
+            <select
+              id="users-role"
+              value={roleFilter}
+              onChange={(event) => setRoleFilter(event.target.value)}
+            >
+              <option value="all">Tất cả</option>
+              <option value="admin">admin</option>
+              <option value="user">user</option>
+            </select>
+          </div>
+
+          <div className="users-filter-control">
+            <label htmlFor="users-sort">Sắp xếp</label>
+            <select id="users-sort" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+              <option value="newest">Mới nhất</option>
+              <option value="oldest">Cũ nhất</option>
+              <option value="name-asc">Tên A-Z</option>
+              <option value="name-desc">Tên Z-A</option>
+            </select>
+          </div>
+        </div>
 
         {loading ? (
           <p>Đang tải danh sách người dùng...</p>
@@ -103,7 +177,7 @@ function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
+                {filteredUsers.map((user) => (
                   <tr key={user._id}>
                     <td>
                       {editingUserId === user._id ? (
@@ -167,7 +241,7 @@ function AdminUsersPage() {
                             <button
                               type="button"
                               className="danger-btn"
-                              onClick={() => handleDelete(user._id)}
+                              onClick={() => setUserPendingDelete(user)}
                             >
                               Xóa
                             </button>
@@ -177,11 +251,42 @@ function AdminUsersPage() {
                     </td>
                   </tr>
                 ))}
+                {filteredUsers.length === 0 && (
+                  <tr>
+                    <td colSpan="4" className="users-empty-cell">
+                      Không tìm thấy người dùng phù hợp bộ lọc.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         )}
       </section>
+
+      {userPendingDelete && (
+        <div className="confirm-modal-backdrop" role="presentation">
+          <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-user-title">
+            <h3 id="delete-user-title">Xác nhận xóa người dùng</h3>
+            <p>
+              Bạn có chắc chắn muốn xóa tài khoản <strong>{userPendingDelete.email}</strong>?
+            </p>
+            <div className="confirm-modal-actions">
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => setUserPendingDelete(null)}
+                disabled={deleting}
+              >
+                Hủy
+              </button>
+              <button type="button" className="danger-btn" onClick={handleDelete} disabled={deleting}>
+                {deleting ? "Đang xóa..." : "Xóa"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

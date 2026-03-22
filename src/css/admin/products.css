@@ -329,6 +329,12 @@
   border: 1px solid #c7d3e0;
 }
 
+.field-error {
+  margin: 4px 0 0;
+  color: #b42318;
+  font-size: 13px;
+}
+
 .admin-product-add-form textarea {
   resize: vertical;
 }

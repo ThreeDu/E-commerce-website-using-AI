@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { getAdminDiscountById, updateAdminDiscount } from "../../../services/admin/discountService";
+import { getErrorMessage } from "../../../utils/adminErrorUtils";
 import "../../../css/admin/discounts.css";
 
 const toInputDateParts = (value) => {
@@ -26,13 +27,25 @@ const toInputDateParts = (value) => {
   };
 };
 
-const composeDateTime = (date, time) => {
+const composeUtcDateTime = (date, time) => {
   if (!date) {
     return "";
   }
 
   const mergedTime = time || "00:00";
-  return `${date}T${mergedTime}`;
+  const [year, month, day] = date.split("-").map(Number);
+  const [hours, minutes] = mergedTime.split(":").map(Number);
+
+  if (
+    [year, month, day, hours, minutes].some((part) => Number.isNaN(part)) ||
+    !year ||
+    !month ||
+    !day
+  ) {
+    return "";
+  }
+
+  return new Date(year, month - 1, day, hours, minutes, 0, 0).toISOString();
 };
 
 function AdminEditDiscountPage() {
@@ -43,6 +56,7 @@ function AdminEditDiscountPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [formData, setFormData] = useState({
     code: "",
     type: "percent",
@@ -84,7 +98,7 @@ function AdminEditDiscountPage() {
           isActive: Boolean(discount.isActive),
         });
       } catch (error) {
-        setMessage(error.message);
+        setMessage(getErrorMessage(error, "Không thể tải thông tin mã giảm giá."));
       } finally {
         setLoading(false);
       }
@@ -95,22 +109,88 @@ function AdminEditDiscountPage() {
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
   };
 
+  const validateForm = () => {
+    const errors = {};
+    const code = formData.code.trim().toUpperCase();
+    const value = Number(formData.value);
+    const minOrderValue = Number(formData.minOrderValue || 0);
+    const maxDiscountValue = Number(formData.maxDiscountValue || 0);
+    const usageLimit = Number(formData.usageLimit || 0);
+    const hasStartDate = Boolean(formData.startDate);
+    const hasEndDate = Boolean(formData.endDate);
+
+    if (!code) {
+      errors.code = "Mã giảm giá không được để trống.";
+    }
+
+    if (Number.isNaN(value) || value <= 0) {
+      errors.value = "Giá trị giảm phải lớn hơn 0.";
+    }
+
+    if (formData.type === "percent" && value > 100) {
+      errors.value = "Giảm giá theo phần trăm không được lớn hơn 100.";
+    }
+
+    if (Number.isNaN(minOrderValue) || minOrderValue < 0) {
+      errors.minOrderValue = "Đơn tối thiểu không hợp lệ.";
+    }
+
+    if (Number.isNaN(maxDiscountValue) || maxDiscountValue < 0) {
+      errors.maxDiscountValue = "Giảm tối đa không hợp lệ.";
+    }
+
+    if (Number.isNaN(usageLimit) || usageLimit < 0) {
+      errors.usageLimit = "Số lượng không hợp lệ.";
+    }
+
+    if (hasStartDate !== hasEndDate) {
+      errors.startDate = "Cần nhập đủ ngày bắt đầu và ngày kết thúc.";
+      errors.endDate = "Cần nhập đủ ngày bắt đầu và ngày kết thúc.";
+    }
+
+    if (!hasStartDate && formData.startTime) {
+      errors.startDate = "Vui lòng chọn ngày bắt đầu trước khi nhập giờ.";
+    }
+
+    if (!hasEndDate && formData.endTime) {
+      errors.endDate = "Vui lòng chọn ngày kết thúc trước khi nhập giờ.";
+    }
+
+    const startDateTime = composeUtcDateTime(formData.startDate, formData.startTime);
+    const endDateTime = composeUtcDateTime(formData.endDate, formData.endTime);
+    if (startDateTime && endDateTime && new Date(startDateTime) > new Date(endDateTime)) {
+      errors.endDate = "Ngày kết thúc phải sau ngày bắt đầu.";
+    }
+
+    return { errors, code, startDateTime, endDateTime };
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setMessage("");
+    setFieldErrors({});
+
+    const { errors, code, startDateTime, endDateTime } = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setMessage("Vui lòng kiểm tra lại các trường dữ liệu.");
+      return;
+    }
 
     try {
       setSaving(true);
-      const startDateTime = composeDateTime(formData.startDate, formData.startTime);
-      const endDateTime = composeDateTime(formData.endDate, formData.endTime);
       await updateAdminDiscount(auth.token, id, {
-        code: formData.code,
+        code,
         type: formData.type,
         value: Number(formData.value),
         minOrderValue: Number(formData.minOrderValue || 0),
@@ -125,7 +205,7 @@ function AdminEditDiscountPage() {
         state: { successMessage: "Cập nhật mã giảm giá thành công." },
       });
     } catch (error) {
-      setMessage(error.message);
+      setMessage(getErrorMessage(error, "Không thể cập nhật mã giảm giá."));
     } finally {
       setSaving(false);
     }
@@ -150,6 +230,7 @@ function AdminEditDiscountPage() {
         <form className="discount-form" onSubmit={handleSubmit}>
           <label htmlFor="code">Mã giảm giá</label>
           <input id="code" name="code" value={formData.code} onChange={handleChange} required />
+          {fieldErrors.code && <p className="field-error">{fieldErrors.code}</p>}
 
           <div className="discount-form-grid">
             <div>
@@ -171,6 +252,7 @@ function AdminEditDiscountPage() {
                 onChange={handleChange}
                 required
               />
+              {fieldErrors.value && <p className="field-error">{fieldErrors.value}</p>}
             </div>
 
             <div>
@@ -183,6 +265,7 @@ function AdminEditDiscountPage() {
                 value={formData.minOrderValue}
                 onChange={handleChange}
               />
+              {fieldErrors.minOrderValue && <p className="field-error">{fieldErrors.minOrderValue}</p>}
             </div>
 
             <div>
@@ -195,6 +278,7 @@ function AdminEditDiscountPage() {
                 value={formData.maxDiscountValue}
                 onChange={handleChange}
               />
+              {fieldErrors.maxDiscountValue && <p className="field-error">{fieldErrors.maxDiscountValue}</p>}
             </div>
 
             <div>
@@ -206,6 +290,7 @@ function AdminEditDiscountPage() {
                 value={formData.startDate}
                 onChange={handleChange}
               />
+              {fieldErrors.startDate && <p className="field-error">{fieldErrors.startDate}</p>}
             </div>
 
             <div>
@@ -228,6 +313,7 @@ function AdminEditDiscountPage() {
                 value={formData.endDate}
                 onChange={handleChange}
               />
+              {fieldErrors.endDate && <p className="field-error">{fieldErrors.endDate}</p>}
             </div>
 
             <div>
@@ -251,6 +337,7 @@ function AdminEditDiscountPage() {
                 value={formData.usageLimit}
                 onChange={handleChange}
               />
+              {fieldErrors.usageLimit && <p className="field-error">{fieldErrors.usageLimit}</p>}
             </div>
           </div>
 
