@@ -129,18 +129,19 @@
 .users-table-wrap {
   width: 100%;
   max-width: 100%;
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .users-table {
   width: 100%;
-  min-width: 0;
+  min-width: 1022px;
   border-collapse: collapse;
   background: #fff;
 }
 
 .dashboard-table {
   table-layout: fixed;
+  width: 100%;
 }
 
 .dashboard-table th:nth-child(1),
@@ -153,19 +154,24 @@
   width: 180px;
 }
 
+.dashboard-table th:nth-child(3),
+.dashboard-table td:nth-child(3) {
+  width: 250px;
+}
+
 .dashboard-table th:nth-child(4),
 .dashboard-table td:nth-child(4) {
-  width: 230px;
+  width: 220px;
 }
 
 .dashboard-table th:nth-child(5),
 .dashboard-table td:nth-child(5) {
-  width: 130px;
+  width: 140px;
 }
 
 .dashboard-table th:nth-child(6),
 .dashboard-table td:nth-child(6) {
-  width: 200px;
+  width: 190px;
 }
 
 .dashboard-table th:first-child,
@@ -179,8 +185,9 @@
   padding: 14px 14px;
   border-bottom: 1px solid #edf2f8;
   vertical-align: middle;
-  white-space: normal;
+  white-space: nowrap;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .dashboard-table thead th {
@@ -189,6 +196,11 @@
   letter-spacing: 0.04em;
   color: #6f7f94;
   background: #f8fbff;
+  vertical-align: middle;
+}
+
+.dashboard-table tbody td > * {
+  max-width: 100%;
 }
 
 .dashboard-table tbody tr {
@@ -220,6 +232,7 @@
 .price-stack {
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
 .pill {
@@ -269,8 +282,9 @@
 .table-actions {
   display: flex;
   gap: 8px;
-  justify-content: flex-end;
-  flex-wrap: wrap;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .table-actions button,
@@ -286,6 +300,7 @@
   font-weight: 600;
   text-decoration: none;
   color: #0f2233;
+  white-space: nowrap;
 }
 
 .table-link-btn {
