@@ -102,38 +102,54 @@
 .users-table-wrap {
   width: 100%;
   max-width: 100%;
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .users-table {
   width: 100%;
-  min-width: 0;
+  min-width: 1008px;
   border-collapse: collapse;
   background: #fff;
 }
 
 .dashboard-table {
   table-layout: fixed;
+  width: 100%;
 }
 
 .dashboard-table th:nth-child(1),
 .dashboard-table td:nth-child(1) {
-  width: 90px;
+  width: 42px;
+}
+
+.dashboard-table th:nth-child(2),
+.dashboard-table td:nth-child(2) {
+  width: 96px;
 }
 
 .dashboard-table th:nth-child(3),
 .dashboard-table td:nth-child(3) {
-  width: 220px;
+  width: 280px;
 }
 
 .dashboard-table th:nth-child(4),
 .dashboard-table td:nth-child(4) {
-  width: 170px;
+  width: 220px;
 }
 
 .dashboard-table th:nth-child(5),
 .dashboard-table td:nth-child(5) {
+  width: 170px;
+}
+
+.dashboard-table th:nth-child(6),
+.dashboard-table td:nth-child(6) {
   width: 200px;
+}
+
+.dashboard-table th:first-child,
+.dashboard-table td:first-child {
+  text-align: center;
 }
 
 .users-table th,
@@ -142,8 +158,9 @@
   padding: 14px 14px;
   border-bottom: 1px solid #edf2f8;
   vertical-align: middle;
-  white-space: normal;
+  white-space: nowrap;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .dashboard-table thead th {
@@ -152,6 +169,11 @@
   letter-spacing: 0.04em;
   color: #6f7f94;
   background: #f8fbff;
+  vertical-align: middle;
+}
+
+.dashboard-table tbody td > * {
+  max-width: 100%;
 }
 
 .dashboard-table tbody tr {
@@ -183,6 +205,7 @@
 .price-stack {
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
 .pill {
@@ -227,8 +250,9 @@
 .table-actions {
   display: flex;
   gap: 8px;
-  justify-content: flex-end;
-  flex-wrap: wrap;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .table-actions button,
@@ -244,6 +268,7 @@
   font-weight: 600;
   text-decoration: none;
   color: #0f2233;
+  white-space: nowrap;
 }
 
 .table-link-btn {
@@ -262,6 +287,67 @@
   text-align: center !important;
   color: #657589;
   padding: 24px !important;
+}
+
+.bulk-action-bar {
+  margin: 8px 0 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #dbe6f3;
+  background: #f8fbff;
+}
+
+.bulk-action-bar p {
+  margin: 0;
+  color: #4f6078;
+}
+
+.bulk-action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.bulk-action-buttons .secondary-btn,
+.bulk-action-buttons .danger-btn {
+  border: 1px solid #d0d9e4;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.bulk-action-buttons .secondary-btn {
+  background: #e8edf3;
+  color: #0f2233;
+}
+
+.bulk-action-buttons .danger-btn {
+  border-color: #df6b6b;
+  color: #b42318;
+  background: #fff7f7;
+}
+
+.bulk-action-buttons button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.dashboard-surface button:focus-visible,
+.dashboard-surface a:focus-visible,
+.dashboard-surface input:focus-visible,
+.dashboard-surface select:focus-visible,
+.dashboard-surface textarea:focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+.dashboard-surface button:disabled,
+.dashboard-surface input:disabled,
+.dashboard-surface select:disabled {
+  opacity: 0.7;
 }
 
 .dashboard-pagination {
@@ -327,6 +413,12 @@
   padding: 10px;
   border-radius: 8px;
   border: 1px solid #c7d3e0;
+}
+
+.field-error {
+  margin: 4px 0 0;
+  color: #b42318;
+  font-size: 13px;
 }
 
 .admin-product-add-form textarea {
@@ -450,6 +542,11 @@
   .dashboard-header-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .bulk-action-bar {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .dashboard-filter-bar {

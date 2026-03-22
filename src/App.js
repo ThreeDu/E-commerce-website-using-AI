@@ -18,6 +18,7 @@ import AdminListDiscountsPage from "./pages/admin/discount/AdminListDiscountsPag
 import AdminAddDiscountPage from "./pages/admin/discount/AdminAddDiscountPage";
 import AdminEditDiscountPage from "./pages/admin/discount/AdminEditDiscountPage";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
+import AdminSystemLogsPage from "./pages/admin/AdminSystemLogsPage";
 
 function GuestRoute({ children }) {
   const { auth } = useAuth();
@@ -143,6 +144,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminOrdersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/system-logs"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminSystemLogsPage />
                 </ProtectedRoute>
               }
             />

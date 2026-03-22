@@ -1,7 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
-import { deleteAdminDiscount, getAdminDiscounts } from "../../../services/admin/discountService";
+import {
+  deleteAdminDiscount,
+  getAdminDiscounts,
+  updateAdminDiscount,
+} from "../../../services/admin/discountService";
+import { getErrorMessage } from "../../../utils/adminErrorUtils";
 import "../../../css/admin/discounts.css";
 
 const ITEMS_PER_PAGE = 8;
@@ -15,17 +20,32 @@ const VALUE_FILTERS = {
 
 function AdminListDiscountsPage() {
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { auth } = useAuth();
+  const hasInitializedFilters = useRef(false);
+
+  const initialPage = useMemo(() => {
+    const parsed = Number(searchParams.get("page") || 1);
+    if (Number.isNaN(parsed) || parsed < 1) {
+      return 1;
+    }
+    return Math.floor(parsed);
+  }, [searchParams]);
+
   const [discounts, setDiscounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
   const [discountPendingDelete, setDiscountPendingDelete] = useState(null);
+  const [selectedDiscountIds, setSelectedDiscountIds] = useState([]);
   const [message, setMessage] = useState(location.state?.successMessage || "");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [valueFilter, setValueFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
+  const [typeFilter, setTypeFilter] = useState(searchParams.get("type") || "all");
+  const [valueFilter, setValueFilter] = useState(searchParams.get("value") || "all");
+  const [activeFilter, setActiveFilter] = useState(searchParams.get("active") || "all");
+  const [timeFilter, setTimeFilter] = useState(searchParams.get("time") || "all");
+  const [remainingFilter, setRemainingFilter] = useState(searchParams.get("remaining") || "all");
+  const [currentPage, setCurrentPage] = useState(initialPage);
 
   const loadDiscounts = useCallback(async () => {
     if (!auth?.token) {
@@ -37,7 +57,7 @@ function AdminListDiscountsPage() {
       const data = await getAdminDiscounts(auth.token);
       setDiscounts(data.discounts || []);
     } catch (error) {
-      setMessage(error.message);
+      setMessage(getErrorMessage(error, "Không thể tải danh sách mã giảm giá."));
     } finally {
       setLoading(false);
     }
@@ -84,14 +104,41 @@ function AdminListDiscountsPage() {
     return discount.isActive ? "Hoạt động" : "Ngưng";
   };
 
+  const getRemainingQuantity = (discount) =>
+    Math.max(0, Number(discount.usageLimit || 0) - Number(discount.usedCount || 0));
+
+  const getTimeState = (discount) => {
+    const now = new Date();
+    const hasStart = Boolean(discount.startDate);
+    const hasEnd = Boolean(discount.endDate);
+
+    if (!hasStart || !hasEnd) {
+      return "no-window";
+    }
+
+    const start = new Date(discount.startDate);
+    const end = new Date(discount.endDate);
+
+    if (start > now) {
+      return "upcoming";
+    }
+
+    if (end < now) {
+      return "expired";
+    }
+
+    return "running";
+  };
+
   const filteredDiscounts = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
     const valueMatcher = VALUE_FILTERS[valueFilter] || VALUE_FILTERS.all;
 
     return discounts.filter((discount) => {
       const discountValue = Number(discount.value || 0);
-      const status = getDiscountStatus(discount);
       const typeLabel = discount.type === "percent" ? "percent" : "fixed";
+      const timeState = getTimeState(discount);
+      const remaining = getRemainingQuantity(discount);
 
       const matchesSearch =
         !normalizedSearch ||
@@ -100,15 +147,69 @@ function AdminListDiscountsPage() {
 
       const matchesType = typeFilter === "all" || typeLabel === typeFilter;
       const matchesValue = valueMatcher(discountValue);
-      const matchesStatus = statusFilter === "all" || status === statusFilter;
+      const matchesActive =
+        activeFilter === "all" ||
+        (activeFilter === "active" ? Boolean(discount.isActive) : !Boolean(discount.isActive));
+      const matchesTime = timeFilter === "all" || timeState === timeFilter;
+      const matchesRemaining =
+        remainingFilter === "all" ||
+        (remainingFilter === "has-remaining" ? remaining > 0 : remaining === 0);
 
-      return matchesSearch && matchesType && matchesValue && matchesStatus;
+      return matchesSearch && matchesType && matchesValue && matchesActive && matchesTime && matchesRemaining;
     });
-  }, [discounts, searchTerm, typeFilter, valueFilter, statusFilter]);
+  }, [discounts, searchTerm, typeFilter, valueFilter, activeFilter, timeFilter, remainingFilter]);
 
   useEffect(() => {
+    if (!hasInitializedFilters.current) {
+      hasInitializedFilters.current = true;
+      return;
+    }
+
     setCurrentPage(1);
-  }, [searchTerm, typeFilter, valueFilter, statusFilter]);
+  }, [searchTerm, typeFilter, valueFilter, activeFilter, timeFilter, remainingFilter]);
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams();
+
+    if (searchTerm.trim()) {
+      nextParams.set("q", searchTerm.trim());
+    }
+
+    if (typeFilter !== "all") {
+      nextParams.set("type", typeFilter);
+    }
+
+    if (valueFilter !== "all") {
+      nextParams.set("value", valueFilter);
+    }
+
+    if (activeFilter !== "all") {
+      nextParams.set("active", activeFilter);
+    }
+
+    if (timeFilter !== "all") {
+      nextParams.set("time", timeFilter);
+    }
+
+    if (remainingFilter !== "all") {
+      nextParams.set("remaining", remainingFilter);
+    }
+
+    if (currentPage > 1) {
+      nextParams.set("page", String(currentPage));
+    }
+
+    setSearchParams(nextParams, { replace: true });
+  }, [
+    searchTerm,
+    typeFilter,
+    valueFilter,
+    activeFilter,
+    timeFilter,
+    remainingFilter,
+    currentPage,
+    setSearchParams,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(filteredDiscounts.length / ITEMS_PER_PAGE));
 
@@ -123,27 +224,148 @@ function AdminListDiscountsPage() {
     return filteredDiscounts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredDiscounts, currentPage]);
 
+  useEffect(() => {
+    const validIds = new Set(filteredDiscounts.map((item) => item._id));
+    setSelectedDiscountIds((prev) => prev.filter((id) => validIds.has(id)));
+  }, [filteredDiscounts]);
+
+  const selectedDiscounts = useMemo(
+    () => filteredDiscounts.filter((discount) => selectedDiscountIds.includes(discount._id)),
+    [filteredDiscounts, selectedDiscountIds]
+  );
+
+  const selectedIdsOnPage = useMemo(
+    () => paginatedDiscounts.map((discount) => discount._id).filter((id) => selectedDiscountIds.includes(id)),
+    [paginatedDiscounts, selectedDiscountIds]
+  );
+
+  const isAllOnPageSelected = paginatedDiscounts.length > 0 && selectedIdsOnPage.length === paginatedDiscounts.length;
+
+  const toggleDiscountSelect = (discountId) => {
+    setSelectedDiscountIds((prev) =>
+      prev.includes(discountId) ? prev.filter((id) => id !== discountId) : [...prev, discountId]
+    );
+  };
+
+  const toggleSelectAllOnPage = () => {
+    const pageIds = paginatedDiscounts.map((discount) => discount._id);
+    if (pageIds.length === 0) {
+      return;
+    }
+
+    setSelectedDiscountIds((prev) => {
+      if (isAllOnPageSelected) {
+        return prev.filter((id) => !pageIds.includes(id));
+      }
+
+      const merged = new Set([...prev, ...pageIds]);
+      return Array.from(merged);
+    });
+  };
+
+  const toDiscountPayload = (discount, nextIsActive) => ({
+    code: discount.code,
+    type: discount.type,
+    value: Number(discount.value),
+    minOrderValue: Number(discount.minOrderValue || 0),
+    maxDiscountValue: Number(discount.maxDiscountValue || 0),
+    startDate: discount.startDate || null,
+    endDate: discount.endDate || null,
+    usageLimit: Number(discount.usageLimit || 0),
+    isActive: nextIsActive,
+  });
+
   const handleDelete = async () => {
-    if (!discountPendingDelete?._id) {
+    const bulkIds = discountPendingDelete?.ids || [];
+    const isBulkDelete = bulkIds.length > 0;
+
+    if (!isBulkDelete && !discountPendingDelete?._id) {
       return;
     }
 
     try {
       setDeleting(true);
-      await deleteAdminDiscount(auth.token, discountPendingDelete._id);
-      setDiscounts((prev) => prev.filter((item) => item._id !== discountPendingDelete._id));
-      setMessage("Xóa mã giảm giá thành công.");
+
+      if (isBulkDelete) {
+        const results = await Promise.allSettled(
+          bulkIds.map((discountId) => deleteAdminDiscount(auth.token, discountId))
+        );
+
+        const succeededIds = results
+          .map((result, index) => (result.status === "fulfilled" ? bulkIds[index] : null))
+          .filter(Boolean);
+        const failedCount = bulkIds.length - succeededIds.length;
+
+        if (succeededIds.length > 0) {
+          setDiscounts((prev) => prev.filter((item) => !succeededIds.includes(item._id)));
+          setSelectedDiscountIds((prev) => prev.filter((id) => !succeededIds.includes(id)));
+        }
+
+        if (failedCount > 0) {
+          setMessage(`Đã xóa ${succeededIds.length} mã, ${failedCount} mã thất bại.`);
+        } else {
+          setMessage(`Đã xóa ${succeededIds.length} mã giảm giá thành công.`);
+        }
+      } else {
+        await deleteAdminDiscount(auth.token, discountPendingDelete._id);
+        setDiscounts((prev) => prev.filter((item) => item._id !== discountPendingDelete._id));
+        setSelectedDiscountIds((prev) => prev.filter((id) => id !== discountPendingDelete._id));
+        setMessage("Xóa mã giảm giá thành công.");
+      }
+
       setDiscountPendingDelete(null);
     } catch (error) {
-      setMessage(error.message);
+      setMessage(getErrorMessage(error, "Không thể xóa mã giảm giá."));
     } finally {
       setDeleting(false);
     }
   };
 
+  const handleBulkActiveChange = async (nextIsActive) => {
+    if (selectedDiscounts.length === 0) {
+      return;
+    }
+
+    try {
+      setBulkProcessing(true);
+      const results = await Promise.allSettled(
+        selectedDiscounts.map((discount) =>
+          updateAdminDiscount(auth.token, discount._id, toDiscountPayload(discount, nextIsActive))
+        )
+      );
+
+      const succeededIds = results
+        .map((result, index) => (result.status === "fulfilled" ? selectedDiscounts[index]._id : null))
+        .filter(Boolean);
+      const failedCount = selectedDiscounts.length - succeededIds.length;
+
+      if (succeededIds.length > 0) {
+        setDiscounts((prev) =>
+          prev.map((discount) =>
+            succeededIds.includes(discount._id) ? { ...discount, isActive: nextIsActive } : discount
+          )
+        );
+      }
+
+      if (failedCount > 0) {
+        setMessage(`Đã cập nhật ${succeededIds.length} mã, ${failedCount} mã thất bại.`);
+      } else {
+        setMessage(
+          nextIsActive
+            ? `Đã kích hoạt ${succeededIds.length} mã giảm giá.`
+            : `Đã ngưng ${succeededIds.length} mã giảm giá.`
+        );
+      }
+    } catch (error) {
+      setMessage(getErrorMessage(error, "Không thể cập nhật trạng thái mã giảm giá."));
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
   return (
     <main className="container page-content">
-      <section className="hero-card dashboard-surface">
+      <section className="hero-card dashboard-surface" aria-busy={loading || deleting || bulkProcessing}>
         <div className="dashboard-header-row">
           <div>
             <h2>Quản lý mã giảm giá</h2>
@@ -154,7 +376,11 @@ function AdminListDiscountsPage() {
           </Link>
         </div>
 
-        {message && <p className="form-message">{message}</p>}
+        {message && (
+          <p className="form-message" role="status" aria-live="polite">
+            {message}
+          </p>
+        )}
 
         <div className="dashboard-metric-grid">
           <article className="metric-card">
@@ -207,19 +433,81 @@ function AdminListDiscountsPage() {
           </div>
 
           <div className="filter-control">
-            <label htmlFor="discount-status">Trạng thái</label>
-            <select
-              id="discount-status"
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="Hoạt động">Hoạt động</option>
-              <option value="Ngưng">Ngưng</option>
-              <option value="Sắp mở">Sắp mở</option>
-              <option value="Hết mã">Hết mã</option>
-              <option value="Hết hạn">Hết hạn</option>
+            <label htmlFor="discount-active">Hoạt động</label>
+            <select id="discount-active" value={activeFilter} onChange={(event) => setActiveFilter(event.target.value)}>
+              <option value="all">Tất cả</option>
+              <option value="active">Đang bật</option>
+              <option value="inactive">Đang tắt</option>
             </select>
+          </div>
+
+          <div className="filter-control">
+            <label htmlFor="discount-time">Thời gian hiệu lực</label>
+            <select id="discount-time" value={timeFilter} onChange={(event) => setTimeFilter(event.target.value)}>
+              <option value="all">Tất cả</option>
+              <option value="running">Đang hiệu lực</option>
+              <option value="upcoming">Sắp mở</option>
+              <option value="expired">Hết hạn</option>
+              <option value="no-window">Không giới hạn thời gian</option>
+            </select>
+          </div>
+
+          <div className="filter-control">
+            <label htmlFor="discount-remaining">Số lượt còn lại</label>
+            <select
+              id="discount-remaining"
+              value={remainingFilter}
+              onChange={(event) => setRemainingFilter(event.target.value)}
+            >
+              <option value="all">Tất cả</option>
+              <option value="has-remaining">Còn lượt dùng</option>
+              <option value="out-of-code">Đã hết lượt</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="bulk-action-bar">
+          <p>
+            Đã chọn <strong>{selectedDiscounts.length}</strong> mã giảm giá
+          </p>
+          <div className="bulk-action-buttons">
+            <button
+              type="button"
+              className="secondary-btn"
+              disabled={selectedDiscounts.length === 0 || bulkProcessing}
+              onClick={() => handleBulkActiveChange(true)}
+            >
+              Bật đã chọn
+            </button>
+            <button
+              type="button"
+              className="secondary-btn"
+              disabled={selectedDiscounts.length === 0 || bulkProcessing}
+              onClick={() => handleBulkActiveChange(false)}
+            >
+              Tắt đã chọn
+            </button>
+            <button
+              type="button"
+              className="danger-btn"
+              disabled={selectedDiscounts.length === 0 || deleting || bulkProcessing}
+              onClick={() =>
+                setDiscountPendingDelete({
+                  ids: selectedDiscounts.map((item) => item._id),
+                  code: `${selectedDiscounts.length} mã đã chọn`,
+                })
+              }
+            >
+              Xóa đã chọn
+            </button>
+            <button
+              type="button"
+              className="secondary-btn"
+              disabled={selectedDiscounts.length === 0}
+              onClick={() => setSelectedDiscountIds([])}
+            >
+              Bỏ chọn
+            </button>
           </div>
         </div>
 
@@ -231,6 +519,14 @@ function AdminListDiscountsPage() {
               <table className="users-table dashboard-table">
                 <thead>
                   <tr>
+                    <th>
+                      <input
+                        type="checkbox"
+                        aria-label="Chọn tất cả mã giảm giá trong trang"
+                        checked={isAllOnPageSelected}
+                        onChange={toggleSelectAllOnPage}
+                      />
+                    </th>
                     <th>Mã giảm giá</th>
                     <th>Giá trị & điều kiện</th>
                     <th>Hiệu lực</th>
@@ -244,6 +540,14 @@ function AdminListDiscountsPage() {
 
                     return (
                       <tr key={discount._id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            aria-label={`Chọn mã giảm giá ${discount.code}`}
+                            checked={selectedDiscountIds.includes(discount._id)}
+                            onChange={() => toggleDiscountSelect(discount._id)}
+                          />
+                        </td>
                         <td>
                           <div className="cell-title truncate-text" title={discount.code}>
                             {discount.code}
@@ -261,10 +565,7 @@ function AdminListDiscountsPage() {
                               Đơn tối thiểu: {Number(discount.minOrderValue || 0).toLocaleString("vi-VN")} đ
                             </span>
                             <span className="cell-subtext">
-                              Số lượng còn lại: {Math.max(
-                                0,
-                                Number(discount.usageLimit || 0) - Number(discount.usedCount || 0)
-                              ).toLocaleString("vi-VN")}
+                              Số lượng còn lại: {getRemainingQuantity(discount).toLocaleString("vi-VN")}
                             </span>
                           </div>
                         </td>
@@ -309,7 +610,7 @@ function AdminListDiscountsPage() {
                   })}
                   {paginatedDiscounts.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="table-empty-cell">
+                      <td colSpan="6" className="table-empty-cell">
                         Không tìm thấy mã giảm giá phù hợp bộ lọc.
                       </td>
                     </tr>
@@ -353,7 +654,7 @@ function AdminListDiscountsPage() {
           <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title">
             <h3 id="delete-title">Xác nhận xóa mã giảm giá</h3>
             <p>
-              Bạn có chắc chắn muốn xóa mã <strong>{discountPendingDelete.code}</strong>?
+              Bạn có chắc chắn muốn xóa <strong>{discountPendingDelete.code}</strong>?
             </p>
             <div className="confirm-modal-actions">
               <button

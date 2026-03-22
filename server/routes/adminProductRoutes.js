@@ -1,6 +1,7 @@
 const express = require("express");
 const Product = require("../models/Product");
 const { verifyAdminRequest } = require("./helpers/authHelpers");
+const { logAdminAction } = require("../utils/adminAuditLogger");
 
 const router = express.Router();
 
@@ -88,6 +89,18 @@ router.post("/", async (req, res) => {
       description: description || "",
     });
 
+    logAdminAction({
+      req,
+      adminUser,
+      action: "create",
+      resource: "product",
+      resourceId: newProduct._id,
+      details: {
+        name: newProduct.name,
+        category: newProduct.category,
+      },
+    });
+
     return res.status(201).json({
       message: "Thêm sản phẩm thành công.",
       product: newProduct,
@@ -149,6 +162,18 @@ router.put("/:id", async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm." });
     }
 
+    logAdminAction({
+      req,
+      adminUser,
+      action: "update",
+      resource: "product",
+      resourceId: updatedProduct._id,
+      details: {
+        name: updatedProduct.name,
+        category: updatedProduct.category,
+      },
+    });
+
     return res.json({
       message: "Cập nhật sản phẩm thành công.",
       product: updatedProduct,
@@ -171,6 +196,18 @@ router.delete("/:id", async (req, res) => {
     if (!deletedProduct) {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm." });
     }
+
+    logAdminAction({
+      req,
+      adminUser,
+      action: "delete",
+      resource: "product",
+      resourceId: deletedProduct._id,
+      details: {
+        name: deletedProduct.name,
+        category: deletedProduct.category,
+      },
+    });
 
     return res.json({
       message: "Xóa sản phẩm thành công.",

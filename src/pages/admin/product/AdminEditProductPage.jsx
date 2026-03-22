@@ -3,7 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { getAdminProductById, updateAdminProduct } from "../../../services/admin/productService";
 import { getAdminCategories } from "../../../services/admin/categoryService";
+import { getErrorMessage } from "../../../utils/adminErrorUtils";
 import "../../../css/admin/products.css";
+
+const MAX_IMAGE_SIZE_MB = 5;
+
+const isUploadedImageValue = (value) => String(value || "").trim().startsWith("data:image/");
 
 function AdminEditProductPage() {
   const navigate = useNavigate();
@@ -17,6 +22,7 @@ function AdminEditProductPage() {
   const [categories, setCategories] = useState([]);
   const [imageInputMode, setImageInputMode] = useState("url");
   const [uploadedFileName, setUploadedFileName] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [formData, setFormData] = useState({
     name: "",
     category: "",
@@ -88,7 +94,7 @@ function AdminEditProductPage() {
         const data = await getAdminCategories(auth.token);
         setCategories(data.categories || []);
       } catch (error) {
-        setMessage(error.message);
+        setMessage(getErrorMessage(error, "Không thể tải danh mục."));
       } finally {
         setLoadingCategories(false);
       }
@@ -117,8 +123,16 @@ function AdminEditProductPage() {
           discountPercent: String(product.discountPercent ?? 0),
           description: product.description || "",
         });
+
+        if (isUploadedImageValue(product.imageUrl)) {
+          setImageInputMode("upload");
+          setUploadedFileName("Ảnh hiện tại");
+        } else {
+          setImageInputMode("url");
+          setUploadedFileName("");
+        }
       } catch (error) {
-        setMessage(error.message);
+        setMessage(getErrorMessage(error, "Không thể tải thông tin sản phẩm."));
       } finally {
         setLoading(false);
       }
@@ -129,16 +143,21 @@ function AdminEditProductPage() {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
+
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleImageModeChange = (event) => {
     const mode = event.target.value;
     setImageInputMode(mode);
-    setUploadedFileName("");
-    if (mode === "upload") {
-      setFormData((prev) => ({ ...prev, imageUrl: "" }));
+    if (mode !== "upload") {
+      setUploadedFileName("");
     }
+    setFieldErrors((prev) => ({ ...prev, imageUrl: "" }));
   };
 
   const handleImageUpload = (event) => {
@@ -146,6 +165,21 @@ function AdminEditProductPage() {
     if (!file) {
       return;
     }
+
+    if (!file.type.startsWith("image/")) {
+      setFieldErrors((prev) => ({ ...prev, imageUrl: "Chỉ chấp nhận tệp hình ảnh." }));
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        imageUrl: `Ảnh không được lớn hơn ${MAX_IMAGE_SIZE_MB}MB.`,
+      }));
+      return;
+    }
+
+    setFieldErrors((prev) => ({ ...prev, imageUrl: "" }));
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -155,27 +189,86 @@ function AdminEditProductPage() {
     reader.readAsDataURL(file);
   };
 
+  const validateForm = () => {
+    const errors = {};
+    const trimmedName = formData.name.trim();
+    const trimmedCategory = formData.category.trim();
+    const trimmedImageUrl = formData.imageUrl.trim();
+    const price = Number(formData.price);
+    const stock = Number(formData.stock);
+    const discountPercent = Number(formData.discountPercent || 0);
+
+    if (!trimmedName) {
+      errors.name = "Tên sản phẩm không được để trống.";
+    }
+
+    if (!trimmedCategory) {
+      errors.category = "Vui lòng chọn danh mục.";
+    }
+
+    if (!trimmedImageUrl) {
+      errors.imageUrl = "Vui lòng nhập hoặc tải ảnh sản phẩm.";
+    }
+
+    if (imageInputMode === "url" && trimmedImageUrl) {
+      try {
+        const parsedUrl = new URL(trimmedImageUrl);
+        if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+          errors.imageUrl = "URL ảnh phải bắt đầu bằng http:// hoặc https://.";
+        }
+      } catch (error) {
+        errors.imageUrl = "URL ảnh không hợp lệ.";
+      }
+    }
+
+    if (Number.isNaN(price) || price <= 0) {
+      errors.price = "Giá sản phẩm phải lớn hơn 0.";
+    }
+
+    if (Number.isNaN(stock) || stock < 0) {
+      errors.stock = "Số lượng tồn kho không hợp lệ.";
+    }
+
+    if (Number.isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100) {
+      errors.discountPercent = "Phần trăm giảm giá phải trong khoảng 0 - 100.";
+    }
+
+    return {
+      errors,
+      payload: {
+        name: trimmedName,
+        category: trimmedCategory,
+        imageUrl: trimmedImageUrl,
+        price,
+        stock: Number(formData.stock || 0),
+        discountPercent,
+        description: formData.description,
+      },
+    };
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setMessage("");
+    setFieldErrors({});
+
+    const { errors, payload } = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setMessage("Vui lòng kiểm tra lại các trường dữ liệu.");
+      return;
+    }
+
     setSaving(true);
 
     try {
-      await updateAdminProduct(auth.token, id, {
-        name: formData.name,
-        category: formData.category,
-        imageUrl: formData.imageUrl,
-        price: Number(formData.price),
-        stock: Number(formData.stock || 0),
-        discountPercent: Number(formData.discountPercent || 0),
-        description: formData.description,
-      });
+      await updateAdminProduct(auth.token, id, payload);
 
       navigate("/admin/products", {
         state: { successMessage: "Cập nhật sản phẩm thành công." },
       });
     } catch (error) {
-      setMessage(error.message);
+      setMessage(getErrorMessage(error, "Không thể cập nhật sản phẩm."));
     } finally {
       setSaving(false);
     }
@@ -200,6 +293,7 @@ function AdminEditProductPage() {
         <form className="admin-product-add-form" onSubmit={handleSubmit}>
           <label htmlFor="name">Tên sản phẩm</label>
           <input id="name" name="name" value={formData.name} onChange={handleChange} required />
+          {fieldErrors.name && <p className="field-error">{fieldErrors.name}</p>}
 
           <label htmlFor="category">Danh mục</label>
           <select
@@ -217,6 +311,7 @@ function AdminEditProductPage() {
               </option>
             ))}
           </select>
+          {fieldErrors.category && <p className="field-error">{fieldErrors.category}</p>}
 
           <label>Ảnh sản phẩm</label>
           <div className="image-mode-row">
@@ -253,10 +348,17 @@ function AdminEditProductPage() {
             />
           ) : (
             <>
-              <input type="file" accept="image/*" onChange={handleImageUpload} required />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                required={!formData.imageUrl}
+              />
               {uploadedFileName && <small>Đã chọn: {uploadedFileName}</small>}
+              {!uploadedFileName && formData.imageUrl && <small>Đang dùng ảnh hiện tại.</small>}
             </>
           )}
+          {fieldErrors.imageUrl && <p className="field-error">{fieldErrors.imageUrl}</p>}
 
           {imagePreviewSrc ? (
             <div className="admin-image-preview-wrap">
@@ -283,6 +385,7 @@ function AdminEditProductPage() {
             onChange={handleChange}
             required
           />
+          {fieldErrors.price && <p className="field-error">{fieldErrors.price}</p>}
 
           <label htmlFor="stock">Số lượng tồn kho</label>
           <input
@@ -294,6 +397,7 @@ function AdminEditProductPage() {
             onChange={handleChange}
             required
           />
+          {fieldErrors.stock && <p className="field-error">{fieldErrors.stock}</p>}
 
           <label htmlFor="discountPercent">% giảm giá</label>
           <input
@@ -306,6 +410,7 @@ function AdminEditProductPage() {
             onChange={handleChange}
             required
           />
+          {fieldErrors.discountPercent && <p className="field-error">{fieldErrors.discountPercent}</p>}
 
           <label htmlFor="finalPrice">Giá tiền</label>
           <input id="finalPrice" value={finalPricePreview.toLocaleString("vi-VN")} readOnly />
