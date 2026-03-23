@@ -3,8 +3,12 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
 import HomePage from "./pages/HomePage";
 import ProductsPage from "./pages/ProductsPage";
+import CartPage from "./pages/CartPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import ProductDetailPage from "./pages/ProductDetailPage";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -37,12 +41,16 @@ function GuestRoute({ children }) {
 function App() {
   return (
     <AuthProvider>
+      <CartProvider>
       <BrowserRouter>
         <div className="app-shell">
           <Header />
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/products" element={<ProductsPage />} />
+            <Route path="/products/:id" element={<ProductDetailPage />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
             <Route
               path="/login"
               element={
@@ -160,6 +168,7 @@ function App() {
           <Footer />
         </div>
       </BrowserRouter>
+      </CartProvider>
     </AuthProvider>
   );
 }
