@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
 import "../css/header.css";
 
 function Header() {
   const { auth, logout } = useAuth();
+  const { cart } = useCart();
   const location = useLocation();
   const isAdmin = auth?.user?.role === "admin";
   const isAdminArea = isAdmin && location.pathname.startsWith("/admin");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Tính tổng số lượng sản phẩm có trong giỏ hàng
+  const totalItems = cart ? cart.reduce((sum, item) => sum + item.quantity, 0) : 0;
 
   useEffect(() => {
     if (isAdminArea) {
@@ -113,6 +118,28 @@ function Header() {
             <>
               <Link to="/">Trang chủ</Link>
               <Link to="/products">Sản phẩm</Link>
+              
+              {/* Nút Giỏ hàng */}
+              <Link to="/cart" style={{ position: "relative", display: "flex", alignItems: "center", textDecoration: "none", color: "inherit", margin: "0 8px" }}>
+                <span style={{ fontSize: "20px" }}>🛒</span>
+                {totalItems > 0 && (
+                  <span style={{
+                    position: "absolute",
+                    top: "-8px",
+                    right: "-12px",
+                    backgroundColor: "#dc3545",
+                    color: "white",
+                    borderRadius: "50%",
+                    padding: "2px 6px",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    lineHeight: 1
+                  }}>
+                    {totalItems}
+                  </span>
+                )}
+              </Link>
+
               {!auth && <Link to="/login">Đăng nhập</Link>}
             </>
           )}
