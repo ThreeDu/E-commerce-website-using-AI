@@ -4,20 +4,18 @@ const categorySchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
+      required: [true, "Tên danh mục là bắt buộc"],
+      unique: true,
       trim: true,
     },
-    parentId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
-      default: null,
+    description: {
+      type: String,
+      default: "",
     },
   },
   {
     timestamps: true,
   }
 );
-
-categorySchema.index({ name: 1, parentId: 1 }, { unique: true });
 
 module.exports = mongoose.model("Category", categorySchema);

@@ -140,6 +140,12 @@ function Header() {
                 )}
               </Link>
 
+              {/* Nút Lịch sử đơn hàng - Chỉ hiện khi User đã đăng nhập */}
+              {auth && <Link to="/order-history">Lịch sử đơn hàng</Link>}
+              
+              {/* Nút Hồ sơ cá nhân */}
+              {auth && <Link to="/profile">Hồ sơ cá nhân</Link>}
+
               {!auth && <Link to="/login">Đăng nhập</Link>}
             </>
           )}

@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 
 function CheckoutPage() {
   const { cart, clearCart } = useCart();
   const navigate = useNavigate();
+  const { auth } = useAuth(); // Lấy thông tin đăng nhập
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -19,9 +21,13 @@ function CheckoutPage() {
     setFormData({ ...formData, [name]: value });
   };
 
-  // Chuyển đổi chuỗi giá sang số
-  const parsePrice = (priceStr) => {
-    return parseInt(priceStr.replace(/\./g, "").replace(" đ", ""), 10) || 0;
+  // Chuyển đổi giá sang số để tính toán 
+  const parsePrice = (price) => {
+    if (typeof price === "number") return price;
+    if (typeof price === "string") {
+      return parseInt(price.replace(/\D/g, ""), 10) || 0;
+    }
+    return 0;
   };
 
   const formatPrice = (priceNum) => {
@@ -32,15 +38,46 @@ function CheckoutPage() {
     return total + parsePrice(item.price) * item.quantity;
   }, 0);
 
-  const handlePlaceOrder = (e) => {
+  const handlePlaceOrder = async (e) => {
     e.preventDefault();
     
-    // Ở đây sau này bạn sẽ gọi API gửi dữ liệu đơn hàng (cart, formData) lên Backend
-    // Tạm thời hiển thị alert thành công
-    alert(`Đặt hàng thành công!\nCảm ơn ${formData.fullName} đã mua sắm tại AI Shop.`);
-    
-    clearCart(); // Làm sạch giỏ hàng
-    navigate("/"); // Chuyển người dùng về trang chủ
+    // Chuẩn bị dữ liệu để gửi xuống Backend
+    const orderData = {
+      user: auth?.user?.id || null, // Đính kèm ID của user đang đăng nhập
+      orderItems: cart.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: parsePrice(item.price),
+        product: item.id || item._id // Đảm bảo truyền đúng ID của MongoDB
+      })),
+      shippingAddress: {
+        fullName: formData.fullName,
+        phone: formData.phone,
+        address: formData.address,
+      },
+      paymentMethod: formData.paymentMethod,
+      totalPrice: totalPrice,
+    };
+
+    try {
+      const response = await fetch("http://localhost:5000/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderData),
+      });
+
+      if (response.ok) {
+        alert(`Đặt hàng thành công!\nCảm ơn ${formData.fullName} đã mua sắm tại AI Shop.`);
+        clearCart(); // Làm sạch giỏ hàng
+        navigate("/"); // Chuyển người dùng về trang chủ
+      } else {
+        const errorData = await response.json();
+        alert(`Lỗi đặt hàng: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error("Lỗi khi gọi API đặt hàng:", error);
+      alert("Có lỗi xảy ra khi kết nối đến máy chủ.");
+    }
   };
 
   // Chặn người dùng vào trang thanh toán nếu giỏ hàng trống
