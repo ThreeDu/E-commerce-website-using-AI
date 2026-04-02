@@ -23,6 +23,8 @@ import AdminAddDiscountPage from "./pages/admin/discount/AdminAddDiscountPage";
 import AdminEditDiscountPage from "./pages/admin/discount/AdminEditDiscountPage";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 import AdminSystemLogsPage from "./pages/admin/AdminSystemLogsPage";
+import OrderHistoryPage from "./pages/OrderHistoryPage";
+import UserDashboard from "./pages/UserDashboard";
 
 function GuestRoute({ children }) {
   const { auth } = useAuth();
@@ -67,6 +69,8 @@ function App() {
                 </GuestRoute>
               }
             />
+          <Route path="/order-history" element={<OrderHistoryPage />} />
+          <Route path="/profile" element={<UserDashboard />} />
             <Route
               path="/admin/dashboard"
               element={

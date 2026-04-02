@@ -2,34 +2,61 @@ import { useState, useEffect } from "react";
 import { Link, useLocation} from "react-router-dom";
 import { useCart } from "../context/CartContext";
 
-const allProducts = [
-  { id: 1, name: "Điện thoại AI Pro", price: "25.000.000 đ", category: "Điện thoại" },
-  { id: 2, name: "Laptop DevBook 16", price: "40.000.000 đ", category: "Laptop" },
-  { id: 3, name: "Tai nghe Noise Cancel", price: "3.500.000 đ", category: "Phụ kiện" },
-  { id: 4, name: "Đồng hồ thông minh", price: "5.000.000 đ", category: "Phụ kiện" },
-  { id: 5, name: "Bàn phím cơ RGB", price: "2.100.000 đ", category: "Phụ kiện" },
-  { id: 6, name: "Chuột không dây Ergonomic", price: "950.000 đ", category: "Phụ kiện" },
-  { id: 7, name: "Màn hình 4K 27 inch", price: "12.500.000 đ", category: "Phụ kiện" },
-  { id: 8, name: "Webcam Full HD", price: "1.200.000 đ", category: "Phụ kiện" },
-];
-
-const categories = ["Tất cả", "Điện thoại", "Laptop", "Máy tính bảng", "Phụ kiện"];
-
 function ProductsPage() {
   const { addToCart } = useCart();
   const location = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(location.state?.category || "Tất cả");
-  const [filteredProducts, setFilteredProducts] = useState(allProducts);
+  const [maxPrice, setMaxPrice] = useState(100000000); // Mức giá đang chọn (mặc định để rất lớn)
+  const [maxPossiblePrice, setMaxPossiblePrice] = useState(100000000); // Mức giá lớn nhất có trong data
+  const [allProducts, setAllProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [categories, setCategories] = useState(["Tất cả"]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // 1. Gọi API lấy danh sách sản phẩm
+        const productsRes = await fetch("http://localhost:5000/api/products");
+        if (productsRes.ok) {
+          const data = await productsRes.json();
+          setAllProducts(data);
+          
+          // Tự động tìm giá lớn nhất trong database để làm mốc cho thanh kéo
+          if (data.length > 0) {
+            const highestPrice = Math.max(...data.map(item => item.price));
+            setMaxPossiblePrice(highestPrice);
+            setMaxPrice(highestPrice); // Mặc định thanh kéo sẽ nằm ở mức cao nhất
+          }
+        }
+
+        // 2. Gọi API lấy danh sách danh mục (API mới tạo)
+        const categoriesRes = await fetch("http://localhost:5000/api/categories");
+        if (categoriesRes.ok) {
+          const catData = await categoriesRes.json();
+          // Lấy tên các danh mục từ DB và đẩy chữ "Tất cả" lên vị trí đầu tiên
+          setCategories(["Tất cả", ...catData.map(cat => cat.name)]);
+        }
+
+      } catch (error) {
+        console.error("Lỗi tải dữ liệu:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   useEffect(() => {
     const results = allProducts.filter((product) => {
       const matchSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchCategory = selectedCategory === "Tất cả" || product.category === selectedCategory;
-      return matchSearch && matchCategory;
+      const matchPrice = product.price <= maxPrice;
+      return matchSearch && matchCategory && matchPrice;
     });
     setFilteredProducts(results);
-  }, [searchTerm, selectedCategory]);
+  }, [searchTerm, selectedCategory, maxPrice, allProducts]);
 
   useEffect(() => {
     if (location.state?.category) {
@@ -79,6 +106,67 @@ function ProductsPage() {
               </li>
             ))}
           </ul>
+
+          {/* Bộ lọc thanh kéo mức giá */}
+          <h4 style={{ marginTop: "24px", marginBottom: "8px" }}>Mức giá</h4>
+          <div style={{ marginBottom: "24px" }}>
+            <style>{`
+              .custom-slider {
+                -webkit-appearance: none;
+                appearance: none;
+                height: 6px;
+                border-radius: 4px;
+                outline: none;
+              }
+              .custom-slider::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #007bff;
+                cursor: pointer;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                transition: 0.2s;
+              }
+              .custom-slider::-webkit-slider-thumb:hover {
+                transform: scale(1.15);
+              }
+              .custom-slider::-moz-range-thumb {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #007bff;
+                cursor: pointer;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                border: none;
+                transition: 0.2s;
+              }
+              .custom-slider::-moz-range-thumb:hover {
+                transform: scale(1.15);
+              }
+            `}</style>
+            <input
+              type="range"
+              min="0"
+              max={maxPossiblePrice}
+              step="500000" // Mỗi lần kéo nhích 500k
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(Number(e.target.value))}
+              className="custom-slider"
+              style={{ 
+                width: "100%", 
+                cursor: "pointer",
+                background: `linear-gradient(to right, #007bff ${maxPossiblePrice > 0 ? (maxPrice / maxPossiblePrice) * 100 : 100}%, #e9ecef ${maxPossiblePrice > 0 ? (maxPrice / maxPossiblePrice) * 100 : 100}%)`
+              }}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", marginTop: "8px" }}>
+              <span style={{ color: "#6c757d" }}>0 đ</span>
+              <span style={{ fontWeight: "bold", color: "#dc3545" }}>
+                Dưới {maxPrice.toLocaleString("vi-VN")} đ
+              </span>
+            </div>
+          </div>
         </aside>
 
         {/* Products Section */}
@@ -90,7 +178,7 @@ function ProductsPage() {
             <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
               {filteredProducts.map((product) => (
                 <div
-                  key={product.id}
+                  key={product._id}
                   style={{
                     flex: "1 1 calc(33.333% - 24px)", // Adjusted for 3 items per row
                     minWidth: "200px",
@@ -102,7 +190,7 @@ function ProductsPage() {
                     boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
                   }}
                 >
-                  <Link to={`/products/${product.id}`} style={{ textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", flexGrow: 1 }}>
+                  <Link to={`/products/${product._id}`} style={{ textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", flexGrow: 1 }}>
                     <div
                       style={{
                         width: "100%",
@@ -130,7 +218,7 @@ function ProductsPage() {
                         marginBottom: "16px",
                       }}
                     >
-                      {product.price}
+                      {product.price.toLocaleString("vi-VN")} đ
                     </p>
                   </Link>
                   <button
@@ -145,7 +233,7 @@ function ProductsPage() {
                       fontWeight: "bold",
                       fontSize: "14px",
                     }}
-                    onClick={() => addToCart(product)}
+                    onClick={() => addToCart({ ...product, id: product._id })}
                   >
                     Thêm vào giỏ
                   </button>

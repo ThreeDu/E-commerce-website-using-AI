@@ -4,10 +4,14 @@ import { useCart } from "../context/CartContext";
 function CartPage() {
   const { cart, removeFromCart, updateQuantity } = useCart();
 
-  // Hàm chuyển đổi chuỗi giá (VD: "25.000.000 đ") sang số để tính toán
-  const parsePrice = (priceStr) => {
-    // Xóa dấu chấm và chữ " đ" để lấy ra số nguyên
-    return parseInt(priceStr.replace(/\./g, "").replace(" đ", ""), 10) || 0;
+  // Hàm chuyển đổi giá sang số để tính toán (xử lý cả chuỗi cũ và số mới từ Backend)
+  const parsePrice = (price) => {
+    if (typeof price === "number") return price;
+    if (typeof price === "string") {
+      // Xóa tất cả các ký tự không phải là số
+      return parseInt(price.replace(/\D/g, ""), 10) || 0;
+    }
+    return 0;
   };
 
   // Hàm định dạng số tiền VND để hiển thị lại
@@ -49,7 +53,7 @@ function CartPage() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <h4 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>{item.name}</h4>
-                  <p style={{ margin: 0, color: "#dc3545", fontWeight: "bold" }}>{item.price}</p>
+                  <p style={{ margin: 0, color: "#dc3545", fontWeight: "bold" }}>{formatPrice(parsePrice(item.price))}</p>
                 </div>
                 
                 {/* Nút cộng trừ số lượng */}

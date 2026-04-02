@@ -1,16 +1,33 @@
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 
 function HomePage() {
   const { addToCart } = useCart();
   const navigate = useNavigate();
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
 
-  const mockProducts = [
-    { id: 1, name: "Điện thoại AI Pro", price: "25.000.000 đ" },
-    { id: 2, name: "Laptop DevBook 16", price: "40.000.000 đ" },
-    { id: 3, name: "Tai nghe Noise Cancel", price: "3.500.000 đ" },
-    { id: 4, name: "Đồng hồ thông minh", price: "5.000.000 đ" },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/products");
+        if (response.ok) {
+          const data = await response.json();
+          setFeaturedProducts(data.slice(0, 4)); // Lấy 4 sản phẩm đầu tiên
+        }
+
+        const catResponse = await fetch("http://localhost:5000/api/categories");
+        if (catResponse.ok) {
+          const catData = await catResponse.json();
+          setCategories(catData);
+        }
+      } catch (error) {
+        console.error("Lỗi tải dữ liệu trang chủ:", error);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleCategoryClick = (category) => {
     navigate("/products", { state: { category } });
@@ -54,10 +71,10 @@ function HomePage() {
       <section style={{ marginBottom: "48px" }}>
         <h3 style={{ marginBottom: "24px", fontSize: "24px" }}>Danh mục nổi bật</h3>
         <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-          {["Điện thoại", "Laptop", "Máy tính bảng", "Phụ kiện"].map((category, index) => (
+          {categories.map((category) => (
             <div 
-              key={index} 
-              onClick={() => handleCategoryClick(category)}
+              key={category._id} 
+              onClick={() => handleCategoryClick(category.name)}
               style={{ 
                 flex: "1 1 calc(25% - 16px)", 
                 minWidth: "150px", 
@@ -70,7 +87,7 @@ function HomePage() {
                 fontSize: "16px"
               }}
             >
-              {category}
+              {category.name}
             </div>
           ))}
         </div>
@@ -80,9 +97,9 @@ function HomePage() {
       <section>
         <h3 style={{ marginBottom: "24px", fontSize: "24px" }}>Sản phẩm bán chạy</h3>
         <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
-          {mockProducts.map((product) => (
+          {featuredProducts.map((product) => (
             <div 
-              key={product.id} 
+              key={product._id} 
               style={{ 
                 flex: "1 1 calc(25% - 24px)", 
                 minWidth: "200px", 
@@ -94,7 +111,7 @@ function HomePage() {
                 boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
               }}
             >
-              <Link to={`/products/${product.id}`} style={{ textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", flexGrow: 1 }}>
+              <Link to={`/products/${product._id}`} style={{ textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", flexGrow: 1 }}>
                 <div 
                   style={{ 
                     width: "100%", 
@@ -120,7 +137,7 @@ function HomePage() {
                     marginBottom: "16px" 
                   }}
                 >
-                  {product.price}
+                  {product.price.toLocaleString("vi-VN")} đ
                 </p>
               </Link>
               <button 
@@ -135,7 +152,7 @@ function HomePage() {
                   fontWeight: "bold",
                   fontSize: "14px"
                 }}
-                onClick={() => addToCart(product)}
+                onClick={() => addToCart({ ...product, id: product._id })}
               >
                 Thêm vào giỏ
               </button>
