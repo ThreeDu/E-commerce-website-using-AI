@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
 function UserDashboard() {
-  const { auth } = useAuth();
+  const { auth, login } = useAuth();
   
   const [formData, setFormData] = useState({
     name: auth?.user?.name || "",
@@ -19,17 +19,18 @@ function UserDashboard() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:5000/api/auth/profile", {
+      const response = await fetch("/api/auth/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${auth?.token}` // Gửi token lên để xác thực bảo mật
+          "Authorization": `Bearer ${auth?.token}`
         },
         body: JSON.stringify(formData),
       });
       const data = await response.json();
       if (response.ok) {
-        setMessage("Cập nhật thông tin cá nhân thành công! (Thay đổi sẽ hiển thị ở lần đăng nhập tiếp theo)");
+        login({ token: auth.token, user: data.user });
+        setMessage("Cập nhật thông tin cá nhân thành công!");
       } else {
         setMessage(`Lỗi: ${data.message}`);
       }

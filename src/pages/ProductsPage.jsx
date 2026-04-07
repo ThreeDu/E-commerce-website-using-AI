@@ -2,6 +2,24 @@ import { useState, useEffect } from "react";
 import { Link, useLocation} from "react-router-dom";
 import { useCart } from "../context/CartContext";
 
+function getProductImageSrc(product) {
+  const rawValue = String(product?.image || product?.imageUrl || "").trim();
+  if (!rawValue) {
+    return "/placeholder.jpg";
+  }
+
+  if (
+    rawValue.startsWith("http://") ||
+    rawValue.startsWith("https://") ||
+    rawValue.startsWith("data:image/") ||
+    rawValue.startsWith("/")
+  ) {
+    return rawValue;
+  }
+
+  return `/${rawValue.replace(/^\/+/, "")}`;
+}
+
 function ProductsPage() {
   const { addToCart } = useCart();
   const location = useLocation();
@@ -18,7 +36,7 @@ function ProductsPage() {
     const fetchData = async () => {
       try {
         // 1. Gọi API lấy danh sách sản phẩm
-        const productsRes = await fetch("http://localhost:5000/api/products");
+        const productsRes = await fetch("/api/products");
         if (productsRes.ok) {
           const data = await productsRes.json();
           setAllProducts(data);
@@ -32,7 +50,7 @@ function ProductsPage() {
         }
 
         // 2. Gọi API lấy danh sách danh mục (API mới tạo)
-        const categoriesRes = await fetch("http://localhost:5000/api/categories");
+        const categoriesRes = await fetch("/api/categories");
         if (categoriesRes.ok) {
           const catData = await categoriesRes.json();
           // Lấy tên các danh mục từ DB và đẩy chữ "Tất cả" lên vị trí đầu tiên
@@ -174,7 +192,9 @@ function ProductsPage() {
           <h2 style={{ marginBottom: "24px", fontSize: "24px" }}>
             Tất cả sản phẩm
           </h2>
-          {filteredProducts.length > 0 ? (
+          {loading ? (
+            <p>Đang tải danh sách sản phẩm...</p>
+          ) : filteredProducts.length > 0 ? (
             <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
               {filteredProducts.map((product) => (
                 <div
@@ -191,22 +211,22 @@ function ProductsPage() {
                   }}
                 >
                   <Link to={`/products/${product._id}`} style={{ textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", flexGrow: 1 }}>
-                    <div
+                    <img
+                      src={getProductImageSrc(product)}
+                      alt={product.name}
                       style={{
                         width: "100%",
                         height: "200px",
-                        backgroundColor: "#f8f9fa",
                         borderRadius: "4px",
                         marginBottom: "16px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#adb5bd",
-                        fontSize: "14px",
+                        objectFit: "cover",
+                        backgroundColor: "#f8f9fa",
                       }}
-                    >
-                      Ảnh SP
-                    </div>
+                      onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = "/placeholder.jpg";
+                      }}
+                    />
                     <h4 style={{ fontSize: "18px", marginBottom: "8px" }}>
                       {product.name}
                     </h4>

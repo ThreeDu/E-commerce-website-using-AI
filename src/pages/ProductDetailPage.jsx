@@ -2,6 +2,24 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 
+function getProductImageSrc(product) {
+  const rawValue = String(product?.image || product?.imageUrl || "").trim();
+  if (!rawValue) {
+    return "/placeholder.jpg";
+  }
+
+  if (
+    rawValue.startsWith("http://") ||
+    rawValue.startsWith("https://") ||
+    rawValue.startsWith("data:image/") ||
+    rawValue.startsWith("/")
+  ) {
+    return rawValue;
+  }
+
+  return `/${rawValue.replace(/^\/+/, "")}`;
+}
+
 function ProductDetailPage() {
   const { id } = useParams();
   const { addToCart } = useCart();
@@ -12,7 +30,7 @@ function ProductDetailPage() {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/products/${id}`);
+        const response = await fetch(`/api/products/${id}`);
         if (response.ok) {
           const data = await response.json();
           setProduct(data);
@@ -54,8 +72,16 @@ function ProductDetailPage() {
 
       <div style={{ display: "flex", gap: "48px", flexWrap: "wrap", backgroundColor: "#fff", padding: "32px", borderRadius: "8px", border: "1px solid #dee2e6" }}>
         {/* Cột hiển thị hình ảnh */}
-        <div style={{ flex: "1 1 40%", minWidth: "300px", height: "400px", backgroundColor: "#f8f9fa", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", color: "#adb5bd", fontSize: "24px" }}>
-          Ảnh {product.name}
+        <div style={{ flex: "1 1 40%", minWidth: "300px", borderRadius: "8px", border: "1px solid #dee2e6", overflow: "hidden", backgroundColor: "#f8f9fa" }}>
+          <img
+            src={getProductImageSrc(product)}
+            alt={product.name}
+            style={{ width: "100%", height: "400px", objectFit: "cover" }}
+            onError={(event) => {
+              event.currentTarget.onerror = null;
+              event.currentTarget.src = "/placeholder.jpg";
+            }}
+          />
         </div>
 
         {/* Cột thông tin chi tiết */}

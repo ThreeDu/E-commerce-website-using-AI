@@ -53,9 +53,10 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    const { name, image, price, discountPercent, category, stock, description } = req.body;
+    const { name, image, imageUrl, price, discountPercent, category, stock, description } = req.body;
+    const normalizedImage = String(image || imageUrl || "").trim();
 
-    if (!name || !image || price === undefined || price === null) {
+    if (!name || !normalizedImage || price === undefined || price === null) {
       return res.status(400).json({ message: "Tên, ảnh và giá sản phẩm là bắt buộc." });
     }
 
@@ -80,7 +81,7 @@ router.post("/", async (req, res) => {
 
     const newProduct = await Product.create({
       name,
-      image,
+      image: normalizedImage,
       price: numericPrice,
       discountPercent: numericDiscount,
       finalPrice: computedFinalPrice,
@@ -118,9 +119,10 @@ router.put("/:id", async (req, res) => {
 
   try {
     const { id } = req.params;
-    const { name, image, price, discountPercent, category, stock, description } = req.body;
+    const { name, image, imageUrl, price, discountPercent, category, stock, description } = req.body;
+    const normalizedImage = String(image || imageUrl || "").trim();
 
-    if (!name || !image || price === undefined || price === null) {
+    if (!name || !normalizedImage || price === undefined || price === null) {
       return res.status(400).json({ message: "Tên, ảnh và giá sản phẩm là bắt buộc." });
     }
 
@@ -147,7 +149,7 @@ router.put("/:id", async (req, res) => {
       id,
       {
         name,
-        image,
+        image: normalizedImage,
         price: numericPrice,
         discountPercent: numericDiscount,
         finalPrice: computedFinalPrice,

@@ -194,7 +194,7 @@ function AdminAddProductPage() {
       payload: {
         name: trimmedName,
         category: trimmedCategory,
-        imageUrl: trimmedImageUrl,
+        image: trimmedImageUrl,
         price,
         stock: Number(formData.stock || 0),
         discountPercent,

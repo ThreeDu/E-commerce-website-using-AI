@@ -2,12 +2,13 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
-const { createToken, getTokenFromHeader, verifyAdminRequest } = require("./helpers/authHelpers");
+const { createToken, getTokenFromHeader, verifyAdminRequest, verifyUserRequest } = require("./helpers/authHelpers");
 const adminUserRoutes = require("./adminUserRoutes");
 const adminProductRoutes = require("./adminProductRoutes");
 const adminCategoryRoutes = require("./adminCategoryRoutes");
 const adminDiscountRoutes = require("./adminDiscountRoutes");
 const adminSystemLogRoutes = require("./adminSystemLogRoutes");
+const adminOrderRoutes = require("./adminOrderRoutes");
 
 const router = express.Router();
 
@@ -47,6 +48,8 @@ router.post("/register", async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
+        phone: newUser.phone,
+        address: newUser.address,
       },
     });
   } catch (error) {
@@ -84,6 +87,8 @@ router.post("/login", async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        phone: user.phone,
+        address: user.address,
       },
     });
   } catch (error) {
@@ -117,7 +122,7 @@ router.get("/verify-token", async (req, res) => {
     const secret = process.env.JWT_SECRET || "dev_secret_change_me";
     const decoded = jwt.verify(token, secret);
 
-    const user = await User.findById(decoded.userId).select("_id name email role");
+    const user = await User.findById(decoded.userId).select("_id name email role phone address");
     if (!user) {
       return res.status(401).json({ message: "Tài khoản không tồn tại." });
     }
@@ -131,10 +136,64 @@ router.get("/verify-token", async (req, res) => {
   }
 });
 
+router.get("/profile", async (req, res) => {
+  const user = await verifyUserRequest(req, res);
+  if (!user) {
+    return;
+  }
+
+  return res.json({
+    message: "Lấy hồ sơ thành công.",
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone || "",
+      address: user.address || "",
+    },
+  });
+});
+
+router.put("/profile", async (req, res) => {
+  const user = await verifyUserRequest(req, res);
+  if (!user) {
+    return;
+  }
+
+  try {
+    const { name, phone, address } = req.body;
+
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ message: "Họ tên là bắt buộc." });
+    }
+
+    user.name = String(name).trim();
+    user.phone = String(phone || "").trim();
+    user.address = String(address || "").trim();
+    await user.save();
+
+    return res.json({
+      message: "Cập nhật hồ sơ thành công.",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        address: user.address,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
 router.use("/admin/users", adminUserRoutes);
 router.use("/admin/products", adminProductRoutes);
 router.use("/admin/categories", adminCategoryRoutes);
 router.use("/admin/discounts", adminDiscountRoutes);
+router.use("/admin/orders", adminOrderRoutes);
 router.use("/admin/system-logs", adminSystemLogRoutes);
 
 module.exports = router;

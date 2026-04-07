@@ -14,6 +14,7 @@ function CheckoutPage() {
     address: "",
     paymentMethod: "cod",
   });
+  const [formError, setFormError] = useState("");
 
   // Hàm xử lý thay đổi input
   const handleChange = (e) => {
@@ -40,10 +41,36 @@ function CheckoutPage() {
 
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
+    setFormError("");
+
+    if (!auth?.token) {
+      alert("Vui lòng đăng nhập để đặt hàng.");
+      navigate("/login");
+      return;
+    }
+
+    const trimmedFullName = formData.fullName.trim();
+    const trimmedPhone = formData.phone.trim();
+    const trimmedAddress = formData.address.trim();
+    const phoneRegex = /^(0|\+84)(3|5|7|8|9)\d{8}$/;
+
+    if (trimmedFullName.length < 2) {
+      setFormError("Họ và tên phải có ít nhất 2 ký tự.");
+      return;
+    }
+
+    if (!phoneRegex.test(trimmedPhone)) {
+      setFormError("Số điện thoại không hợp lệ. Ví dụ: 0912345678 hoặc +84912345678.");
+      return;
+    }
+
+    if (trimmedAddress.length < 10) {
+      setFormError("Địa chỉ quá ngắn, vui lòng nhập chi tiết hơn (ít nhất 10 ký tự).");
+      return;
+    }
     
     // Chuẩn bị dữ liệu để gửi xuống Backend
     const orderData = {
-      user: auth?.user?.id || null, // Đính kèm ID của user đang đăng nhập
       orderItems: cart.map(item => ({
         name: item.name,
         quantity: item.quantity,
@@ -51,18 +78,21 @@ function CheckoutPage() {
         product: item.id || item._id // Đảm bảo truyền đúng ID của MongoDB
       })),
       shippingAddress: {
-        fullName: formData.fullName,
-        phone: formData.phone,
-        address: formData.address,
+        fullName: trimmedFullName,
+        phone: trimmedPhone,
+        address: trimmedAddress,
       },
       paymentMethod: formData.paymentMethod,
       totalPrice: totalPrice,
     };
 
     try {
-      const response = await fetch("http://localhost:5000/api/orders", {
+      const response = await fetch("/api/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.token}`,
+        },
         body: JSON.stringify(orderData),
       });
 
@@ -98,6 +128,11 @@ function CheckoutPage() {
         {/* Cột Form điền thông tin */}
         <div style={{ flex: "1 1 60%", minWidth: "300px", backgroundColor: "#fff", padding: "24px", borderRadius: "8px", border: "1px solid #dee2e6" }}>
           <h3 style={{ marginBottom: "20px", fontSize: "20px" }}>Thông tin giao hàng</h3>
+          {formError && (
+            <p style={{ marginBottom: "16px", padding: "10px", borderRadius: "6px", backgroundColor: "#fff1f2", color: "#9f1239", border: "1px solid #fecdd3" }}>
+              {formError}
+            </p>
+          )}
           <form onSubmit={handlePlaceOrder} id="checkout-form">
             <div style={{ marginBottom: "16px" }}>
               <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Họ và tên</label>
