@@ -21,6 +21,7 @@
   display: flex;
   gap: 16px;
   align-items: center;
+  min-width: 0;
 }
 
 .nav-menu a,
@@ -32,6 +33,24 @@
   border-radius: 8px;
   padding: 8px 12px;
   cursor: pointer;
+}
+
+.account-action-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  max-width: min(72vw, 780px);
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.account-action-chip {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.cart-chip {
+  padding-right: 10px;
 }
 
 .admin-sidebar-active .app-shell {
@@ -119,6 +138,11 @@
 
   .nav-menu {
     flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .account-action-scroll {
+    max-width: 100%;
   }
 }
 

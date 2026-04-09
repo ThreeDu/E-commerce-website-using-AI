@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
@@ -15,6 +15,19 @@ function CheckoutPage() {
     paymentMethod: "cod",
   });
   const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    if (!auth?.user) {
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      fullName: prev.fullName || auth.user.name || "",
+      phone: prev.phone || auth.user.phone || "",
+      address: prev.address || auth.user.address || "",
+    }));
+  }, [auth?.user]);
 
   // Hàm xử lý thay đổi input
   const handleChange = (e) => {

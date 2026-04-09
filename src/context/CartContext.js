@@ -1,11 +1,42 @@
-import { createContext, useContext, useState , useRef} from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "./AuthContext";
 
 const CartContext = createContext();
 
+const CART_STORAGE_PREFIX = "ecommerce_cart";
+
+function getCartStorageKey(userId) {
+  return `${CART_STORAGE_PREFIX}:${userId || "guest"}`;
+}
+
 export function CartProvider({ children }) {
-  const [cart, setCart] = useState([]);
+  const { auth } = useAuth();
+  const userId = auth?.user?.id || null;
+  const storageKey = useMemo(() => getCartStorageKey(userId), [userId]);
+
+  const [cart, setCart] = useState(() => {
+    try {
+      const saved = localStorage.getItem(getCartStorageKey(null));
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      return [];
+    }
+  });
   const [toast, setToast] = useState({ show: false, message: "" });
   const toastTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      setCart(saved ? JSON.parse(saved) : []);
+    } catch (error) {
+      setCart([]);
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify(cart));
+  }, [storageKey, cart]);
 
   const addToCart = (product) => {
     setCart((prevCart) => {

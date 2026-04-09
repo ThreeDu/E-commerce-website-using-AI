@@ -189,6 +189,43 @@ router.put("/profile", async (req, res) => {
   }
 });
 
+router.put("/change-password", async (req, res) => {
+  const authUser = await verifyUserRequest(req, res);
+  if (!authUser) {
+    return;
+  }
+
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Mật khẩu hiện tại và mật khẩu mới là bắt buộc." });
+    }
+
+    if (String(newPassword).length < 6) {
+      return res.status(400).json({ message: "Mật khẩu mới phải có ít nhất 6 ký tự." });
+    }
+
+    const user = await User.findById(authUser._id).select("password");
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy tài khoản." });
+    }
+
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!isValidPassword) {
+      return res.status(400).json({ message: "Mật khẩu hiện tại không đúng." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.json({ message: "Đổi mật khẩu thành công." });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
 router.use("/admin/users", adminUserRoutes);
 router.use("/admin/products", adminProductRoutes);
 router.use("/admin/categories", adminCategoryRoutes);

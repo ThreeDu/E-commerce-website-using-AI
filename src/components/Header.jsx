@@ -118,41 +118,42 @@ function Header() {
             <>
               <Link to="/">Trang chủ</Link>
               <Link to="/products">Sản phẩm</Link>
-              
-              {/* Nút Giỏ hàng */}
-              <Link to="/cart" style={{ position: "relative", display: "flex", alignItems: "center", textDecoration: "none", color: "inherit", margin: "0 8px" }}>
-                <span style={{ fontSize: "20px" }}>🛒</span>
-                {totalItems > 0 && (
-                  <span style={{
-                    position: "absolute",
-                    top: "-8px",
-                    right: "-12px",
-                    backgroundColor: "#dc3545",
-                    color: "white",
-                    borderRadius: "50%",
-                    padding: "2px 6px",
-                    fontSize: "12px",
-                    fontWeight: "bold",
-                    lineHeight: 1
-                  }}>
-                    {totalItems}
-                  </span>
-                )}
-              </Link>
 
-              {/* Nút Lịch sử đơn hàng - Chỉ hiện khi User đã đăng nhập */}
-              {auth && <Link to="/order-history">Lịch sử đơn hàng</Link>}
-              
-              {/* Nút Hồ sơ cá nhân */}
-              {auth && <Link to="/profile">Hồ sơ cá nhân</Link>}
-
-              {!auth && <Link to="/login">Đăng nhập</Link>}
+              {!auth ? (
+                <Link to="/login">Đăng nhập</Link>
+              ) : (
+                <div className="account-action-scroll" role="group" aria-label="Tác vụ tài khoản">
+                  <Link
+                    to="/cart"
+                    className="account-action-chip cart-chip"
+                    style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <span style={{ fontSize: "18px" }}>🛒</span>
+                    <span>Giỏ hàng</span>
+                    {totalItems > 0 && (
+                      <span
+                        style={{
+                          backgroundColor: "#dc3545",
+                          color: "white",
+                          borderRadius: "999px",
+                          padding: "2px 8px",
+                          fontSize: "12px",
+                          fontWeight: "bold",
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {totalItems}
+                      </span>
+                    )}
+                  </Link>
+                  <Link to="/order-history" className="account-action-chip">Lịch sử đơn hàng</Link>
+                  <Link to="/profile" className="account-action-chip">Hồ sơ cá nhân</Link>
+                  <button type="button" className="logout-btn account-action-chip" onClick={logout}>
+                    Đăng xuất
+                  </button>
+                </div>
+              )}
             </>
-          )}
-          {auth && (
-            <button type="button" className="logout-btn" onClick={logout}>
-              Đăng xuất
-            </button>
           )}
         </nav>
       </div>

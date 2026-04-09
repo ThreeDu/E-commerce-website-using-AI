@@ -69,8 +69,22 @@ function App() {
                 </GuestRoute>
               }
             />
-          <Route path="/order-history" element={<OrderHistoryPage />} />
-          <Route path="/profile" element={<UserDashboard />} />
+          <Route
+            path="/order-history"
+            element={
+              <ProtectedRoute>
+                <OrderHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <UserDashboard />
+              </ProtectedRoute>
+            }
+          />
             <Route
               path="/admin/dashboard"
               element={

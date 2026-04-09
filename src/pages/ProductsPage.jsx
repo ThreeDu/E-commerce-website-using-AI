@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation} from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 
 function getProductImageSrc(product) {
   const rawValue = String(product?.image || product?.imageUrl || "").trim();
@@ -22,14 +23,16 @@ function getProductImageSrc(product) {
 
 function ProductsPage() {
   const { addToCart } = useCart();
+  const { auth } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(location.state?.category || "Tất cả");
   const [maxPrice, setMaxPrice] = useState(100000000); // Mức giá đang chọn (mặc định để rất lớn)
   const [maxPossiblePrice, setMaxPossiblePrice] = useState(100000000); // Mức giá lớn nhất có trong data
   const [allProducts, setAllProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
-  const [categories, setCategories] = useState(["Tất cả"]);
+  const [categories, setCategories] = useState([{ _id: "all", name: "Tất cả", path: "Tất cả" }]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,8 +56,40 @@ function ProductsPage() {
         const categoriesRes = await fetch("/api/categories");
         if (categoriesRes.ok) {
           const catData = await categoriesRes.json();
-          // Lấy tên các danh mục từ DB và đẩy chữ "Tất cả" lên vị trí đầu tiên
-          setCategories(["Tất cả", ...catData.map(cat => cat.name)]);
+          const categoryMap = new Map();
+          catData.forEach((cat) => {
+            categoryMap.set(String(cat._id), cat);
+          });
+
+          const buildPath = (category) => {
+            const path = [category.name];
+            let cursor = category;
+            const visited = new Set();
+
+            while (cursor?.parentId) {
+              const parentId = String(cursor.parentId);
+              if (visited.has(parentId)) {
+                break;
+              }
+              visited.add(parentId);
+
+              const parent = categoryMap.get(parentId);
+              if (!parent) {
+                break;
+              }
+
+              path.unshift(parent.name);
+              cursor = parent;
+            }
+
+            return path.join(" > ");
+          };
+
+          const normalizedCategories = catData
+            .map((cat) => ({ ...cat, path: buildPath(cat) }))
+            .sort((a, b) => a.path.localeCompare(b.path, "vi", { sensitivity: "base" }));
+
+          setCategories([{ _id: "all", name: "Tất cả", path: "Tất cả" }, ...normalizedCategories]);
         }
 
       } catch (error) {
@@ -69,12 +104,25 @@ function ProductsPage() {
   useEffect(() => {
     const results = allProducts.filter((product) => {
       const matchSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchCategory = selectedCategory === "Tất cả" || product.category === selectedCategory;
+      const productCategory = String(product.category || "");
+      const matchCategory =
+        selectedCategory === "Tất cả" ||
+        productCategory === selectedCategory ||
+        productCategory.startsWith(`${selectedCategory} >`);
       const matchPrice = product.price <= maxPrice;
       return matchSearch && matchCategory && matchPrice;
     });
     setFilteredProducts(results);
   }, [searchTerm, selectedCategory, maxPrice, allProducts]);
+
+  const handleAddToCart = (product) => {
+    if (!auth?.token) {
+      navigate("/login", { state: { from: "/products" } });
+      return;
+    }
+
+    addToCart({ ...product, id: product._id });
+  };
 
   useEffect(() => {
     if (location.state?.category) {
@@ -111,16 +159,16 @@ function ProductsPage() {
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {categories.map((cat) => (
               <li
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
+                key={cat._id || cat.path}
+                onClick={() => setSelectedCategory(cat.path)}
                 style={{
                   marginBottom: '8px',
                   cursor: 'pointer',
-                  fontWeight: selectedCategory === cat ? 'bold' : 'normal',
-                  color: selectedCategory === cat ? '#007bff' : 'inherit'
+                  fontWeight: selectedCategory === cat.path ? 'bold' : 'normal',
+                  color: selectedCategory === cat.path ? '#007bff' : 'inherit'
                 }}
               >
-                {cat}
+                {cat.path}
               </li>
             ))}
           </ul>
@@ -168,7 +216,7 @@ function ProductsPage() {
               type="range"
               min="0"
               max={maxPossiblePrice}
-              step="500000" // Mỗi lần kéo nhích 500k
+              step={Math.max(10000, Math.round(maxPossiblePrice / 200))}
               value={maxPrice}
               onChange={(e) => setMaxPrice(Number(e.target.value))}
               className="custom-slider"
@@ -181,7 +229,7 @@ function ProductsPage() {
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", marginTop: "8px" }}>
               <span style={{ color: "#6c757d" }}>0 đ</span>
               <span style={{ fontWeight: "bold", color: "#dc3545" }}>
-                Dưới {maxPrice.toLocaleString("vi-VN")} đ
+                Dưới {maxPrice.toLocaleString("vi-VN")} đ / Tối đa {maxPossiblePrice.toLocaleString("vi-VN")} đ
               </span>
             </div>
           </div>
@@ -253,7 +301,7 @@ function ProductsPage() {
                       fontWeight: "bold",
                       fontSize: "14px",
                     }}
-                    onClick={() => addToCart({ ...product, id: product._id })}
+                    onClick={() => handleAddToCart(product)}
                   >
                     Thêm vào giỏ
                   </button>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 
 function getProductImageSrc(product) {
   const rawValue = String(product?.image || product?.imageUrl || "").trim();
@@ -23,6 +24,17 @@ function getProductImageSrc(product) {
 function ProductDetailPage() {
   const { id } = useParams();
   const { addToCart } = useCart();
+  const { auth } = useAuth();
+  const navigate = useNavigate();
+    const handleAddToCart = () => {
+      if (!auth?.token) {
+        navigate("/login", { state: { from: `/products/${id}` } });
+        return;
+      }
+
+      addToCart({ ...product, id: product._id });
+    };
+
   
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -93,7 +105,7 @@ function ProductDetailPage() {
             <h4 style={{ marginBottom: "8px" }}>Mô tả sản phẩm:</h4>
             <p>{product.description}</p>
           </div>
-          <button onClick={() => addToCart({ ...product, id: product._id })} style={{ padding: "16px 32px", backgroundColor: "#28a745", color: "white", border: "none", borderRadius: "4px", fontSize: "18px", fontWeight: "bold", cursor: "pointer", width: "fit-content" }}>
+          <button onClick={handleAddToCart} style={{ padding: "16px 32px", backgroundColor: "#28a745", color: "white", border: "none", borderRadius: "4px", fontSize: "18px", fontWeight: "bold", cursor: "pointer", width: "fit-content" }}>
             Thêm vào giỏ hàng
           </button>
         </div>

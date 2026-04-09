@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 
 function getProductImageSrc(product) {
   const rawValue = String(product?.image || product?.imageUrl || "").trim();
@@ -22,6 +23,7 @@ function getProductImageSrc(product) {
 
 function HomePage() {
   const { addToCart } = useCart();
+  const { auth } = useAuth();
   const navigate = useNavigate();
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -49,6 +51,15 @@ function HomePage() {
 
   const handleCategoryClick = (category) => {
     navigate("/products", { state: { category } });
+  };
+
+  const handleAddToCart = (product) => {
+    if (!auth?.token) {
+      navigate("/login", { state: { from: "/products" } });
+      return;
+    }
+
+    addToCart({ ...product, id: product._id });
   };
 
   return (
@@ -170,7 +181,7 @@ function HomePage() {
                   fontWeight: "bold",
                   fontSize: "14px"
                 }}
-                onClick={() => addToCart({ ...product, id: product._id })}
+                onClick={() => handleAddToCart(product)}
               >
                 Thêm vào giỏ
               </button>
