@@ -33,6 +33,15 @@ const userSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    wishlist: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+        },
+      ],
+      default: [],
+    },
   },
   {
     timestamps: true,

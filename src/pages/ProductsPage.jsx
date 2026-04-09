@@ -32,8 +32,42 @@ function ProductsPage() {
   const [maxPossiblePrice, setMaxPossiblePrice] = useState(100000000); // Mức giá lớn nhất có trong data
   const [allProducts, setAllProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
+  const [wishlistIds, setWishlistIds] = useState([]);
+  const [pendingWishlistIds, setPendingWishlistIds] = useState([]);
   const [categories, setCategories] = useState([{ _id: "all", name: "Tất cả", path: "Tất cả" }]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchWishlist = async () => {
+      if (!auth?.token) {
+        setWishlistIds([]);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/auth/wishlist", {
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+          },
+        });
+
+        if (!response.ok) {
+          setWishlistIds([]);
+          return;
+        }
+
+        const data = await response.json();
+        const ids = Array.isArray(data?.wishlist)
+          ? data.wishlist.map((item) => String(item._id))
+          : [];
+        setWishlistIds(ids);
+      } catch (error) {
+        setWishlistIds([]);
+      }
+    };
+
+    fetchWishlist();
+  }, [auth?.token]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -129,6 +163,48 @@ function ProductsPage() {
       setSelectedCategory(location.state.category);
     }
   }, [location.state?.category]);
+
+  const handleToggleWishlist = async (productId) => {
+    if (!auth?.token) {
+      navigate("/login", { state: { from: "/products" } });
+      return;
+    }
+
+    if (pendingWishlistIds.includes(productId)) {
+      return;
+    }
+
+    const isWishlisted = wishlistIds.includes(productId);
+    setPendingWishlistIds((prev) => [...prev, productId]);
+
+    try {
+      const response = await fetch(
+        isWishlisted ? `/api/auth/wishlist/${productId}` : "/api/auth/wishlist",
+        {
+          method: isWishlisted ? "DELETE" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${auth.token}`,
+          },
+          body: isWishlisted ? undefined : JSON.stringify({ productId }),
+        }
+      );
+
+      const data = await response.json();
+      if (!response.ok) {
+        return;
+      }
+
+      const ids = Array.isArray(data?.wishlist)
+        ? data.wishlist.map((item) => String(item._id))
+        : [];
+      setWishlistIds(ids);
+    } catch (error) {
+      console.error("Lỗi cập nhật wishlist:", error);
+    } finally {
+      setPendingWishlistIds((prev) => prev.filter((id) => id !== productId));
+    }
+  };
 
   return (
     <main className="container page-content">
@@ -244,9 +320,14 @@ function ProductsPage() {
             <p>Đang tải danh sách sản phẩm...</p>
           ) : filteredProducts.length > 0 ? (
             <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
-              {filteredProducts.map((product) => (
+              {filteredProducts.map((product) => {
+                const productId = String(product._id);
+                const isWishlisted = wishlistIds.includes(productId);
+                const isPending = pendingWishlistIds.includes(productId);
+
+                return (
                 <div
-                  key={product._id}
+                  key={productId}
                   style={{
                     flex: "1 1 calc(33.333% - 24px)", // Adjusted for 3 items per row
                     minWidth: "200px",
@@ -290,6 +371,24 @@ function ProductsPage() {
                     </p>
                   </Link>
                   <button
+                    type="button"
+                    disabled={isPending}
+                    style={{
+                      marginBottom: "8px",
+                      padding: "8px",
+                      backgroundColor: isWishlisted ? "#ffe3e3" : "#fff",
+                      color: isWishlisted ? "#c92a2a" : "#495057",
+                      border: "1px solid #dee2e6",
+                      borderRadius: "4px",
+                      cursor: isPending ? "not-allowed" : "pointer",
+                      fontWeight: "bold",
+                      fontSize: "14px",
+                    }}
+                    onClick={() => handleToggleWishlist(productId)}
+                  >
+                    {isPending ? "Đang xử lý..." : isWishlisted ? "Đã yêu thích ♥" : "Thêm yêu thích ♡"}
+                  </button>
+                  <button
                     style={{
                       marginTop: "auto",
                       padding: "8px",
@@ -306,7 +405,8 @@ function ProductsPage() {
                     Thêm vào giỏ
                   </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p>Không tìm thấy sản phẩm nào phù hợp.</p>

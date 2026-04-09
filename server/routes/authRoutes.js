@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
+const Product = require("../models/Product");
 const jwt = require("jsonwebtoken");
 const { createToken, getTokenFromHeader, verifyAdminRequest, verifyUserRequest } = require("./helpers/authHelpers");
 const adminUserRoutes = require("./adminUserRoutes");
@@ -11,6 +12,18 @@ const adminSystemLogRoutes = require("./adminSystemLogRoutes");
 const adminOrderRoutes = require("./adminOrderRoutes");
 
 const router = express.Router();
+
+const WISHLIST_PRODUCT_SELECT = "_id name image price category";
+
+const mapWishlistItems = (wishlistProducts) => {
+  return (Array.isArray(wishlistProducts) ? wishlistProducts : []).map((product) => ({
+    _id: product._id,
+    name: product.name,
+    image: product.image,
+    price: product.price,
+    category: product.category,
+  }));
+};
 
 router.post("/register", async (req, res) => {
   try {
@@ -221,6 +234,85 @@ router.put("/change-password", async (req, res) => {
     await user.save();
 
     return res.json({ message: "Đổi mật khẩu thành công." });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/wishlist", async (req, res) => {
+  const authUser = await verifyUserRequest(req, res);
+  if (!authUser) {
+    return;
+  }
+
+  try {
+    const user = await User.findById(authUser._id)
+      .select("wishlist")
+      .populate("wishlist", WISHLIST_PRODUCT_SELECT);
+
+    return res.json({
+      message: "Lấy danh sách yêu thích thành công.",
+      wishlist: mapWishlistItems(user?.wishlist),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/wishlist", async (req, res) => {
+  const authUser = await verifyUserRequest(req, res);
+  if (!authUser) {
+    return;
+  }
+
+  try {
+    const { productId } = req.body;
+    if (!productId) {
+      return res.status(400).json({ message: "Thiếu productId." });
+    }
+
+    const product = await Product.findById(productId).select("_id");
+    if (!product) {
+      return res.status(404).json({ message: "Sản phẩm không tồn tại." });
+    }
+
+    await User.findByIdAndUpdate(authUser._id, {
+      $addToSet: { wishlist: product._id },
+    });
+
+    const updatedUser = await User.findById(authUser._id)
+      .select("wishlist")
+      .populate("wishlist", WISHLIST_PRODUCT_SELECT);
+
+    return res.json({
+      message: "Đã thêm vào yêu thích.",
+      wishlist: mapWishlistItems(updatedUser?.wishlist),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.delete("/wishlist/:productId", async (req, res) => {
+  const authUser = await verifyUserRequest(req, res);
+  if (!authUser) {
+    return;
+  }
+
+  try {
+    const { productId } = req.params;
+    await User.findByIdAndUpdate(authUser._id, {
+      $pull: { wishlist: productId },
+    });
+
+    const updatedUser = await User.findById(authUser._id)
+      .select("wishlist")
+      .populate("wishlist", WISHLIST_PRODUCT_SELECT);
+
+    return res.json({
+      message: "Đã xóa khỏi yêu thích.",
+      wishlist: mapWishlistItems(updatedUser?.wishlist),
+    });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
