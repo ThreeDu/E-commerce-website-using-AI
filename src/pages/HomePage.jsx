@@ -50,7 +50,12 @@ function HomePage() {
   }, []);
 
   const handleCategoryClick = (category) => {
-    navigate("/products", { state: { category } });
+    navigate("/products", {
+      state: {
+        categoryId: String(category._id),
+        category: category.name,
+      },
+    });
   };
 
   const handleAddToCart = (product) => {
@@ -103,7 +108,7 @@ function HomePage() {
           {categories.map((category) => (
             <div 
               key={category._id} 
-              onClick={() => handleCategoryClick(category.name)}
+              onClick={() => handleCategoryClick(category)}
               style={{ 
                 flex: "1 1 calc(25% - 16px)", 
                 minWidth: "150px", 

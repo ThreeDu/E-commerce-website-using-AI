@@ -27,7 +27,7 @@ function ProductsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState(location.state?.category || "Tất cả");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("all");
   const [maxPrice, setMaxPrice] = useState(100000000); // Mức giá đang chọn (mặc định để rất lớn)
   const [maxPossiblePrice, setMaxPossiblePrice] = useState(100000000); // Mức giá lớn nhất có trong data
   const [allProducts, setAllProducts] = useState([]);
@@ -136,18 +136,112 @@ function ProductsPage() {
   }, []);
 
   useEffect(() => {
+    if (categories.length <= 1) {
+      return;
+    }
+
+    const stateCategoryId = location.state?.categoryId;
+    if (stateCategoryId) {
+      const matchedById = categories.find((item) => String(item._id) === String(stateCategoryId));
+      if (matchedById) {
+        setSelectedCategoryId(String(matchedById._id));
+        return;
+      }
+    }
+
+    const stateCategory = String(location.state?.category || "").trim();
+    if (!stateCategory) {
+      return;
+    }
+
+    const matchedByPath = categories.find((item) => item.path === stateCategory);
+    if (matchedByPath) {
+      setSelectedCategoryId(String(matchedByPath._id));
+      return;
+    }
+
+    const matchedByName = categories.find((item) => item.name === stateCategory);
+    if (matchedByName) {
+      setSelectedCategoryId(String(matchedByName._id));
+    }
+  }, [categories, location.state?.category, location.state?.categoryId]);
+
+  const categoriesById = new Map(
+    categories
+      .filter((item) => item._id !== "all")
+      .map((item) => [String(item._id), item])
+  );
+
+  const childrenByParentId = new Map();
+  categories.forEach((item) => {
+    if (item._id === "all") {
+      return;
+    }
+
+    const key = item.parentId ? String(item.parentId) : "root";
+    const next = childrenByParentId.get(key) || [];
+    next.push(item);
+    childrenByParentId.set(key, next);
+  });
+
+  const selectedCategoryScope = (() => {
+    if (selectedCategoryId === "all") {
+      return null;
+    }
+
+    const root = categoriesById.get(String(selectedCategoryId));
+    if (!root) {
+      return null;
+    }
+
+    const matchedCategories = [];
+    const queue = [root];
+    const visited = new Set();
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      const currentId = String(current._id);
+      if (visited.has(currentId)) {
+        continue;
+      }
+
+      visited.add(currentId);
+      matchedCategories.push(current);
+
+      const children = childrenByParentId.get(currentId) || [];
+      children.forEach((child) => queue.push(child));
+    }
+
+    return {
+      names: new Set(matchedCategories.map((item) => item.name)),
+      paths: matchedCategories
+        .map((item) => String(item.path || "").trim())
+        .filter(Boolean),
+    };
+  })();
+
+  useEffect(() => {
     const results = allProducts.filter((product) => {
       const matchSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const productCategory = String(product.category || "");
-      const matchCategory =
-        selectedCategory === "Tất cả" ||
-        productCategory === selectedCategory ||
-        productCategory.startsWith(`${selectedCategory} >`);
+      const productCategory = String(product.category || "").trim();
+      const matchCategory = (() => {
+        if (!selectedCategoryScope) {
+          return true;
+        }
+
+        if (selectedCategoryScope.names.has(productCategory)) {
+          return true;
+        }
+
+        return selectedCategoryScope.paths.some(
+          (path) => productCategory === path || productCategory.startsWith(`${path} >`)
+        );
+      })();
       const matchPrice = product.price <= maxPrice;
       return matchSearch && matchCategory && matchPrice;
     });
     setFilteredProducts(results);
-  }, [searchTerm, selectedCategory, maxPrice, allProducts]);
+  }, [searchTerm, selectedCategoryScope, maxPrice, allProducts]);
 
   const handleAddToCart = (product) => {
     if (!auth?.token) {
@@ -157,12 +251,6 @@ function ProductsPage() {
 
     addToCart({ ...product, id: product._id });
   };
-
-  useEffect(() => {
-    if (location.state?.category) {
-      setSelectedCategory(location.state.category);
-    }
-  }, [location.state?.category]);
 
   const handleToggleWishlist = async (productId) => {
     if (!auth?.token) {
@@ -236,12 +324,12 @@ function ProductsPage() {
             {categories.map((cat) => (
               <li
                 key={cat._id || cat.path}
-                onClick={() => setSelectedCategory(cat.path)}
+                onClick={() => setSelectedCategoryId(String(cat._id))}
                 style={{
                   marginBottom: '8px',
                   cursor: 'pointer',
-                  fontWeight: selectedCategory === cat.path ? 'bold' : 'normal',
-                  color: selectedCategory === cat.path ? '#007bff' : 'inherit'
+                  fontWeight: selectedCategoryId === String(cat._id) ? 'bold' : 'normal',
+                  color: selectedCategoryId === String(cat._id) ? '#007bff' : 'inherit'
                 }}
               >
                 {cat.path}
