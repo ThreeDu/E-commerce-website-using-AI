@@ -2,16 +2,43 @@ import { useState, useEffect } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
+function getStatusInfo(order) {
+  const status = String(order?.status || "").trim() || (order?.isDelivered ? "delivered" : "pending");
+
+  if (status === "delivered") {
+    return { label: "Đã giao", bg: "#dcfce7", color: "#166534" };
+  }
+
+  if (status === "shipping") {
+    return { label: "Đang giao", bg: "#dbeafe", color: "#1d4ed8" };
+  }
+
+  if (status === "confirmed") {
+    return { label: "Đã xác nhận", bg: "#fef3c7", color: "#b45309" };
+  }
+
+  if (status === "cancelled") {
+    return { label: "Đã hủy", bg: "#fee2e2", color: "#b91c1c" };
+  }
+
+  return { label: "Chờ xử lý", bg: "#ede9fe", color: "#5b21b6" };
+}
+
 function OrderHistoryPage() {
   const { auth } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (auth?.user?.id) {
+    if (auth?.token) {
       const fetchOrders = async () => {
         try {
-          const response = await fetch(`http://localhost:5000/api/orders/user/${auth.user.id}`);
+          const response = await fetch("/api/orders/my-orders", {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${auth.token}`,
+            },
+          });
           if (response.ok) {
             const data = await response.json();
             setOrders(data);
@@ -47,6 +74,10 @@ function OrderHistoryPage() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {orders.map(order => (
+            (() => {
+              const statusInfo = getStatusInfo(order);
+
+              return (
             <div key={order._id} style={{ border: "1px solid #dee2e6", borderRadius: "8px", padding: "24px", backgroundColor: "#fff" }}>
               <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #dee2e6", paddingBottom: "16px", marginBottom: "16px" }}>
                 <div>
@@ -54,7 +85,12 @@ function OrderHistoryPage() {
                   <p style={{ margin: 0, color: "#6c757d" }}>Ngày đặt: <strong>{new Date(order.createdAt).toLocaleDateString("vi-VN")}</strong></p>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <p style={{ margin: "0 0 8px 0", color: "#6c757d" }}>Trạng thái: <strong style={{ color: order.isDelivered ? "#28a745" : "#ffc107" }}>{order.isDelivered ? "Đã giao" : "Đang xử lý"}</strong></p>
+                  <p style={{ margin: "0 0 8px 0", color: "#6c757d" }}>
+                    Trạng thái: {" "}
+                    <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: "999px", backgroundColor: statusInfo.bg, color: statusInfo.color, fontWeight: "bold", fontSize: "12px" }}>
+                      {statusInfo.label}
+                    </span>
+                  </p>
                   <p style={{ margin: 0, color: "#dc3545", fontSize: "20px", fontWeight: "bold" }}>{order.totalPrice.toLocaleString("vi-VN")} đ</p>
                 </div>
               </div>
@@ -69,6 +105,8 @@ function OrderHistoryPage() {
                 ))}
               </div>
             </div>
+              );
+            })()
           ))}
         </div>
       )}

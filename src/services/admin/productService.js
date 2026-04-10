@@ -1,3 +1,21 @@
+async function parseResponseSafely(response) {
+  const rawText = await response.text();
+
+  if (!rawText) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch (error) {
+    return {
+      message: rawText.startsWith("<!DOCTYPE")
+        ? "Server trả về HTML thay vì JSON. Vui lòng kiểm tra server API hoặc payload gửi lên."
+        : rawText,
+    };
+  }
+}
+
 export async function getAdminProducts(token) {
   const response = await fetch("/api/auth/admin/products", {
     method: "GET",
@@ -6,7 +24,7 @@ export async function getAdminProducts(token) {
     },
   });
 
-  const data = await response.json();
+  const data = await parseResponseSafely(response);
   if (!response.ok) {
     throw new Error(data.message || "Không thể lấy danh sách sản phẩm");
   }
@@ -22,7 +40,7 @@ export async function getAdminProductById(token, productId) {
     },
   });
 
-  const data = await response.json();
+  const data = await parseResponseSafely(response);
   if (!response.ok) {
     throw new Error(data.message || "Không thể lấy chi tiết sản phẩm");
   }
@@ -40,7 +58,7 @@ export async function createAdminProduct(token, payload) {
     body: JSON.stringify(payload),
   });
 
-  const data = await response.json();
+  const data = await parseResponseSafely(response);
   if (!response.ok) {
     throw new Error(data.message || "Không thể thêm sản phẩm");
   }
@@ -58,7 +76,7 @@ export async function updateAdminProduct(token, productId, payload) {
     body: JSON.stringify(payload),
   });
 
-  const data = await response.json();
+  const data = await parseResponseSafely(response);
   if (!response.ok) {
     throw new Error(data.message || "Không thể cập nhật sản phẩm");
   }
@@ -74,7 +92,7 @@ export async function deleteAdminProduct(token, productId) {
     },
   });
 
-  const data = await response.json();
+  const data = await parseResponseSafely(response);
   if (!response.ok) {
     throw new Error(data.message || "Không thể xóa sản phẩm");
   }

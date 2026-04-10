@@ -1,6 +1,24 @@
 import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 
+function getProductImageSrc(item) {
+  const rawValue = String(item?.image || item?.imageUrl || "").trim();
+  if (!rawValue) {
+    return "/placeholder.jpg";
+  }
+
+  if (
+    rawValue.startsWith("http://") ||
+    rawValue.startsWith("https://") ||
+    rawValue.startsWith("data:image/") ||
+    rawValue.startsWith("/")
+  ) {
+    return rawValue;
+  }
+
+  return `/${rawValue.replace(/^\/+/, "")}`;
+}
+
 function CartPage() {
   const { cart, removeFromCart, updateQuantity } = useCart();
 
@@ -48,9 +66,15 @@ function CartPage() {
                 key={item.id}
                 style={{ display: "flex", alignItems: "center", padding: "16px", border: "1px solid #dee2e6", borderRadius: "8px", marginBottom: "16px", backgroundColor: "#fff" }}
               >
-                <div style={{ width: "80px", height: "80px", backgroundColor: "#e9ecef", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "16px", color: "#adb5bd" }}>
-                  Ảnh
-                </div>
+                <img
+                  src={getProductImageSrc(item)}
+                  alt={item.name}
+                  style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "4px", marginRight: "16px", backgroundColor: "#e9ecef" }}
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = "/placeholder.jpg";
+                  }}
+                />
                 <div style={{ flex: 1 }}>
                   <h4 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>{item.name}</h4>
                   <p style={{ margin: 0, color: "#dc3545", fontWeight: "bold" }}>{formatPrice(parsePrice(item.price))}</p>

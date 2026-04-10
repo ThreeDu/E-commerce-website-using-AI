@@ -117,14 +117,14 @@ function AdminEditProductPage() {
         setFormData({
           name: product.name || "",
           category: product.category || "",
-          imageUrl: product.imageUrl || "",
+          imageUrl: product.image || product.imageUrl || "",
           price: String(product.price ?? ""),
           stock: String(product.stock ?? 0),
           discountPercent: String(product.discountPercent ?? 0),
           description: product.description || "",
         });
 
-        if (isUploadedImageValue(product.imageUrl)) {
+        if (isUploadedImageValue(product.image || product.imageUrl)) {
           setImageInputMode("upload");
           setUploadedFileName("Ảnh hiện tại");
         } else {
@@ -238,7 +238,7 @@ function AdminEditProductPage() {
       payload: {
         name: trimmedName,
         category: trimmedCategory,
-        imageUrl: trimmedImageUrl,
+        image: trimmedImageUrl,
         price,
         stock: Number(formData.stock || 0),
         discountPercent,

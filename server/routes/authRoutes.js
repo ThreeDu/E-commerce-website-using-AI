@@ -1,15 +1,29 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
+const Product = require("../models/Product");
 const jwt = require("jsonwebtoken");
-const { createToken, getTokenFromHeader, verifyAdminRequest } = require("./helpers/authHelpers");
+const { createToken, getTokenFromHeader, verifyAdminRequest, verifyUserRequest } = require("./helpers/authHelpers");
 const adminUserRoutes = require("./adminUserRoutes");
 const adminProductRoutes = require("./adminProductRoutes");
 const adminCategoryRoutes = require("./adminCategoryRoutes");
 const adminDiscountRoutes = require("./adminDiscountRoutes");
 const adminSystemLogRoutes = require("./adminSystemLogRoutes");
+const adminOrderRoutes = require("./adminOrderRoutes");
 
 const router = express.Router();
+
+const WISHLIST_PRODUCT_SELECT = "_id name image price category";
+
+const mapWishlistItems = (wishlistProducts) => {
+  return (Array.isArray(wishlistProducts) ? wishlistProducts : []).map((product) => ({
+    _id: product._id,
+    name: product.name,
+    image: product.image,
+    price: product.price,
+    category: product.category,
+  }));
+};
 
 router.post("/register", async (req, res) => {
   try {
@@ -47,6 +61,8 @@ router.post("/register", async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
+        phone: newUser.phone,
+        address: newUser.address,
       },
     });
   } catch (error) {
@@ -84,6 +100,8 @@ router.post("/login", async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        phone: user.phone,
+        address: user.address,
       },
     });
   } catch (error) {
@@ -117,7 +135,7 @@ router.get("/verify-token", async (req, res) => {
     const secret = process.env.JWT_SECRET || "dev_secret_change_me";
     const decoded = jwt.verify(token, secret);
 
-    const user = await User.findById(decoded.userId).select("_id name email role");
+    const user = await User.findById(decoded.userId).select("_id name email role phone address");
     if (!user) {
       return res.status(401).json({ message: "Tài khoản không tồn tại." });
     }
@@ -131,10 +149,180 @@ router.get("/verify-token", async (req, res) => {
   }
 });
 
+router.get("/profile", async (req, res) => {
+  const user = await verifyUserRequest(req, res);
+  if (!user) {
+    return;
+  }
+
+  return res.json({
+    message: "Lấy hồ sơ thành công.",
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone || "",
+      address: user.address || "",
+    },
+  });
+});
+
+router.put("/profile", async (req, res) => {
+  const user = await verifyUserRequest(req, res);
+  if (!user) {
+    return;
+  }
+
+  try {
+    const { name, phone, address } = req.body;
+
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ message: "Họ tên là bắt buộc." });
+    }
+
+    user.name = String(name).trim();
+    user.phone = String(phone || "").trim();
+    user.address = String(address || "").trim();
+    await user.save();
+
+    return res.json({
+      message: "Cập nhật hồ sơ thành công.",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        address: user.address,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.put("/change-password", async (req, res) => {
+  const authUser = await verifyUserRequest(req, res);
+  if (!authUser) {
+    return;
+  }
+
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Mật khẩu hiện tại và mật khẩu mới là bắt buộc." });
+    }
+
+    if (String(newPassword).length < 6) {
+      return res.status(400).json({ message: "Mật khẩu mới phải có ít nhất 6 ký tự." });
+    }
+
+    const user = await User.findById(authUser._id).select("password");
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy tài khoản." });
+    }
+
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!isValidPassword) {
+      return res.status(400).json({ message: "Mật khẩu hiện tại không đúng." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.json({ message: "Đổi mật khẩu thành công." });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/wishlist", async (req, res) => {
+  const authUser = await verifyUserRequest(req, res);
+  if (!authUser) {
+    return;
+  }
+
+  try {
+    const user = await User.findById(authUser._id)
+      .select("wishlist")
+      .populate("wishlist", WISHLIST_PRODUCT_SELECT);
+
+    return res.json({
+      message: "Lấy danh sách yêu thích thành công.",
+      wishlist: mapWishlistItems(user?.wishlist),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/wishlist", async (req, res) => {
+  const authUser = await verifyUserRequest(req, res);
+  if (!authUser) {
+    return;
+  }
+
+  try {
+    const { productId } = req.body;
+    if (!productId) {
+      return res.status(400).json({ message: "Thiếu productId." });
+    }
+
+    const product = await Product.findById(productId).select("_id");
+    if (!product) {
+      return res.status(404).json({ message: "Sản phẩm không tồn tại." });
+    }
+
+    await User.findByIdAndUpdate(authUser._id, {
+      $addToSet: { wishlist: product._id },
+    });
+
+    const updatedUser = await User.findById(authUser._id)
+      .select("wishlist")
+      .populate("wishlist", WISHLIST_PRODUCT_SELECT);
+
+    return res.json({
+      message: "Đã thêm vào yêu thích.",
+      wishlist: mapWishlistItems(updatedUser?.wishlist),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.delete("/wishlist/:productId", async (req, res) => {
+  const authUser = await verifyUserRequest(req, res);
+  if (!authUser) {
+    return;
+  }
+
+  try {
+    const { productId } = req.params;
+    await User.findByIdAndUpdate(authUser._id, {
+      $pull: { wishlist: productId },
+    });
+
+    const updatedUser = await User.findById(authUser._id)
+      .select("wishlist")
+      .populate("wishlist", WISHLIST_PRODUCT_SELECT);
+
+    return res.json({
+      message: "Đã xóa khỏi yêu thích.",
+      wishlist: mapWishlistItems(updatedUser?.wishlist),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
 router.use("/admin/users", adminUserRoutes);
 router.use("/admin/products", adminProductRoutes);
 router.use("/admin/categories", adminCategoryRoutes);
 router.use("/admin/discounts", adminDiscountRoutes);
+router.use("/admin/orders", adminOrderRoutes);
 router.use("/admin/system-logs", adminSystemLogRoutes);
 
 module.exports = router;

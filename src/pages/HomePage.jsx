@@ -1,9 +1,29 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
+
+function getProductImageSrc(product) {
+  const rawValue = String(product?.image || product?.imageUrl || "").trim();
+  if (!rawValue) {
+    return "/placeholder.jpg";
+  }
+
+  if (
+    rawValue.startsWith("http://") ||
+    rawValue.startsWith("https://") ||
+    rawValue.startsWith("data:image/") ||
+    rawValue.startsWith("/")
+  ) {
+    return rawValue;
+  }
+
+  return `/${rawValue.replace(/^\/+/, "")}`;
+}
 
 function HomePage() {
   const { addToCart } = useCart();
+  const { auth } = useAuth();
   const navigate = useNavigate();
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -11,13 +31,13 @@ function HomePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/products");
+        const response = await fetch("/api/products");
         if (response.ok) {
           const data = await response.json();
           setFeaturedProducts(data.slice(0, 4)); // Lấy 4 sản phẩm đầu tiên
         }
 
-        const catResponse = await fetch("http://localhost:5000/api/categories");
+        const catResponse = await fetch("/api/categories");
         if (catResponse.ok) {
           const catData = await catResponse.json();
           setCategories(catData);
@@ -30,7 +50,21 @@ function HomePage() {
   }, []);
 
   const handleCategoryClick = (category) => {
-    navigate("/products", { state: { category } });
+    navigate("/products", {
+      state: {
+        categoryId: String(category._id),
+        category: category.name,
+      },
+    });
+  };
+
+  const handleAddToCart = (product) => {
+    if (!auth?.token) {
+      navigate("/login", { state: { from: "/products" } });
+      return;
+    }
+
+    addToCart({ ...product, id: product._id });
   };
 
   return (
@@ -74,7 +108,7 @@ function HomePage() {
           {categories.map((category) => (
             <div 
               key={category._id} 
-              onClick={() => handleCategoryClick(category.name)}
+              onClick={() => handleCategoryClick(category)}
               style={{ 
                 flex: "1 1 calc(25% - 16px)", 
                 minWidth: "150px", 
@@ -112,22 +146,22 @@ function HomePage() {
               }}
             >
               <Link to={`/products/${product._id}`} style={{ textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", flexGrow: 1 }}>
-                <div 
-                  style={{ 
-                    width: "100%", 
-                    height: "200px", 
-                    backgroundColor: "#f8f9fa", 
-                    borderRadius: "4px", 
-                    marginBottom: "16px", 
-                    display: "flex", 
-                    alignItems: "center", 
-                    justifyContent: "center", 
-                    color: "#adb5bd",
-                    fontSize: "14px"
+                <img
+                  src={getProductImageSrc(product)}
+                  alt={product.name}
+                  style={{
+                    width: "100%",
+                    height: "200px",
+                    borderRadius: "4px",
+                    marginBottom: "16px",
+                    objectFit: "cover",
+                    backgroundColor: "#f8f9fa",
                   }}
-                >
-                  Ảnh SP
-                </div>
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = "/placeholder.jpg";
+                  }}
+                />
                 <h4 style={{ fontSize: "18px", marginBottom: "8px" }}>{product.name}</h4>
                 <p 
                   style={{ 
@@ -152,7 +186,7 @@ function HomePage() {
                   fontWeight: "bold",
                   fontSize: "14px"
                 }}
-                onClick={() => addToCart({ ...product, id: product._id })}
+                onClick={() => handleAddToCart(product)}
               >
                 Thêm vào giỏ
               </button>

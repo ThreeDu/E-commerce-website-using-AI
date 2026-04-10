@@ -14,6 +14,24 @@ const PRICE_FILTERS = {
   over2m: (price) => price > 2000000,
 };
 
+function getProductImageSrc(product) {
+  const rawValue = String(product?.image || product?.imageUrl || "").trim();
+  if (!rawValue) {
+    return "/placeholder.jpg";
+  }
+
+  if (
+    rawValue.startsWith("http://") ||
+    rawValue.startsWith("https://") ||
+    rawValue.startsWith("data:image/") ||
+    rawValue.startsWith("/")
+  ) {
+    return rawValue;
+  }
+
+  return `/${rawValue.replace(/^\/+/, "")}`;
+}
+
 function AdminListProductPage() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -395,7 +413,15 @@ function AdminListProductPage() {
                         />
                       </td>
                       <td>
-                        <img src={product.imageUrl} alt={product.name} className="admin-product-thumb" />
+                        <img
+                          src={getProductImageSrc(product)}
+                          alt={product.name}
+                          className="admin-product-thumb"
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src = "/placeholder.jpg";
+                          }}
+                        />
                       </td>
                       <td>
                         <div className="cell-title truncate-text" title={product.name}>
