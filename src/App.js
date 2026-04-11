@@ -24,6 +24,7 @@ import AdminEditDiscountPage from "./pages/admin/discount/AdminEditDiscountPage"
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 import AdminSystemLogsPage from "./pages/admin/AdminSystemLogsPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
+import OrderDetailPage from "./pages/OrderDetailPage";
 import UserDashboard from "./pages/UserDashboard";
 
 function GuestRoute({ children }) {
@@ -74,6 +75,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <OrderHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/order-history/:id"
+            element={
+              <ProtectedRoute>
+                <OrderDetailPage />
               </ProtectedRoute>
             }
           />

@@ -81,6 +81,8 @@ router.put("/:id/status", async (req, res) => {
     const updatePayload = {
       status,
       isDelivered: status === "delivered",
+      deliveredAt: status === "delivered" ? new Date() : null,
+      cancelledAt: status === "cancelled" ? new Date() : null,
     };
 
     const updatedOrder = await Order.findByIdAndUpdate(req.params.id, updatePayload, {

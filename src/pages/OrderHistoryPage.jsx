@@ -104,6 +104,23 @@ function OrderHistoryPage() {
                   </div>
                 ))}
               </div>
+              <div style={{ marginTop: "16px", textAlign: "right" }}>
+                <Link
+                  to={`/order-history/${order._id}`}
+                  style={{
+                    display: "inline-block",
+                    padding: "8px 14px",
+                    borderRadius: "4px",
+                    backgroundColor: "#0f172a",
+                    color: "#fff",
+                    textDecoration: "none",
+                    fontWeight: "bold",
+                    fontSize: "13px",
+                  }}
+                >
+                  Xem chi tiết đơn hàng
+                </Link>
+              </div>
             </div>
               );
             })()

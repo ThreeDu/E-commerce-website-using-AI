@@ -447,6 +447,12 @@ function ProductsPage() {
                     <h4 style={{ fontSize: "18px", marginBottom: "8px" }}>
                       {product.name}
                     </h4>
+                    <p style={{ marginTop: 0, marginBottom: "8px", color: "#f59e0b", fontWeight: "bold", fontSize: "14px" }}>
+                      {Number(product.averageRating || 0).toFixed(1)} ★ ({Number(product.totalRatings || 0)})
+                    </p>
+                    <p style={{ marginTop: 0, marginBottom: "12px", color: "#64748b", fontSize: "13px" }}>
+                      {Number(product.totalViews || 0)} lượt xem
+                    </p>
                     <p
                       style={{
                         color: "#dc3545",
