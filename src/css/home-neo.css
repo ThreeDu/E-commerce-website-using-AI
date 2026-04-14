@@ -1,0 +1,292 @@
+.neo-home-page {
+  padding: 0 20px;
+  color: #1d1d1f;
+}
+
+.neo-hero-block {
+  display: grid;
+  grid-template-columns: 1.5fr 0.8fr;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.neo-hero-main,
+.neo-hero-side,
+.neo-section,
+.neo-info-bento article,
+.neo-stat-card,
+.neo-product-card,
+.neo-bento-card {
+  border: 1px solid #1d1d1f;
+  border-radius: 22px;
+  background: #ffffff;
+}
+
+.neo-hero-main {
+  padding: 26px;
+}
+
+.neo-eyebrow {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.neo-hero-main h2 {
+  margin: 0;
+  font-size: clamp(1.7rem, 3vw, 2.7rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.neo-hero-main p {
+  margin: 14px 0 0;
+  max-width: 640px;
+  line-height: 1.6;
+  color: #2d3748;
+}
+
+.neo-hero-actions {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.neo-btn {
+  min-height: 46px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 1px solid #1d1d1f;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
+.neo-btn:hover {
+  transform: translateY(-1px);
+}
+
+.neo-btn-primary {
+  background: #0f314f;
+  color: #fff;
+}
+
+.neo-btn-primary:hover {
+  background: #174f7c;
+}
+
+.neo-btn-ghost {
+  background: #ffffff;
+  color: #1d1d1f;
+}
+
+.neo-btn-ghost:hover {
+  background: #ecf8f6;
+}
+
+.neo-hero-side {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+  background: #f7f9fc;
+}
+
+.neo-stat-card {
+  padding: 18px;
+  display: grid;
+  gap: 5px;
+}
+
+.neo-stat-card strong {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.neo-stat-card span {
+  color: #3f4752;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.neo-stat-accent {
+  background: #fff0d6;
+}
+
+.neo-section {
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.neo-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.neo-section-head h3 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.neo-section-head a {
+  color: #0f314f;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.neo-bento-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.neo-bento-grid-categories {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.neo-bento-grid-products {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.neo-bento-card {
+  min-height: 116px;
+  text-align: left;
+  padding: 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.neo-bento-card:hover {
+  transform: translateY(-2px);
+}
+
+.neo-bento-card span {
+  display: inline-flex;
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #334155;
+  margin-bottom: 12px;
+}
+
+.neo-bento-card strong {
+  display: block;
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.neo-cat-0 {
+  background: #e9f6ff;
+}
+
+.neo-cat-1 {
+  background: #fef2e4;
+}
+
+.neo-cat-2 {
+  background: #edf9f0;
+}
+
+.neo-cat-3 {
+  background: #f6f0ff;
+}
+
+.neo-cat-4 {
+  background: #fff4f4;
+}
+
+.neo-product-card {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.neo-product-link {
+  text-decoration: none;
+  color: #1d1d1f;
+  display: block;
+}
+
+.neo-product-link img {
+  width: 100%;
+  height: 190px;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 1px solid #1d1d1f;
+  background: #eef4f8;
+}
+
+.neo-product-link h4 {
+  margin: 10px 0 6px;
+  font-size: 1rem;
+}
+
+.neo-product-link p {
+  margin: 0;
+  color: #0f314f;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.neo-info-bento {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.neo-info-bento article {
+  padding: 16px;
+  min-height: 160px;
+}
+
+.neo-info-bento h4 {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+}
+
+.neo-info-bento p {
+  margin: 0;
+  color: #364152;
+  line-height: 1.65;
+}
+
+@media (max-width: 1024px) {
+  .neo-hero-block {
+    grid-template-columns: 1fr;
+  }
+
+  .neo-bento-grid-categories,
+  .neo-bento-grid-products,
+  .neo-info-bento {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .neo-home-page {
+    padding: 0 10px;
+  }
+
+  .neo-bento-grid-categories,
+  .neo-bento-grid-products,
+  .neo-info-bento {
+    grid-template-columns: 1fr;
+  }
+
+  .neo-section-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
