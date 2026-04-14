@@ -15,6 +15,10 @@ function CheckoutPage() {
     paymentMethod: "cod",
   });
   const [formError, setFormError] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponInfo, setCouponInfo] = useState(null);
+  const [couponError, setCouponError] = useState("");
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
   useEffect(() => {
     if (!auth?.user) {
@@ -51,6 +55,55 @@ function CheckoutPage() {
   const totalPrice = cart.reduce((total, item) => {
     return total + parsePrice(item.price) * item.quantity;
   }, 0);
+
+  const discountAmount = couponInfo?.discountAmount || 0;
+  const finalTotal = Math.max(0, totalPrice - discountAmount);
+
+  const handleApplyCoupon = async () => {
+    setCouponError("");
+
+    if (!auth?.token) {
+      setCouponError("Vui lòng đăng nhập để sử dụng mã giảm giá.");
+      return;
+    }
+
+    const normalizedCode = String(couponCode || "").trim().toUpperCase();
+    if (!normalizedCode) {
+      setCouponError("Vui lòng nhập mã giảm giá.");
+      return;
+    }
+
+    setIsApplyingCoupon(true);
+    try {
+      const response = await fetch(`/api/orders/coupon/${encodeURIComponent(normalizedCode)}?subtotal=${totalPrice}`, {
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setCouponInfo(null);
+        setCouponError(data?.message || "Không thể áp dụng mã giảm giá.");
+        return;
+      }
+
+      setCouponInfo(data);
+      setCouponCode(data?.coupon?.code || normalizedCode);
+      setCouponError("");
+    } catch (error) {
+      setCouponInfo(null);
+      setCouponError("Không thể kết nối để áp dụng mã giảm giá.");
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setCouponInfo(null);
+    setCouponError("");
+    setCouponCode("");
+  };
 
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
@@ -96,7 +149,8 @@ function CheckoutPage() {
         address: trimmedAddress,
       },
       paymentMethod: formData.paymentMethod,
-      totalPrice: totalPrice,
+      totalPrice: finalTotal,
+      discountCode: couponInfo?.coupon?.code || "",
     };
 
     try {
@@ -184,12 +238,45 @@ function CheckoutPage() {
               </div>
             ))}
           </div>
+          <div style={{ marginBottom: "16px" }}>
+            <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Mã giảm giá</label>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <input
+                type="text"
+                value={couponCode}
+                onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
+                placeholder="Nhập mã..."
+                style={{ flex: 1, padding: "10px", borderRadius: "4px", border: "1px solid #ced4da" }}
+              />
+              <button
+                type="button"
+                onClick={handleApplyCoupon}
+                disabled={isApplyingCoupon}
+                style={{ padding: "10px 14px", borderRadius: "4px", border: "none", backgroundColor: "#212529", color: "#fff", fontWeight: "bold", cursor: isApplyingCoupon ? "not-allowed" : "pointer" }}
+              >
+                {isApplyingCoupon ? "Đang áp dụng..." : "Áp dụng"}
+              </button>
+            </div>
+            {couponInfo?.coupon?.code && (
+              <div style={{ marginTop: "8px", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "13px", color: "#166534" }}>
+                <span>Đã áp dụng mã: <strong>{couponInfo.coupon.code}</strong></span>
+                <button type="button" onClick={handleRemoveCoupon} style={{ border: "none", background: "transparent", color: "#b91c1c", cursor: "pointer", fontWeight: "bold" }}>Xóa mã</button>
+              </div>
+            )}
+            {couponError && <p style={{ marginTop: "8px", marginBottom: 0, color: "#b91c1c", fontSize: "13px" }}>{couponError}</p>}
+          </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px", fontSize: "16px", borderTop: "1px solid #dee2e6", paddingTop: "12px" }}>
             <span>Phí vận chuyển:</span><span style={{ fontWeight: "bold" }}>Miễn phí</span>
           </div>
+          {discountAmount > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", fontSize: "16px" }}>
+              <span>Giảm giá:</span>
+              <span style={{ fontWeight: "bold", color: "#16a34a" }}>- {formatPrice(discountAmount)}</span>
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "24px", fontSize: "20px" }}>
             <span style={{ fontWeight: "bold" }}>Tổng cộng:</span>
-            <span style={{ fontWeight: "bold", color: "#dc3545" }}>{formatPrice(totalPrice)}</span>
+            <span style={{ fontWeight: "bold", color: "#dc3545" }}>{formatPrice(finalTotal)}</span>
           </div>
           
           <button type="submit" form="checkout-form" style={{ width: "100%", padding: "14px", backgroundColor: "#007bff", color: "white", border: "none", borderRadius: "4px", fontSize: "16px", fontWeight: "bold", cursor: "pointer" }}>

@@ -38,6 +38,26 @@ const orderSchema = new mongoose.Schema(
       required: true,
       default: 0.0,
     },
+    subtotalPrice: {
+      type: Number,
+      required: true,
+      default: 0.0,
+    },
+    discountCode: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    discountAmount: {
+      type: Number,
+      required: true,
+      default: 0.0,
+    },
+    discount: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Discount",
+      default: null,
+    },
     // Trạng thái đơn hàng
     status: {
       type: String,
@@ -49,6 +69,19 @@ const orderSchema = new mongoose.Schema(
       type: Boolean,
       required: true,
       default: false,
+    },
+    deliveredAt: {
+      type: Date,
+      default: null,
+    },
+    cancelledReason: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    cancelledAt: {
+      type: Date,
+      default: null,
     },
   },
   {
