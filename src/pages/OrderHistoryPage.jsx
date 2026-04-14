@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import "../css/shop-experience.css";
 
 function getStatusInfo(order) {
   const status = String(order?.status || "").trim() || (order?.isDelivered ? "delivered" : "pending");
@@ -62,71 +63,97 @@ function OrderHistoryPage() {
     return <main className="container page-content" style={{ textAlign: "center", padding: "100px 20px" }}><h2>Đang tải dữ liệu...</h2></main>;
   }
 
+  const totalSpend = orders.reduce((sum, item) => sum + Number(item.totalPrice || 0), 0);
+  const deliveredCount = orders.filter((item) => String(item.status || "") === "delivered").length;
+
   return (
-    <main className="container page-content" style={{ padding: "0 20px" }}>
-      <h2 style={{ marginBottom: "24px", fontSize: "28px" }}>Lịch sử đơn hàng của bạn</h2>
-      
-      {orders.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 20px", backgroundColor: "#f8f9fa", borderRadius: "8px" }}>
-          <p style={{ fontSize: "18px", marginBottom: "24px", color: "#6c757d" }}>Bạn chưa có đơn hàng nào.</p>
-          <Link to="/products" style={{ padding: "12px 24px", backgroundColor: "#007bff", color: "white", textDecoration: "none", borderRadius: "4px", fontWeight: "bold" }}>Bắt đầu mua sắm</Link>
+    <main className="container page-content">
+      <div className="shopx-page">
+        <div className="shopx-panel shopx-hero" style={{ marginBottom: "14px" }}>
+          <div>
+            <h1 className="shopx-title">Lich su don hang</h1>
+            <p className="shopx-subtitle">Theo doi trang thai, tong chi tieu va quay lai don hang de thao tac nhanh.</p>
+          </div>
+          <div className="shopx-pills">
+            <span className="shopx-pill">{orders.length} don hang</span>
+            <span className="shopx-pill">{deliveredCount} da giao</span>
+          </div>
         </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {orders.map(order => (
-            (() => {
+
+        {orders.length === 0 ? (
+          <div className="shopx-empty">
+            <p>Ban chua co don hang nao.</p>
+            <Link to="/products" className="shopx-btn shopx-btn--primary" style={{ display: "inline-block", textDecoration: "none", marginTop: "10px" }}>
+              Bat dau mua sam
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="shopx-order-summary">
+              <div className="shopx-panel">
+                <strong>Tong don</strong>
+                <p style={{ margin: "8px 0 0", fontSize: "24px", fontWeight: 700 }}>{orders.length}</p>
+              </div>
+              <div className="shopx-panel">
+                <strong>Da giao thanh cong</strong>
+                <p style={{ margin: "8px 0 0", fontSize: "24px", fontWeight: 700 }}>{deliveredCount}</p>
+              </div>
+              <div className="shopx-panel">
+                <strong>Tong chi tieu</strong>
+                <p style={{ margin: "8px 0 0", fontSize: "24px", fontWeight: 700 }}>
+                  {totalSpend.toLocaleString("vi-VN")} đ
+                </p>
+              </div>
+            </div>
+
+            {orders.map((order) => {
               const statusInfo = getStatusInfo(order);
 
               return (
-            <div key={order._id} style={{ border: "1px solid #dee2e6", borderRadius: "8px", padding: "24px", backgroundColor: "#fff" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #dee2e6", paddingBottom: "16px", marginBottom: "16px" }}>
-                <div>
-                  <p style={{ margin: "0 0 8px 0", color: "#6c757d" }}>Mã đơn hàng: <strong style={{ color: "#343a40" }}>{order._id}</strong></p>
-                  <p style={{ margin: 0, color: "#6c757d" }}>Ngày đặt: <strong>{new Date(order.createdAt).toLocaleDateString("vi-VN")}</strong></p>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <p style={{ margin: "0 0 8px 0", color: "#6c757d" }}>
-                    Trạng thái: {" "}
-                    <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: "999px", backgroundColor: statusInfo.bg, color: statusInfo.color, fontWeight: "bold", fontSize: "12px" }}>
-                      {statusInfo.label}
-                    </span>
-                  </p>
-                  <p style={{ margin: 0, color: "#dc3545", fontSize: "20px", fontWeight: "bold" }}>{order.totalPrice.toLocaleString("vi-VN")} đ</p>
-                </div>
-              </div>
-              
-              <div>
-                <h4 style={{ marginBottom: "12px", fontSize: "16px" }}>Sản phẩm:</h4>
-                {order.orderItems.map((item, index) => (
-                  <div key={index} style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "14px" }}>
-                    <span>{item.name} <strong style={{ color: "#6c757d" }}>x{item.quantity}</strong></span>
-                    <span style={{ fontWeight: "bold" }}>{(item.price * item.quantity).toLocaleString("vi-VN")} đ</span>
+                <article key={order._id} className="shopx-order-item">
+                  <div className="shopx-order-head">
+                    <div>
+                      <p style={{ margin: "0 0 6px", color: "#64748b" }}>
+                        Ma don: <strong style={{ color: "#1e293b" }}>{order._id}</strong>
+                      </p>
+                      <p style={{ margin: 0, color: "#64748b" }}>
+                        Ngay dat: <strong>{new Date(order.createdAt).toLocaleDateString("vi-VN")}</strong>
+                      </p>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <span className="shopx-status" style={{ backgroundColor: statusInfo.bg, color: statusInfo.color }}>
+                        {statusInfo.label}
+                      </span>
+                      <p className="shopx-order-total">{Number(order.totalPrice || 0).toLocaleString("vi-VN")} đ</p>
+                    </div>
                   </div>
-                ))}
-              </div>
-              <div style={{ marginTop: "16px", textAlign: "right" }}>
-                <Link
-                  to={`/order-history/${order._id}`}
-                  style={{
-                    display: "inline-block",
-                    padding: "8px 14px",
-                    borderRadius: "4px",
-                    backgroundColor: "#0f172a",
-                    color: "#fff",
-                    textDecoration: "none",
-                    fontWeight: "bold",
-                    fontSize: "13px",
-                  }}
-                >
-                  Xem chi tiết đơn hàng
-                </Link>
-              </div>
-            </div>
+
+                  <div style={{ display: "grid", gap: "6px" }}>
+                    {(order.orderItems || []).map((item, index) => (
+                      <div key={`${item.name}-${index}`} style={{ display: "flex", justifyContent: "space-between", gap: "10px", fontSize: "14px" }}>
+                        <span>
+                          {item.name} <strong style={{ color: "#64748b" }}>x{item.quantity}</strong>
+                        </span>
+                        <strong>{Number(item.price * item.quantity).toLocaleString("vi-VN")} đ</strong>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: "12px", textAlign: "right" }}>
+                    <Link
+                      to={`/order-history/${order._id}`}
+                      className="shopx-btn shopx-btn--primary"
+                      style={{ display: "inline-block", textDecoration: "none" }}
+                    >
+                      Xem chi tiet don
+                    </Link>
+                  </div>
+                </article>
               );
-            })()
-          ))}
-        </div>
-      )}
+            })}
+          </>
+        )}
+      </div>
     </main>
   );
 }

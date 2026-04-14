@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import "../css/shop-experience.css";
 
 function getProductImageSrc(product) {
   const rawValue = String(product?.image || product?.imageUrl || "").trim();
@@ -33,6 +34,12 @@ function ProductDetailPage() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewMessage, setReviewMessage] = useState("");
   const [reviewError, setReviewError] = useState("");
+  const [editingReviewId, setEditingReviewId] = useState("");
+  const [editReviewForm, setEditReviewForm] = useState({ rating: 5, comment: "" });
+  const [reviewActionLoadingId, setReviewActionLoadingId] = useState("");
+  const [reviewActionMessage, setReviewActionMessage] = useState("");
+  const [reviewActionError, setReviewActionError] = useState("");
+  const [reviewDeleteTargetId, setReviewDeleteTargetId] = useState("");
 
   const handleAddToCart = () => {
     if (!auth?.token) {
@@ -46,6 +53,7 @@ function ProductDetailPage() {
   
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const currentUserId = String(auth?.user?.id || auth?.user?._id || "");
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -275,6 +283,131 @@ function ProductDetailPage() {
     }
   };
 
+  const handleStartEditReview = (review) => {
+    setEditingReviewId(String(review?._id || ""));
+    setEditReviewForm({
+      rating: Number(review?.rating || 5),
+      comment: String(review?.comment || ""),
+    });
+    setReviewActionError("");
+    setReviewActionMessage("");
+  };
+
+  const handleCancelEditReview = () => {
+    setEditingReviewId("");
+    setEditReviewForm({ rating: 5, comment: "" });
+  };
+
+  const handleUpdateReview = async (reviewId) => {
+    const trimmedComment = String(editReviewForm.comment || "").trim();
+    if (trimmedComment.length < 5) {
+      setReviewActionError("Noi dung danh gia phai toi thieu 5 ky tu.");
+      return;
+    }
+
+    setReviewActionLoadingId(String(reviewId));
+    setReviewActionError("");
+    setReviewActionMessage("");
+    try {
+      const response = await fetch(`/api/products/${id}/reviews/${reviewId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.token}`,
+        },
+        body: JSON.stringify({
+          rating: Number(editReviewForm.rating),
+          comment: trimmedComment,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setReviewActionError(data?.message || "Khong the cap nhat danh gia.");
+        return;
+      }
+
+      const updatedReview = data?.review || {};
+      setProduct((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          reviews: (prev.reviews || []).map((review) =>
+            String(review._id) === String(reviewId)
+              ? {
+                  ...review,
+                  rating: Number(updatedReview.rating || editReviewForm.rating),
+                  comment: updatedReview.comment || trimmedComment,
+                  updatedAt: updatedReview.updatedAt || new Date().toISOString(),
+                }
+              : review
+          ),
+          averageRating: Number(data?.averageRating || prev.averageRating || 0),
+          totalRatings: Number(data?.totalRatings || prev.totalRatings || 0),
+        };
+      });
+
+      setReviewActionMessage("Cap nhat danh gia thanh cong.");
+      handleCancelEditReview();
+    } catch (error) {
+      setReviewActionError("Khong the ket noi toi may chu.");
+    } finally {
+      setReviewActionLoadingId("");
+    }
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    setReviewDeleteTargetId(String(reviewId));
+  };
+
+  const handleConfirmDeleteReview = async () => {
+    const reviewId = String(reviewDeleteTargetId || "").trim();
+    if (!reviewId) {
+      return;
+    }
+
+    setReviewActionLoadingId(String(reviewId));
+    setReviewActionError("");
+    setReviewActionMessage("");
+    try {
+      const response = await fetch(`/api/products/${id}/reviews/${reviewId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setReviewActionError(data?.message || "Khong the xoa danh gia.");
+        return;
+      }
+
+      setProduct((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          reviews: (prev.reviews || []).filter((review) => String(review._id) !== String(reviewId)),
+          averageRating: Number(data?.averageRating || prev.averageRating || 0),
+          totalRatings: Number(data?.totalRatings || prev.totalRatings || 0),
+        };
+      });
+
+      setReviewActionMessage("Da xoa danh gia.");
+      setReviewDeleteTargetId("");
+    } catch (error) {
+      setReviewActionError("Khong the ket noi toi may chu.");
+    } finally {
+      setReviewActionLoadingId("");
+    }
+  };
+
   if (loading) {
     return <main className="container page-content" style={{ textAlign: "center", padding: "100px 20px" }}><h2>Đang tải thông tin...</h2></main>;
   }
@@ -289,141 +422,235 @@ function ProductDetailPage() {
   }
 
   return (
-    <main className="container page-content" style={{ padding: "0 20px" }}>
-      {/* Điều hướng Breadcrumb */}
-      <nav aria-label="breadcrumb" style={{ marginBottom: '24px' }}>
-        <ol style={{ display: 'flex', listStyle: 'none', padding: 0, margin: 0, gap: '8px', color: '#6c757d' }}>
-          <li><Link to="/" style={{ textDecoration: 'none', color: '#007bff' }}>Trang chủ</Link></li>
-          <li>/</li>
-          <li><Link to="/products" style={{ textDecoration: 'none', color: '#007bff' }}>Sản phẩm</Link></li>
-          <li>/</li>
-          <li aria-current="page" style={{ fontWeight: 'bold', color: '#343a40' }}>{product.name}</li>
-        </ol>
-      </nav>
+    <main className="container page-content">
+      <div className="shopx-page">
+        <nav className="shopx-breadcrumb" aria-label="breadcrumb">
+          <ol>
+            <li>
+              <Link to="/">Trang chu</Link>
+            </li>
+            <li>/</li>
+            <li>
+              <Link to="/products">San pham</Link>
+            </li>
+            <li>/</li>
+            <li aria-current="page">{product.name}</li>
+          </ol>
+        </nav>
 
-      <div style={{ display: "flex", gap: "48px", flexWrap: "wrap", backgroundColor: "#fff", padding: "32px", borderRadius: "8px", border: "1px solid #dee2e6" }}>
-        {/* Cột hiển thị hình ảnh */}
-        <div style={{ flex: "1 1 40%", minWidth: "300px", borderRadius: "8px", border: "1px solid #dee2e6", overflow: "hidden", backgroundColor: "#f8f9fa" }}>
-          <img
-            src={getProductImageSrc(product)}
-            alt={product.name}
-            style={{ width: "100%", height: "400px", objectFit: "cover" }}
-            onError={(event) => {
-              event.currentTarget.onerror = null;
-              event.currentTarget.src = "/placeholder.jpg";
-            }}
-          />
-        </div>
-
-        {/* Cột thông tin chi tiết */}
-        <div style={{ flex: "1 1 50%", minWidth: "300px", display: "flex", flexDirection: "column" }}>
-          <h2 style={{ fontSize: "32px", marginBottom: "16px", marginTop: 0 }}>{product.name}</h2>
-          <p style={{ marginTop: 0, marginBottom: "8px", color: "#f59e0b", fontWeight: "bold" }}>
-            {Number(product.averageRating || 0).toFixed(1)} ★ ({Number(product.totalRatings || 0)} đánh giá)
-          </p>
-          <p style={{ color: "#6c757d", fontSize: "16px", marginBottom: "16px" }}>Danh mục: <strong>{product.category}</strong></p>
-          <p style={{ color: "#6c757d", fontSize: "14px", marginTop: 0, marginBottom: "16px" }}>Lượt xem: <strong>{Number(product.totalViews || 0)}</strong></p>
-          <p style={{ fontSize: "28px", fontWeight: "bold", color: "#dc3545", marginBottom: "24px" }}>{product.price.toLocaleString("vi-VN")} đ</p>
-          <div style={{ marginBottom: "32px", lineHeight: "1.6", color: "#495057" }}>
-            <h4 style={{ marginBottom: "8px" }}>Mô tả sản phẩm:</h4>
-            <p>{product.description}</p>
-          </div>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              disabled={isWishlistLoading}
-              onClick={handleToggleWishlist}
-              style={{
-                padding: "14px 24px",
-                backgroundColor: isWishlisted ? "#ffe3e3" : "#ffffff",
-                color: isWishlisted ? "#c92a2a" : "#495057",
-                border: "1px solid #dee2e6",
-                borderRadius: "4px",
-                fontSize: "16px",
-                fontWeight: "bold",
-                cursor: isWishlistLoading ? "not-allowed" : "pointer",
+        <section className="shopx-panel shopx-detail">
+          <div>
+            <img
+              src={getProductImageSrc(product)}
+              alt={product.name}
+              className="shopx-detail-image"
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = "/placeholder.jpg";
               }}
-            >
-              {isWishlistLoading ? "Đang xử lý..." : isWishlisted ? "Đã yêu thích ♥" : "Thêm yêu thích ♡"}
-            </button>
-            <button onClick={handleAddToCart} style={{ padding: "16px 32px", backgroundColor: "#28a745", color: "white", border: "none", borderRadius: "4px", fontSize: "18px", fontWeight: "bold", cursor: "pointer", width: "fit-content" }}>
-              Thêm vào giỏ hàng
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <section style={{ marginTop: "24px", border: "1px solid #dee2e6", borderRadius: "8px", backgroundColor: "#fff", padding: "24px" }}>
-        <h3 style={{ marginTop: 0, marginBottom: "16px" }}>Đánh giá sản phẩm</h3>
-
-        {!auth?.token ? (
-          <p style={{ margin: 0, color: "#6c757d" }}>
-            Vui lòng <Link to="/login" style={{ color: "#007bff" }}>đăng nhập</Link> để đánh giá sau khi đơn hàng đã giao.
-          </p>
-        ) : eligibility.canReview ? (
-          <form onSubmit={handleSubmitReview} style={{ marginBottom: "24px", border: "1px solid #e9ecef", borderRadius: "8px", padding: "16px", backgroundColor: "#f8fafc" }}>
-            <h4 style={{ marginTop: 0, marginBottom: "12px" }}>Viết đánh giá</h4>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 160px", gap: "10px", marginBottom: "10px" }}>
-              <select
-                value={reviewForm.orderId}
-                onChange={(event) => setReviewForm((prev) => ({ ...prev, orderId: event.target.value }))}
-                style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                required
-              >
-                {eligibility.availableOrders.map((order) => (
-                  <option key={order._id} value={order._id}>
-                    Đơn {String(order._id).slice(-8).toUpperCase()} - {new Date(order.createdAt).toLocaleDateString("vi-VN")}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={reviewForm.rating}
-                onChange={(event) => setReviewForm((prev) => ({ ...prev, rating: Number(event.target.value) }))}
-                style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-              >
-                <option value={5}>5 sao</option>
-                <option value={4}>4 sao</option>
-                <option value={3}>3 sao</option>
-                <option value={2}>2 sao</option>
-                <option value={1}>1 sao</option>
-              </select>
-            </div>
-            <textarea
-              rows={4}
-              placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm..."
-              value={reviewForm.comment}
-              onChange={(event) => setReviewForm((prev) => ({ ...prev, comment: event.target.value }))}
-              style={{ width: "100%", boxSizing: "border-box", resize: "vertical", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1", marginBottom: "10px" }}
             />
-            {reviewError ? <p style={{ marginTop: 0, color: "#b91c1c" }}>{reviewError}</p> : null}
-            {reviewMessage ? <p style={{ marginTop: 0, color: "#166534" }}>{reviewMessage}</p> : null}
-            <button type="submit" disabled={reviewSubmitting} style={{ padding: "10px 16px", borderRadius: "6px", border: "none", backgroundColor: "#0f172a", color: "#fff", fontWeight: "bold", cursor: reviewSubmitting ? "not-allowed" : "pointer" }}>
-              {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
-            </button>
-          </form>
-        ) : (
-          <p style={{ marginTop: 0, marginBottom: "16px", color: "#6c757d" }}>
-            Bạn chỉ có thể đánh giá sản phẩm sau khi đã nhận hàng thành công.
-          </p>
-        )}
+          </div>
+          <div>
+            <h1 className="shopx-detail-name">{product.name}</h1>
+            <p className="shopx-subtitle" style={{ marginTop: "12px" }}>
+              Danh muc: <strong>{product.category}</strong>
+            </p>
 
-        <div style={{ display: "grid", gap: "12px" }}>
-          {(product.reviews || []).length === 0 ? (
-            <p style={{ margin: 0, color: "#6c757d" }}>Chưa có đánh giá nào cho sản phẩm này.</p>
+            <div className="shopx-meta-row" style={{ marginTop: "12px" }}>
+              <span className="shopx-chip shopx-chip--rating">
+                {Number(product.averageRating || 0).toFixed(1)} sao ({Number(product.totalRatings || 0)} danh gia)
+              </span>
+              <span className="shopx-chip shopx-chip--views">{Number(product.totalViews || 0)} luot xem</span>
+              <span className="shopx-chip shopx-chip--sold">{Number(product.totalPurchases || 0)} luot mua</span>
+            </div>
+
+            <p className="shopx-price">{Number(product.price || 0).toLocaleString("vi-VN")} đ</p>
+            <p className="shopx-detail-desc">{product.description}</p>
+
+            <div className="shopx-detail-actions">
+              <button
+                type="button"
+                disabled={isWishlistLoading}
+                onClick={handleToggleWishlist}
+                className={`shopx-btn shopx-btn--ghost ${isWishlisted ? "shopx-btn--active" : ""}`}
+              >
+                {isWishlistLoading ? "Dang xu ly..." : isWishlisted ? "Da yeu thich" : "Them yeu thich"}
+              </button>
+              <button type="button" onClick={handleAddToCart} className="shopx-btn shopx-btn--primary">
+                Them vao gio hang
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="shopx-panel shopx-review-box">
+          <h3 style={{ marginTop: 0 }}>Danh gia san pham</h3>
+
+          {!auth?.token ? (
+            <p className="shopx-subtitle">
+              Vui long <Link to="/login">dang nhap</Link> de gui danh gia sau khi don hang da giao.
+            </p>
+          ) : eligibility.canReview ? (
+            <form onSubmit={handleSubmitReview} style={{ marginBottom: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 170px", gap: "10px", marginBottom: "10px" }}>
+                <select
+                  className="shopx-select"
+                  value={reviewForm.orderId}
+                  onChange={(event) => setReviewForm((prev) => ({ ...prev, orderId: event.target.value }))}
+                  required
+                >
+                  {eligibility.availableOrders.map((order) => (
+                    <option key={order._id} value={order._id}>
+                      Don {String(order._id).slice(-8).toUpperCase()} - {new Date(order.createdAt).toLocaleDateString("vi-VN")}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="shopx-select"
+                  value={reviewForm.rating}
+                  onChange={(event) => setReviewForm((prev) => ({ ...prev, rating: Number(event.target.value) }))}
+                >
+                  <option value={5}>5 sao</option>
+                  <option value={4}>4 sao</option>
+                  <option value={3}>3 sao</option>
+                  <option value={2}>2 sao</option>
+                  <option value={1}>1 sao</option>
+                </select>
+              </div>
+
+              <textarea
+                className="shopx-textarea"
+                rows={4}
+                placeholder="Chia se trai nghiem cua ban..."
+                value={reviewForm.comment}
+                onChange={(event) => setReviewForm((prev) => ({ ...prev, comment: event.target.value }))}
+              />
+
+              {reviewError ? <p className="shopx-msg shopx-msg--error">{reviewError}</p> : null}
+              {reviewMessage ? <p className="shopx-msg shopx-msg--ok">{reviewMessage}</p> : null}
+
+              <button type="submit" disabled={reviewSubmitting} className="shopx-btn shopx-btn--primary" style={{ marginTop: "10px" }}>
+                {reviewSubmitting ? "Dang gui..." : "Gui danh gia"}
+              </button>
+            </form>
           ) : (
-            (product.reviews || []).map((review) => (
-              <article key={review._id} style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "12px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
-                  <strong>{review.user?.name || "Người dùng"}</strong>
-                  <span style={{ color: "#f59e0b", fontWeight: "bold" }}>{Number(review.rating || 0).toFixed(1)} ★</span>
-                </div>
-                <p style={{ margin: "8px 0", color: "#374151" }}>{review.comment}</p>
-                <p style={{ margin: 0, color: "#9ca3af", fontSize: "12px" }}>{new Date(review.createdAt).toLocaleString("vi-VN")}</p>
-              </article>
-            ))
+            <p className="shopx-subtitle">Ban chi co the danh gia san pham sau khi da nhan hang thanh cong.</p>
           )}
-        </div>
-      </section>
+
+          {reviewActionError ? <p className="shopx-msg shopx-msg--error">{reviewActionError}</p> : null}
+          {reviewActionMessage ? <p className="shopx-msg shopx-msg--ok">{reviewActionMessage}</p> : null}
+
+          <div className="shopx-review-list">
+            {(product.reviews || []).length === 0 ? (
+              <p className="shopx-subtitle">Chua co danh gia nao cho san pham nay.</p>
+            ) : (
+              (product.reviews || []).map((review) => {
+                const reviewerId = String(review?.user?._id || review?.user || "");
+                const isMine = currentUserId && reviewerId === currentUserId;
+                const isEditing = editingReviewId === String(review._id);
+
+                return (
+                  <article key={review._id} className="shopx-review-item">
+                    <div className="shopx-review-head">
+                      <span className="shopx-review-name">{review.user?.name || "Nguoi dung"}</span>
+                      <span className="shopx-chip shopx-chip--rating">{Number(review.rating || 0).toFixed(1)} sao</span>
+                    </div>
+
+                    {isEditing ? (
+                      <div style={{ marginTop: "10px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "8px", marginBottom: "8px" }}>
+                          <select
+                            className="shopx-select"
+                            value={editReviewForm.rating}
+                            onChange={(event) => setEditReviewForm((prev) => ({ ...prev, rating: Number(event.target.value) }))}
+                          >
+                            <option value={5}>5 sao</option>
+                            <option value={4}>4 sao</option>
+                            <option value={3}>3 sao</option>
+                            <option value={2}>2 sao</option>
+                            <option value={1}>1 sao</option>
+                          </select>
+                          <textarea
+                            className="shopx-textarea"
+                            rows={3}
+                            value={editReviewForm.comment}
+                            onChange={(event) => setEditReviewForm((prev) => ({ ...prev, comment: event.target.value }))}
+                          />
+                        </div>
+                        <div className="shopx-review-actions">
+                          <button
+                            type="button"
+                            className="shopx-btn shopx-btn--primary"
+                            disabled={reviewActionLoadingId === String(review._id)}
+                            onClick={() => handleUpdateReview(review._id)}
+                          >
+                            {reviewActionLoadingId === String(review._id) ? "Dang luu..." : "Luu sua"}
+                          </button>
+                          <button type="button" className="shopx-btn shopx-btn--ghost" onClick={handleCancelEditReview}>
+                            Huy
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p style={{ margin: "8px 0 6px", lineHeight: 1.6 }}>{review.comment}</p>
+                        <p className="shopx-review-time">
+                          {new Date(review.updatedAt || review.createdAt).toLocaleString("vi-VN")}
+                        </p>
+
+                        {isMine ? (
+                          <div className="shopx-review-actions">
+                            <button type="button" className="shopx-btn shopx-btn--ghost" onClick={() => handleStartEditReview(review)}>
+                              Sua
+                            </button>
+                            <button
+                              type="button"
+                              className="shopx-btn shopx-btn--warn"
+                              disabled={reviewActionLoadingId === String(review._id)}
+                              onClick={() => handleDeleteReview(review._id)}
+                            >
+                              {reviewActionLoadingId === String(review._id) ? "Dang xoa..." : "Xoa"}
+                            </button>
+                          </div>
+                        ) : null}
+                      </>
+                    )}
+                  </article>
+                );
+              })
+            )}
+          </div>
+        </section>
+
+        {reviewDeleteTargetId ? (
+          <div className="shopx-modal-backdrop" role="dialog" aria-modal="true" aria-label="Xac nhan xoa danh gia">
+            <div className="shopx-modal-card">
+              <h4 style={{ margin: "0 0 8px" }}>Xac nhan xoa danh gia</h4>
+              <p className="shopx-subtitle" style={{ marginTop: 0 }}>
+                Hanh dong nay se xoa vinh vien danh gia cua ban cho san pham nay.
+              </p>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "10px" }}>
+                <button
+                  type="button"
+                  className="shopx-btn shopx-btn--ghost"
+                  onClick={() => setReviewDeleteTargetId("")}
+                  disabled={reviewActionLoadingId === reviewDeleteTargetId}
+                >
+                  Huy
+                </button>
+                <button
+                  type="button"
+                  className="shopx-btn shopx-btn--warn"
+                  onClick={handleConfirmDeleteReview}
+                  disabled={reviewActionLoadingId === reviewDeleteTargetId}
+                >
+                  {reviewActionLoadingId === reviewDeleteTargetId ? "Dang xoa..." : "Xac nhan xoa"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
     </main>
   );
 }

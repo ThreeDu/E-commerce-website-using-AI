@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import "../css/shop-experience.css";
 
 function getProductImageSrc(product) {
   const rawValue = String(product?.image || product?.imageUrl || "").trim();
@@ -28,6 +29,7 @@ function ProductsPage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("all");
+  const [sortBy, setSortBy] = useState("best-selling");
   const [maxPrice, setMaxPrice] = useState(100000000); // Mức giá đang chọn (mặc định để rất lớn)
   const [maxPossiblePrice, setMaxPossiblePrice] = useState(100000000); // Mức giá lớn nhất có trong data
   const [allProducts, setAllProducts] = useState([]);
@@ -136,6 +138,13 @@ function ProductsPage() {
   }, []);
 
   useEffect(() => {
+    const keyword = new URLSearchParams(location.search).get("keyword");
+    if (keyword) {
+      setSearchTerm(keyword);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
     if (categories.length <= 1) {
       return;
     }
@@ -240,8 +249,30 @@ function ProductsPage() {
       const matchPrice = product.price <= maxPrice;
       return matchSearch && matchCategory && matchPrice;
     });
-    setFilteredProducts(results);
-  }, [searchTerm, selectedCategoryScope, maxPrice, allProducts]);
+
+    const sortedResults = [...results].sort((a, b) => {
+      if (sortBy === "most-viewed") {
+        return Number(b.totalViews || 0) - Number(a.totalViews || 0);
+      }
+
+      if (sortBy === "top-rated") {
+        const ratingDiff = Number(b.averageRating || 0) - Number(a.averageRating || 0);
+        if (ratingDiff !== 0) {
+          return ratingDiff;
+        }
+        return Number(b.totalRatings || 0) - Number(a.totalRatings || 0);
+      }
+
+      const soldDiff = Number(b.totalPurchases || 0) - Number(a.totalPurchases || 0);
+      if (soldDiff !== 0) {
+        return soldDiff;
+      }
+
+      return Number(b.totalViews || 0) - Number(a.totalViews || 0);
+    });
+
+    setFilteredProducts(sortedResults);
+  }, [searchTerm, selectedCategoryScope, maxPrice, allProducts, sortBy]);
 
   const handleAddToCart = (product) => {
     if (!auth?.token) {
@@ -296,216 +327,147 @@ function ProductsPage() {
 
   return (
     <main className="container page-content">
-      {/* Breadcrumb Navigation */}
-      <nav aria-label="breadcrumb" style={{ marginBottom: '24px' }}>
-        <ol style={{ display: 'flex', listStyle: 'none', padding: 0, margin: 0, gap: '8px', color: '#6c757d' }}>
-          <li><Link to="/" style={{ textDecoration: 'none', color: '#007bff' }}>Trang chủ</Link></li>
-          <li>/</li>
-          <li aria-current="page" style={{ fontWeight: 'bold', color: '#343a40' }}>Sản phẩm</li>
-        </ol>
-      </nav>
+      <div className="shopx-page">
+        <nav className="shopx-breadcrumb" aria-label="breadcrumb">
+          <ol>
+            <li>
+              <Link to="/">Trang chủ</Link>
+            </li>
+            <li>/</li>
+            <li aria-current="page">Sản phẩm</li>
+          </ol>
+        </nav>
 
-      <div style={{ display: "flex", gap: "32px" }}>
-        {/* Filters Sidebar */}
-        <aside style={{ width: "240px", flexShrink: 0 }}>
-          <h3 style={{ marginBottom: "16px" }}>Bộ lọc</h3>
-          <div style={{ marginBottom: "24px" }}>
-            <input
-              type="text"
-              placeholder="Tìm kiếm sản phẩm..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid #ced4da" }}
-            />
-          </div>
-          {/* You can add more filters here, e.g., by category, price range */}
-          <h4>Danh mục</h4>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            {categories.map((cat) => (
-              <li
-                key={cat._id || cat.path}
-                onClick={() => setSelectedCategoryId(String(cat._id))}
-                style={{
-                  marginBottom: '8px',
-                  cursor: 'pointer',
-                  fontWeight: selectedCategoryId === String(cat._id) ? 'bold' : 'normal',
-                  color: selectedCategoryId === String(cat._id) ? '#007bff' : 'inherit'
-                }}
-              >
-                {cat.path}
-              </li>
-            ))}
-          </ul>
-
-          {/* Bộ lọc thanh kéo mức giá */}
-          <h4 style={{ marginTop: "24px", marginBottom: "8px" }}>Mức giá</h4>
-          <div style={{ marginBottom: "24px" }}>
-            <style>{`
-              .custom-slider {
-                -webkit-appearance: none;
-                appearance: none;
-                height: 6px;
-                border-radius: 4px;
-                outline: none;
-              }
-              .custom-slider::-webkit-slider-thumb {
-                -webkit-appearance: none;
-                appearance: none;
-                width: 20px;
-                height: 20px;
-                border-radius: 50%;
-                background: #007bff;
-                cursor: pointer;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-                transition: 0.2s;
-              }
-              .custom-slider::-webkit-slider-thumb:hover {
-                transform: scale(1.15);
-              }
-              .custom-slider::-moz-range-thumb {
-                width: 20px;
-                height: 20px;
-                border-radius: 50%;
-                background: #007bff;
-                cursor: pointer;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-                border: none;
-                transition: 0.2s;
-              }
-              .custom-slider::-moz-range-thumb:hover {
-                transform: scale(1.15);
-              }
-            `}</style>
-            <input
-              type="range"
-              min="0"
-              max={maxPossiblePrice}
-              step={Math.max(10000, Math.round(maxPossiblePrice / 200))}
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(Number(e.target.value))}
-              className="custom-slider"
-              style={{ 
-                width: "100%", 
-                cursor: "pointer",
-                background: `linear-gradient(to right, #007bff ${maxPossiblePrice > 0 ? (maxPrice / maxPossiblePrice) * 100 : 100}%, #e9ecef ${maxPossiblePrice > 0 ? (maxPrice / maxPossiblePrice) * 100 : 100}%)`
-              }}
-            />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", marginTop: "8px" }}>
-              <span style={{ color: "#6c757d" }}>0 đ</span>
-              <span style={{ fontWeight: "bold", color: "#dc3545" }}>
-                Dưới {maxPrice.toLocaleString("vi-VN")} đ / Tối đa {maxPossiblePrice.toLocaleString("vi-VN")} đ
-              </span>
+        <div className="shopx-shell">
+          <aside className="shopx-panel shopx-panel--sticky">
+            <h3 className="shopx-filter-title">Bộ lọc thông minh</h3>
+            <div className="shopx-field">
+              <input
+                className="shopx-input"
+                type="text"
+                placeholder="Tìm kiếm sản phẩm..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-          </div>
-        </aside>
 
-        {/* Products Section */}
-        <section style={{ flex: 1 }}>
-          <h2 style={{ marginBottom: "24px", fontSize: "24px" }}>
-            Tất cả sản phẩm
-          </h2>
-          {loading ? (
-            <p>Đang tải danh sách sản phẩm...</p>
-          ) : filteredProducts.length > 0 ? (
-            <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
-              {filteredProducts.map((product) => {
-                const productId = String(product._id);
-                const isWishlisted = wishlistIds.includes(productId);
-                const isPending = pendingWishlistIds.includes(productId);
+            <div className="shopx-field">
+              <h4 style={{ margin: 0 }}>Sắp xếp</h4>
+              <select className="shopx-select" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                <option value="best-selling">Bán chạy nhất</option>
+                <option value="most-viewed">Xem nhiều nhất</option>
+                <option value="top-rated">Đánh giá cao nhất</option>
+              </select>
+            </div>
 
-                return (
-                <div
-                  key={productId}
-                  style={{
-                    flex: "1 1 calc(33.333% - 24px)", // Adjusted for 3 items per row
-                    minWidth: "200px",
-                    border: "1px solid #dee2e6",
-                    borderRadius: "8px",
-                    padding: "16px",
-                    display: "flex",
-                    flexDirection: "column",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                  }}
-                >
-                  <Link to={`/products/${product._id}`} style={{ textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", flexGrow: 1 }}>
-                    <img
-                      src={getProductImageSrc(product)}
-                      alt={product.name}
-                      style={{
-                        width: "100%",
-                        height: "200px",
-                        borderRadius: "4px",
-                        marginBottom: "16px",
-                        objectFit: "cover",
-                        backgroundColor: "#f8f9fa",
-                      }}
-                      onError={(event) => {
-                        event.currentTarget.onerror = null;
-                        event.currentTarget.src = "/placeholder.jpg";
-                      }}
-                    />
-                    <h4 style={{ fontSize: "18px", marginBottom: "8px" }}>
-                      {product.name}
-                    </h4>
-                    <p style={{ marginTop: 0, marginBottom: "8px", color: "#f59e0b", fontWeight: "bold", fontSize: "14px" }}>
-                      {Number(product.averageRating || 0).toFixed(1)} ★ ({Number(product.totalRatings || 0)})
-                    </p>
-                    <p style={{ marginTop: 0, marginBottom: "12px", color: "#64748b", fontSize: "13px" }}>
-                      {Number(product.totalViews || 0)} lượt xem
-                    </p>
-                    <p
-                      style={{
-                        color: "#dc3545",
-                        fontWeight: "bold",
-                        fontSize: "19px",
-                        marginBottom: "16px",
-                      }}
-                    >
-                      {product.price.toLocaleString("vi-VN")} đ
-                    </p>
-                  </Link>
-                  <button
-                    type="button"
-                    disabled={isPending}
-                    style={{
-                      marginBottom: "8px",
-                      padding: "8px",
-                      backgroundColor: isWishlisted ? "#ffe3e3" : "#fff",
-                      color: isWishlisted ? "#c92a2a" : "#495057",
-                      border: "1px solid #dee2e6",
-                      borderRadius: "4px",
-                      cursor: isPending ? "not-allowed" : "pointer",
-                      fontWeight: "bold",
-                      fontSize: "14px",
-                    }}
-                    onClick={() => handleToggleWishlist(productId)}
+            <div className="shopx-field">
+              <h4 style={{ margin: 0 }}>Danh mục</h4>
+              <ul className="shopx-list">
+                {categories.map((cat) => (
+                  <li
+                    key={cat._id || cat.path}
+                    onClick={() => setSelectedCategoryId(String(cat._id))}
+                    className={`shopx-list-item ${selectedCategoryId === String(cat._id) ? "is-active" : ""}`}
                   >
-                    {isPending ? "Đang xử lý..." : isWishlisted ? "Đã yêu thích ♥" : "Thêm yêu thích ♡"}
-                  </button>
-                  <button
-                    style={{
-                      marginTop: "auto",
-                      padding: "8px",
-                      backgroundColor: "#28a745",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      fontWeight: "bold",
-                      fontSize: "14px",
-                    }}
-                    onClick={() => handleAddToCart(product)}
-                  >
-                    Thêm vào giỏ
-                  </button>
+                    {cat.path}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="shopx-field">
+              <h4 style={{ margin: 0 }}>Mức giá</h4>
+              <div className="shopx-range-wrap">
+                <input
+                  className="shopx-range"
+                  type="range"
+                  min="0"
+                  max={maxPossiblePrice}
+                  step={Math.max(10000, Math.round(maxPossiblePrice / 200))}
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(Number(e.target.value))}
+                />
+                <div className="shopx-range-text">
+                  Dưới {maxPrice.toLocaleString("vi-VN")} đ / Tối đa {maxPossiblePrice.toLocaleString("vi-VN")} đ
                 </div>
-                );
-              })}
+              </div>
             </div>
-          ) : (
-            <p>Không tìm thấy sản phẩm nào phù hợp.</p>
-          )}
-        </section>
+          </aside>
+
+          <section>
+            <div className="shopx-panel shopx-hero">
+              <div>
+                <h1 className="shopx-title">Kho san pham cong nghe</h1>
+                <p className="shopx-subtitle">
+                  Loc theo danh muc va gia de tim dung san pham can mua. The hien ro danh gia, luot xem va luot mua.
+                </p>
+              </div>
+              <div className="shopx-pills">
+                <span className="shopx-pill">{allProducts.length} San pham</span>
+                <span className="shopx-pill">{filteredProducts.length} Ket qua</span>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="shopx-empty">Dang tai danh sach san pham...</div>
+            ) : filteredProducts.length > 0 ? (
+              <div className="shopx-grid">
+                {filteredProducts.map((product) => {
+                  const productId = String(product._id);
+                  const isWishlisted = wishlistIds.includes(productId);
+                  const isPending = pendingWishlistIds.includes(productId);
+
+                  return (
+                    <article key={productId} className="shopx-card">
+                      <Link to={`/products/${product._id}`} style={{ textDecoration: "none" }}>
+                        <div className="shopx-card-image-wrap">
+                          <img
+                            src={getProductImageSrc(product)}
+                            alt={product.name}
+                            className="shopx-card-image"
+                            onError={(event) => {
+                              event.currentTarget.onerror = null;
+                              event.currentTarget.src = "/placeholder.jpg";
+                            }}
+                          />
+                        </div>
+                        <h3 className="shopx-card-name">{product.name}</h3>
+                        <div className="shopx-meta-row">
+                          <span className="shopx-chip shopx-chip--rating">
+                            {Number(product.averageRating || 0).toFixed(1)} sao ({Number(product.totalRatings || 0)})
+                          </span>
+                          <span className="shopx-chip shopx-chip--views">{Number(product.totalViews || 0)} luot xem</span>
+                          <span className="shopx-chip shopx-chip--sold">{Number(product.totalPurchases || 0)} luot mua</span>
+                        </div>
+                        <p className="shopx-price">{Number(product.price || 0).toLocaleString("vi-VN")} đ</p>
+                      </Link>
+
+                      <div className="shopx-card-actions">
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          className={`shopx-btn shopx-btn--ghost ${isWishlisted ? "shopx-btn--active" : ""}`}
+                          onClick={() => handleToggleWishlist(productId)}
+                        >
+                          {isPending ? "Dang xu ly..." : isWishlisted ? "Da yeu thich" : "Them yeu thich"}
+                        </button>
+                        <button
+                          type="button"
+                          className="shopx-btn shopx-btn--primary"
+                          onClick={() => handleAddToCart(product)}
+                        >
+                          Them vao gio
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="shopx-empty">Khong tim thay san pham phu hop.</div>
+            )}
+          </section>
+        </div>
       </div>
     </main>
   );

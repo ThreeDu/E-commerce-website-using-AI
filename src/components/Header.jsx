@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import "../css/header.css";
@@ -40,10 +40,12 @@ function Header() {
   const { auth, logout } = useAuth();
   const { cart } = useCart();
   const location = useLocation();
+  const navigate = useNavigate();
   const isAdmin = auth?.user?.role === "admin";
   const isAdminArea = isAdmin && location.pathname.startsWith("/admin");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState("");
   const accountMenuRef = useRef(null);
 
   // Tính tổng số lượng sản phẩm có trong giỏ hàng
@@ -151,92 +153,87 @@ function Header() {
     );
   }
 
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    const keyword = String(searchKeyword || "").trim();
+
+    if (!keyword) {
+      return;
+    }
+
+    navigate(`/products?keyword=${encodeURIComponent(keyword)}`);
+  };
+
   return (
     <header className="site-header">
       <div className="container nav-wrap">
-        <h1 className="brand">AI Shop</h1>
-        <nav className="nav-menu">
-          {isAdmin ? (
-            <>
-              <Link to="/admin/dashboard">Bảng điều khiển</Link>
-              <Link to="/admin/categories">Quản lý danh mục</Link>
-              <Link to="/admin/products">Quản lý sản phẩm</Link>
-              <Link to="/admin/discounts">Quản lý mã giảm giá</Link>
-              <Link to="/admin/orders">Quản lý đơn hàng</Link>
-              <Link to="/admin/users">Quản lý người dùng</Link>
-              <Link to="/admin/system-logs">Log hệ thống</Link>
-            </>
-          ) : (
-            <>
-              <Link to="/">Trang chủ</Link>
-              <Link to="/products">Sản phẩm</Link>
+        <Link to="/" className="brand-link" aria-label="AI Shop home">
+          <h1 className="brand">AI Shop</h1>
+        </Link>
 
-              {!auth ? (
-                <Link to="/login">Đăng nhập</Link>
-              ) : (
-                <>
-                  <Link
-                    to="/cart"
-                    className="account-action-chip cart-chip"
-                    style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: "6px" }}
-                  >
-                    <IconCart />
-                    <span>Giỏ hàng</span>
-                    {totalItems > 0 && (
-                      <span
-                        style={{
-                          backgroundColor: "#dc3545",
-                          color: "white",
-                          borderRadius: "999px",
-                          padding: "2px 8px",
-                          fontSize: "12px",
-                          fontWeight: "bold",
-                          lineHeight: 1.2,
-                        }}
-                      >
-                        {totalItems}
-                      </span>
-                    )}
-                  </Link>
-
-                  <div className="account-dropdown" ref={accountMenuRef}>
-                    <button
-                      type="button"
-                      className={`account-dropdown-trigger ${isAccountMenuOpen ? "open" : ""}`}
-                      aria-expanded={isAccountMenuOpen}
-                      aria-haspopup="menu"
-                      onClick={() => setIsAccountMenuOpen((prev) => !prev)}
-                    >
-                      <span className="header-layered-avatar" aria-hidden="true">
-                        <span className="layer layer-back" />
-                        <span className="layer layer-middle" />
-                        <span className="layer layer-front">{String(auth?.user?.name || "T").slice(0, 1).toUpperCase()}</span>
-                      </span>
-                      <span className="account-label">Tài khoản</span>
-                      <span className="caret">▾</span>
-                    </button>
-
-                    <div className={`account-dropdown-menu ${isAccountMenuOpen ? "open" : ""}`} role="menu">
-                      <Link to="/profile" className="account-menu-item" role="menuitem">
-                        <span className="icon-wrap"><IconProfile /></span>
-                        <span>Hồ sơ cá nhân</span>
-                      </Link>
-                      <Link to="/order-history" className="account-menu-item" role="menuitem">
-                        <span className="icon-wrap"><IconOrder /></span>
-                        <span>Đơn hàng của tôi</span>
-                      </Link>
-                      <div className="account-menu-divider" aria-hidden="true" />
-                      <button type="button" className="account-menu-item logout-item" role="menuitem" onClick={logout}>
-                        <span className="icon-wrap"><IconLogout /></span>
-                        <span>Đăng xuất</span>
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </>
-          )}
+        <nav className="nav-menu" aria-label="Main navigation">
+          <Link to="/">Home</Link>
+          <Link to="/products">Shop</Link>
+          <a href="/#about">About</a>
+          <a href="/#contact">Contact</a>
         </nav>
+
+        <form className="nav-search" onSubmit={handleSearchSubmit}>
+          <input
+            type="search"
+            value={searchKeyword}
+            onChange={(event) => setSearchKeyword(event.target.value)}
+            placeholder="Search products"
+            aria-label="Search products"
+          />
+          <button type="submit">Search</button>
+        </form>
+
+        <div className="nav-actions">
+          <Link to="/cart" className="icon-action" aria-label="Cart">
+            <IconCart />
+            <span>Cart</span>
+            {totalItems > 0 ? <span className="cart-count">{totalItems}</span> : null}
+          </Link>
+
+          {!auth ? (
+            <Link to="/login" className="auth-cta">Login</Link>
+          ) : (
+            <div className="account-dropdown" ref={accountMenuRef}>
+              <button
+                type="button"
+                className={`account-dropdown-trigger ${isAccountMenuOpen ? "open" : ""}`}
+                aria-expanded={isAccountMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => setIsAccountMenuOpen((prev) => !prev)}
+              >
+                <span className="header-layered-avatar" aria-hidden="true">
+                  <span className="layer layer-back" />
+                  <span className="layer layer-middle" />
+                  <span className="layer layer-front">{String(auth?.user?.name || "T").slice(0, 1).toUpperCase()}</span>
+                </span>
+                <span className="account-label">Account</span>
+                <span className="caret">▾</span>
+              </button>
+
+              <div className={`account-dropdown-menu ${isAccountMenuOpen ? "open" : ""}`} role="menu">
+                <Link to="/profile" className="account-menu-item" role="menuitem">
+                  <span className="icon-wrap"><IconProfile /></span>
+                  <span>My Profile</span>
+                </Link>
+                <Link to="/order-history" className="account-menu-item" role="menuitem">
+                  <span className="icon-wrap"><IconOrder /></span>
+                  <span>My Orders</span>
+                </Link>
+                <div className="account-menu-divider" aria-hidden="true" />
+                <button type="button" className="account-menu-item logout-item" role="menuitem" onClick={logout}>
+                  <span className="icon-wrap"><IconLogout /></span>
+                  <span>Logout</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

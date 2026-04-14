@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const { verifyUserRequest } = require("./helpers/authHelpers");
@@ -18,13 +19,63 @@ function recalculateRatings(product) {
   product.averageRating = Number((sum / totalRatings).toFixed(1));
 }
 
+async function getPurchaseMapByProductIds(productIds = []) {
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    return new Map();
+  }
+
+  const objectIds = productIds
+    .map((id) => String(id || "").trim())
+    .filter(Boolean)
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+
+  if (objectIds.length === 0) {
+    return new Map();
+  }
+
+  const purchaseStats = await Order.aggregate([
+    {
+      $match: {
+        status: { $ne: "cancelled" },
+      },
+    },
+    {
+      $unwind: "$orderItems",
+    },
+    {
+      $match: {
+        "orderItems.product": { $in: objectIds },
+      },
+    },
+    {
+      $group: {
+        _id: "$orderItems.product",
+        totalPurchases: {
+          $sum: "$orderItems.quantity",
+        },
+      },
+    },
+  ]);
+
+  return new Map(
+    purchaseStats.map((item) => [String(item._id), Number(item.totalPurchases || 0)])
+  );
+}
+
 // @route   GET /api/products
 // @desc    Lấy tất cả sản phẩm
 // @access  Public
 router.get("/", async (req, res) => {
   try {
-    const products = await Product.find({});
-    res.json(products);
+    const products = await Product.find({}).lean();
+    const purchaseMap = await getPurchaseMapByProductIds(products.map((product) => product._id));
+    const normalizedProducts = products.map((product) => ({
+      ...product,
+      totalPurchases: purchaseMap.get(String(product._id)) || 0,
+    }));
+
+    res.json(normalizedProducts);
   } catch (error) {
     console.error("Lỗi khi lấy danh sách sản phẩm:", error.message);
     res.status(500).json({ message: "Lỗi máy chủ nội bộ" });
@@ -180,6 +231,98 @@ router.post("/:id/reviews", async (req, res) => {
   }
 });
 
+router.put("/:id/reviews/:reviewId", async (req, res) => {
+  try {
+    const authUser = await verifyUserRequest(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+
+    const review = product.reviews.id(req.params.reviewId);
+    if (!review) {
+      return res.status(404).json({ message: "Không tìm thấy đánh giá cần chỉnh sửa." });
+    }
+
+    if (String(review.user) !== String(authUser._id)) {
+      return res.status(403).json({ message: "Bạn chỉ có thể chỉnh sửa đánh giá của mình." });
+    }
+
+    const rating = Number(req.body?.rating || 0);
+    const comment = String(req.body?.comment || "").trim();
+
+    if (Number.isNaN(rating) || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: "Số sao đánh giá phải từ 1 đến 5." });
+    }
+
+    if (comment.length < 5) {
+      return res.status(400).json({ message: "Nội dung đánh giá phải có ít nhất 5 ký tự." });
+    }
+
+    review.rating = rating;
+    review.comment = comment;
+    recalculateRatings(product);
+    await product.save();
+
+    return res.json({
+      message: "Cập nhật đánh giá thành công.",
+      review: {
+        _id: review._id,
+        user: authUser._id,
+        order: review.order,
+        rating: review.rating,
+        comment: review.comment,
+        createdAt: review.createdAt,
+        updatedAt: review.updatedAt,
+      },
+      averageRating: product.averageRating,
+      totalRatings: product.totalRatings,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Lỗi máy chủ khi cập nhật đánh giá" });
+  }
+});
+
+router.delete("/:id/reviews/:reviewId", async (req, res) => {
+  try {
+    const authUser = await verifyUserRequest(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+
+    const review = product.reviews.id(req.params.reviewId);
+    if (!review) {
+      return res.status(404).json({ message: "Không tìm thấy đánh giá cần xóa." });
+    }
+
+    if (String(review.user) !== String(authUser._id)) {
+      return res.status(403).json({ message: "Bạn chỉ có thể xóa đánh giá của mình." });
+    }
+
+    product.reviews.pull(review._id);
+    recalculateRatings(product);
+    await product.save();
+
+    return res.json({
+      message: "Xóa đánh giá thành công.",
+      reviewId: req.params.reviewId,
+      averageRating: product.averageRating,
+      totalRatings: product.totalRatings,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Lỗi máy chủ khi xóa đánh giá" });
+  }
+});
+
 // @route   GET /api/products/seed
 // @desc    Nạp dữ liệu mẫu
 // @access  Public
@@ -230,9 +373,12 @@ router.get("/:id", async (req, res) => {
         : null,
     }));
 
+    const purchaseMap = await getPurchaseMapByProductIds([product._id]);
+
     return res.json({
       ...product.toObject(),
       reviews: normalizedReviews,
+      totalPurchases: purchaseMap.get(String(product._id)) || 0,
     });
   } catch (error) {
     console.error(`Lỗi khi lấy sản phẩm ID ${req.params.id}:`, error.message);
