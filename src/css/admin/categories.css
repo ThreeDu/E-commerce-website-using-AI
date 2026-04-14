@@ -1,6 +1,9 @@
 .users-table-wrap {
   margin-top: 16px;
   overflow-x: auto;
+  border: 1px solid #dde7f3;
+  border-radius: 14px;
+  background: #fff;
 }
 
 .users-table {
@@ -12,8 +15,24 @@
 .users-table th,
 .users-table td {
   text-align: left;
-  padding: 12px;
+  padding: 13px 12px;
   border-bottom: 1px solid #e6edf5;
+}
+
+.users-table thead th {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7a8d;
+  background: #f8fbff;
+}
+
+.users-table tbody tr {
+  transition: background-color 0.18s ease;
+}
+
+.users-table tbody tr:hover {
+  background: #f8fbff;
 }
 
 .table-input,
@@ -35,6 +54,13 @@
   border: 1px solid #d0d9e4;
   background: #fff;
   cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+.table-actions button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(10, 27, 43, 0.1);
 }
 
 .table-actions .danger-btn {
@@ -49,11 +75,12 @@
 .primary-link-btn {
   display: inline-block;
   text-decoration: none;
-  background: #10375c;
+  background: linear-gradient(135deg, #10375c 0%, #1c5d96 100%);
   color: #fff;
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-weight: 600;
+  box-shadow: 0 8px 18px rgba(16, 55, 92, 0.22);
 }
 
 .category-create-form {
@@ -122,6 +149,12 @@
   background: #fff;
 }
 
+.category-search-row input:focus {
+  outline: none;
+  border-color: #eb5b00;
+  box-shadow: 0 0 0 4px rgba(235, 91, 0, 0.15);
+}
+
 .category-change-warning {
   margin: 0 0 12px;
   padding: 10px 12px;
@@ -157,6 +190,11 @@
   cursor: pointer;
   color: #2b3d53;
   font-weight: 700;
+  transition: background-color 0.16s ease;
+}
+
+.category-expand-btn:hover {
+  background: #eef5ff;
 }
 
 .category-expand-placeholder {

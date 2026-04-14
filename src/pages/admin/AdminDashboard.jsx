@@ -62,7 +62,7 @@ function AdminDashboard() {
 
   return (
     <main className="container page-content">
-      <section className="hero-card admin-dashboard" aria-label="Tổng quan quản trị">
+      <section className="hero-card admin-dashboard admin-page-enter" aria-label="Tổng quan quản trị">
         <header className="admin-dashboard-header">
           <div>
             <h2>Bảng điều khiển Admin</h2>

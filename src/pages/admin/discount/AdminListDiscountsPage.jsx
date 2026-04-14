@@ -363,9 +363,21 @@ function AdminListDiscountsPage() {
     }
   };
 
+  const totalDiscounts = discounts.length;
+  const activeCount = discounts.filter((item) => getDiscountStatus(item) === "Hoạt động").length;
+  const outOfCodeCount = discounts.filter((item) => getDiscountStatus(item) === "Hết mã").length;
+  const expiredCount = discounts.filter((item) => getDiscountStatus(item) === "Hết hạn").length;
+
+  const percent = (value) => {
+    if (!totalDiscounts) {
+      return "0%";
+    }
+    return `${Math.round((value / totalDiscounts) * 100)}%`;
+  };
+
   return (
-    <main className="container page-content">
-      <section className="hero-card dashboard-surface" aria-busy={loading || deleting || bulkProcessing}>
+    <main className="container page-content admin-discounts-page">
+      <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading || deleting || bulkProcessing}>
         <div className="dashboard-header-row">
           <div>
             <h2>Quản lý mã giảm giá</h2>
@@ -385,19 +397,23 @@ function AdminListDiscountsPage() {
         <div className="dashboard-metric-grid">
           <article className="metric-card">
             <span>Tổng mã</span>
-            <strong>{discounts.length}</strong>
+            <strong>{totalDiscounts}</strong>
+            <small className="metric-note">Toàn bộ mã khuyến mãi</small>
           </article>
           <article className="metric-card success">
             <span>Đang hoạt động</span>
-            <strong>{discounts.filter((item) => getDiscountStatus(item) === "Hoạt động").length}</strong>
+            <strong>{activeCount}</strong>
+            <small className="metric-note">Chiếm {percent(activeCount)}</small>
           </article>
           <article className="metric-card warning">
             <span>Hết mã</span>
-            <strong>{discounts.filter((item) => getDiscountStatus(item) === "Hết mã").length}</strong>
+            <strong>{outOfCodeCount}</strong>
+            <small className="metric-note">Chiếm {percent(outOfCodeCount)}</small>
           </article>
           <article className="metric-card danger">
             <span>Hết hạn</span>
-            <strong>{discounts.filter((item) => getDiscountStatus(item) === "Hết hạn").length}</strong>
+            <strong>{expiredCount}</strong>
+            <small className="metric-note">Chiếm {percent(expiredCount)}</small>
           </article>
         </div>
 

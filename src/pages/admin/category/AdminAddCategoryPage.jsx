@@ -136,9 +136,9 @@ function AdminAddCategoryPage() {
 
   return (
     <main className="container page-content">
-      <section className="hero-card">
+      <section className="hero-card admin-form-surface">
         <h2>Thêm danh mục</h2>
-        <p>Tạo danh mục mới theo cấp: chính, phụ cấp 2 hoặc phụ cấp 3.</p>
+        <p className="admin-surface-subtitle">Tạo danh mục mới theo cấp: chính, phụ cấp 2 hoặc phụ cấp 3.</p>
         {message && <p className="form-message">{message}</p>}
 
         {loading ? (
@@ -198,6 +198,7 @@ function AdminAddCategoryPage() {
               placeholder="Ví dụ: Giày thể thao"
               required
             />
+            <p className="admin-form-note">Mẹo: đặt tên ngắn gọn, thống nhất theo nhóm sản phẩm để dễ tìm kiếm.</p>
 
             <div className="add-form-actions">
               <button type="submit" disabled={saving}>

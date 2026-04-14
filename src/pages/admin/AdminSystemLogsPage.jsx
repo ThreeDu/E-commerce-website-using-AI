@@ -109,7 +109,7 @@ function AdminSystemLogsPage() {
 
   return (
     <main className="container page-content">
-      <section className="hero-card dashboard-surface" aria-busy={loading}>
+      <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading}>
         <div className="dashboard-header-row">
           <div>
             <h2>Log hệ thống</h2>

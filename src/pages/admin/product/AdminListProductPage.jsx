@@ -262,9 +262,23 @@ function AdminListProductPage() {
     }
   };
 
+  const totalProducts = products.length;
+  const inStockCount = products.filter((item) => Number(item.stock || 0) > 10).length;
+  const lowStockCount = products.filter(
+    (item) => Number(item.stock || 0) > 0 && Number(item.stock || 0) <= 10
+  ).length;
+  const outStockCount = products.filter((item) => Number(item.stock || 0) <= 0).length;
+
+  const percent = (value) => {
+    if (!totalProducts) {
+      return "0%";
+    }
+    return `${Math.round((value / totalProducts) * 100)}%`;
+  };
+
   return (
-    <main className="container page-content">
-      <section className="hero-card dashboard-surface" aria-busy={loading}>
+    <main className="container page-content admin-products-page">
+      <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading}>
         <div className="dashboard-header-row">
           <div>
             <h2>Quản lý sản phẩm</h2>
@@ -284,19 +298,23 @@ function AdminListProductPage() {
         <div className="dashboard-metric-grid">
           <article className="metric-card">
             <span>Tổng sản phẩm</span>
-            <strong>{products.length}</strong>
+            <strong>{totalProducts}</strong>
+            <small className="metric-note">Toàn bộ sản phẩm trong kho</small>
           </article>
-          <article className="metric-card">
+          <article className="metric-card success">
             <span>Còn hàng</span>
-            <strong>{products.filter((item) => Number(item.stock || 0) > 10).length}</strong>
+            <strong>{inStockCount}</strong>
+            <small className="metric-note">Chiếm {percent(inStockCount)}</small>
           </article>
           <article className="metric-card warning">
             <span>Sắp hết</span>
-            <strong>{products.filter((item) => Number(item.stock || 0) > 0 && Number(item.stock || 0) <= 10).length}</strong>
+            <strong>{lowStockCount}</strong>
+            <small className="metric-note">Chiếm {percent(lowStockCount)}</small>
           </article>
           <article className="metric-card danger">
             <span>Hết hàng</span>
-            <strong>{products.filter((item) => Number(item.stock || 0) <= 0).length}</strong>
+            <strong>{outStockCount}</strong>
+            <small className="metric-note">Chiếm {percent(outStockCount)}</small>
           </article>
         </div>
 

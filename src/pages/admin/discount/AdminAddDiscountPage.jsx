@@ -153,8 +153,9 @@ function AdminAddDiscountPage() {
 
   return (
     <main className="container page-content">
-      <section className="hero-card">
+      <section className="hero-card admin-form-surface">
         <h2>Thêm mã giảm giá</h2>
+        <p className="admin-surface-subtitle">Thiết lập chương trình khuyến mãi với thời gian áp dụng, điều kiện và giới hạn sử dụng rõ ràng.</p>
         {message && <p className="form-message">{message}</p>}
 
         <form className="discount-form" onSubmit={handleSubmit}>

@@ -232,8 +232,9 @@ function AdminAddProductPage() {
 
   return (
     <main className="container page-content">
-      <section className="hero-card">
+      <section className="hero-card admin-form-surface">
         <h2>Thêm sản phẩm</h2>
+        <p className="admin-surface-subtitle">Tạo sản phẩm mới với danh mục, giá và ảnh minh họa trước khi đưa lên gian hàng.</p>
         {message && <p className="form-message">{message}</p>}
 
         <form className="admin-product-add-form" onSubmit={handleSubmit}>

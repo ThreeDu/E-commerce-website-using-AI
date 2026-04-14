@@ -1,4 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import "./css/admin/forms.css";
+import "./css/admin/theme.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";

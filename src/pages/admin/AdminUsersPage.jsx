@@ -143,7 +143,7 @@ function AdminUsersPage() {
 
   return (
     <main className="container page-content">
-      <section className="hero-card" aria-busy={loading || deleting}>
+      <section className="hero-card admin-page-enter" aria-busy={loading || deleting}>
         <h2>Quản lý người dùng</h2>
         {message && (
           <p className="form-message" role="status" aria-live="polite">

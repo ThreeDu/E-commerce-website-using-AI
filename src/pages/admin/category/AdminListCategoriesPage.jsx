@@ -256,9 +256,9 @@ function AdminListCategoriesPage() {
 
   return (
     <main className="container page-content">
-      <section className="hero-card" aria-busy={loading || deleting}>
+      <section className="hero-card admin-form-surface" aria-busy={loading || deleting}>
         <h2>Quản lý danh mục</h2>
-        <p>
+        <p className="admin-surface-subtitle">
           Danh sách hiển thị theo cấu trúc cha-con: cấp 1 (danh mục chính), cấp 2 và cấp 3 tương
           ứng.
         </p>
