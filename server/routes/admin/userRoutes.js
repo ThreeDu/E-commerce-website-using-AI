@@ -1,10 +1,10 @@
 const express = require("express");
-const { verifyAdminRequest } = require("./helpers/authHelpers");
+const { verifyAdminRequest } = require("../helpers/authHelpers");
 const {
   listUsers,
   updateUser,
   deleteUser,
-} = require("../controllers/admin/userController");
+} = require("../../controllers/admin/userController");
 
 const router = express.Router();
 

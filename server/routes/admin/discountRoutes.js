@@ -1,12 +1,12 @@
 const express = require("express");
-const { verifyAdminRequest } = require("./helpers/authHelpers");
+const { verifyAdminRequest } = require("../helpers/authHelpers");
 const {
   listDiscounts,
   getDiscountById,
   createDiscount,
   updateDiscount,
   deleteDiscount,
-} = require("../controllers/admin/discountController");
+} = require("../../controllers/admin/discountController");
 
 const router = express.Router();
 

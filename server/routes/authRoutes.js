@@ -11,12 +11,12 @@ const {
   addWishlist,
   removeWishlist,
 } = require("../controllers/authController");
-const adminUserRoutes = require("./adminUserRoutes");
-const adminProductRoutes = require("./adminProductRoutes");
-const adminCategoryRoutes = require("./adminCategoryRoutes");
-const adminDiscountRoutes = require("./adminDiscountRoutes");
-const adminSystemLogRoutes = require("./adminSystemLogRoutes");
-const adminOrderRoutes = require("./adminOrderRoutes");
+const adminUserRoutes = require("./admin/userRoutes");
+const adminProductRoutes = require("./admin/productRoutes");
+const adminCategoryRoutes = require("./admin/categoryRoutes");
+const adminDiscountRoutes = require("./admin/discountRoutes");
+const adminSystemLogRoutes = require("./admin/systemLogRoutes");
+const adminOrderRoutes = require("./admin/orderRoutes");
 
 const router = express.Router();
 router.post("/register", register);

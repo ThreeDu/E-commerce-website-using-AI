@@ -1,12 +1,12 @@
 const express = require("express");
-const { verifyAdminRequest } = require("./helpers/authHelpers");
+const { verifyAdminRequest } = require("../helpers/authHelpers");
 const {
   listProducts,
   getProductById,
   createProduct,
   updateProduct,
   deleteProduct,
-} = require("../controllers/admin/productController");
+} = require("../../controllers/admin/productController");
 
 const router = express.Router();
 

@@ -1,11 +1,11 @@
 const express = require("express");
-const { verifyAdminRequest } = require("./helpers/authHelpers");
+const { verifyAdminRequest } = require("../helpers/authHelpers");
 const {
   listCategories,
   createCategory,
   updateCategory,
   deleteCategory,
-} = require("../controllers/admin/categoryController");
+} = require("../../controllers/admin/categoryController");
 
 const router = express.Router();
 

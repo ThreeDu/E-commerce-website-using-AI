@@ -1,6 +1,6 @@
 const express = require("express");
-const { verifyAdminRequest } = require("./helpers/authHelpers");
-const { listSystemLogs } = require("../controllers/admin/systemLogController");
+const { verifyAdminRequest } = require("../helpers/authHelpers");
+const { listSystemLogs } = require("../../controllers/admin/systemLogController");
 
 const router = express.Router();
 
