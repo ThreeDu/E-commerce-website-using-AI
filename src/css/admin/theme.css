@@ -79,6 +79,21 @@ body.admin-sidebar-active .table-select {
   background: #fff;
 }
 
+body.admin-sidebar-active .filter-control select,
+body.admin-sidebar-active .users-filter-control select,
+body.admin-sidebar-active .system-log-filter-control select,
+body.admin-sidebar-active .table-select,
+body.admin-sidebar-active .order-status-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M7 10l5 5 5-5' stroke='%23607489' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+}
+
 body.admin-sidebar-active .filter-control input:focus,
 body.admin-sidebar-active .filter-control select:focus,
 body.admin-sidebar-active .users-filter-control input:focus,
@@ -121,6 +136,55 @@ body.admin-sidebar-active .admin-metric-card {
   border-radius: 16px;
   border: 1px solid var(--admin-shop-line);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.03);
+}
+
+body.admin-sidebar-active .pager-btn {
+  min-height: 34px;
+  min-width: 92px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1px solid #cdd9e8;
+  background: #f9fbfe;
+  color: #5f6f85;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+body.admin-sidebar-active .pager-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #eef4fb;
+  color: #3f4f67;
+  box-shadow: 0 6px 14px rgba(15, 49, 79, 0.1);
+}
+
+body.admin-sidebar-active .pager-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+body.admin-sidebar-active .dashboard-pagination,
+body.admin-sidebar-active .system-log-pagination {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #dce5f0;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+body.admin-sidebar-active .dashboard-pagination p,
+body.admin-sidebar-active .system-log-pagination p,
+body.admin-sidebar-active .page-indicator {
+  color: #4f6078;
+  font-weight: 600;
+}
+
+body.admin-sidebar-active .pagination-actions {
+  gap: 10px;
 }
 
 @media (max-width: 768px) {

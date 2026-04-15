@@ -95,8 +95,281 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+const getRevenueOverview = async (req, res) => {
+  try {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    const requestedPeriodType = String(req.query.periodType || "month").toLowerCase();
+    const periodType = requestedPeriodType === "year" ? "year" : "month";
+
+    const rawYear = Number(req.query.year);
+    const selectedYear = Number.isInteger(rawYear) && rawYear >= 2000 && rawYear <= currentYear + 1
+      ? rawYear
+      : currentYear;
+
+    const rawMonth = Number(req.query.month);
+    const selectedMonth = Number.isInteger(rawMonth) && rawMonth >= 1 && rawMonth <= 12
+      ? rawMonth
+      : currentMonth;
+
+    const periodStart = periodType === "year"
+      ? new Date(selectedYear, 0, 1)
+      : new Date(selectedYear, selectedMonth - 1, 1);
+    const periodEnd = periodType === "year"
+      ? new Date(selectedYear + 1, 0, 1)
+      : new Date(selectedYear, selectedMonth, 1);
+
+    const deliveredMatch = {
+      status: "delivered",
+    };
+
+    const [monthlyAggregation, yearlyAggregation, allTimeAggregation, periodAggregation, productSoldAggregation] = await Promise.all([
+      Order.aggregate([
+        {
+          $match: {
+            ...deliveredMatch,
+            createdAt: {
+              $gte: new Date(currentYear, 0, 1),
+              $lt: new Date(currentYear + 1, 0, 1),
+            },
+          },
+        },
+        {
+          $group: {
+            _id: { $month: "$createdAt" },
+            revenue: { $sum: "$totalPrice" },
+            orders: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            month: "$_id",
+            revenue: 1,
+            orders: 1,
+          },
+        },
+      ]),
+      Order.aggregate([
+        {
+          $match: deliveredMatch,
+        },
+        {
+          $group: {
+            _id: { $year: "$createdAt" },
+            revenue: { $sum: "$totalPrice" },
+            orders: { $sum: 1 },
+          },
+        },
+        {
+          $sort: {
+            _id: 1,
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            year: "$_id",
+            revenue: 1,
+            orders: 1,
+          },
+        },
+      ]),
+      Order.aggregate([
+        {
+          $match: deliveredMatch,
+        },
+        {
+          $group: {
+            _id: null,
+            revenue: { $sum: "$totalPrice" },
+            orders: { $sum: 1 },
+          },
+        },
+      ]),
+      Order.aggregate([
+        {
+          $match: {
+            ...deliveredMatch,
+            createdAt: {
+              $gte: periodStart,
+              $lt: periodEnd,
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            revenue: { $sum: "$totalPrice" },
+            orders: { $sum: 1 },
+          },
+        },
+      ]),
+      Order.aggregate([
+        {
+          $match: {
+            ...deliveredMatch,
+            createdAt: {
+              $gte: periodStart,
+              $lt: periodEnd,
+            },
+          },
+        },
+        {
+          $unwind: "$orderItems",
+        },
+        {
+          $group: {
+            _id: {
+              productId: "$orderItems.product",
+              name: "$orderItems.name",
+            },
+            soldQuantity: { $sum: "$orderItems.quantity" },
+            revenue: {
+              $sum: {
+                $multiply: ["$orderItems.quantity", "$orderItems.price"],
+              },
+            },
+          },
+        },
+        {
+          $sort: {
+            soldQuantity: -1,
+            revenue: -1,
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            key: {
+              $ifNull: [
+                { $toString: "$_id.productId" },
+                "unknown-product",
+              ],
+            },
+            label: {
+              $ifNull: ["$_id.name", "Sản phẩm không xác định"],
+            },
+            soldQuantity: 1,
+            revenue: 1,
+          },
+        },
+      ]),
+    ]);
+
+    const monthlyMap = new Map(monthlyAggregation.map((item) => [Number(item.month || 0), item]));
+    const monthlyBreakdown = Array.from({ length: 12 }, (_, index) => {
+      const monthNumber = index + 1;
+      const item = monthlyMap.get(monthNumber);
+
+      return {
+        key: String(monthNumber).padStart(2, "0"),
+        label: `T${monthNumber}`,
+        revenue: Number(item?.revenue || 0),
+        orders: Number(item?.orders || 0),
+      };
+    });
+
+    const yearlyMap = new Map(yearlyAggregation.map((item) => [Number(item.year || 0), item]));
+    const minYearFromData = yearlyAggregation.length > 0
+      ? Math.min(...yearlyAggregation.map((item) => Number(item.year || currentYear)))
+      : currentYear;
+    const startYear = Math.max(currentYear - 5, minYearFromData);
+    const availableYears = Array.from(
+      new Set(yearlyAggregation.map((item) => Number(item.year || currentYear)))
+    ).sort((a, b) => b - a);
+
+    const yearlyBreakdown = Array.from({ length: currentYear - startYear + 1 }, (_, index) => {
+      const year = startYear + index;
+      const item = yearlyMap.get(year);
+
+      return {
+        key: String(year),
+        label: String(year),
+        revenue: Number(item?.revenue || 0),
+        orders: Number(item?.orders || 0),
+      };
+    });
+
+    const thisYearRevenue = monthlyBreakdown.reduce((sum, item) => sum + Number(item.revenue || 0), 0);
+    const thisMonthRevenue = Number(monthlyBreakdown[currentMonth - 1]?.revenue || 0);
+    const allTimeRevenue = Number(allTimeAggregation[0]?.revenue || 0);
+    const allTimeDeliveredOrders = Number(allTimeAggregation[0]?.orders || 0);
+    const selectedPeriodRevenue = Number(periodAggregation[0]?.revenue || 0);
+    const selectedPeriodOrders = Number(periodAggregation[0]?.orders || 0);
+
+    const normalizedProducts = productSoldAggregation.map((item) => ({
+      key: String(item?.key || "unknown-product"),
+      label: String(item?.label || "Sản phẩm không xác định"),
+      soldQuantity: Number(item?.soldQuantity || 0),
+      revenue: Number(item?.revenue || 0),
+    }));
+
+    const topProducts = normalizedProducts.slice(0, 8);
+    const remainingProducts = normalizedProducts.slice(8);
+    const remainingSoldQuantity = remainingProducts.reduce((sum, item) => sum + Number(item.soldQuantity || 0), 0);
+    const remainingRevenue = remainingProducts.reduce((sum, item) => sum + Number(item.revenue || 0), 0);
+
+    const productBreakdown = remainingSoldQuantity > 0
+      ? [
+          ...topProducts,
+          {
+            key: "other-products",
+            label: "Sản phẩm khác",
+            soldQuantity: remainingSoldQuantity,
+            revenue: remainingRevenue,
+          },
+        ]
+      : topProducts;
+
+    const totalSoldUnits = normalizedProducts.reduce((sum, item) => sum + Number(item.soldQuantity || 0), 0);
+
+    return res.json({
+      message: "Lấy tổng quan doanh thu thành công.",
+      generatedAt: now,
+      revenue: {
+        filter: {
+          periodType,
+          year: selectedYear,
+          month: selectedMonth,
+          availableYears,
+          periodStart,
+          periodEnd,
+        },
+        monthly: {
+          year: currentYear,
+          total: thisYearRevenue,
+          breakdown: monthlyBreakdown,
+        },
+        yearly: {
+          startYear,
+          endYear: currentYear,
+          breakdown: yearlyBreakdown,
+        },
+        totals: {
+          thisMonth: thisMonthRevenue,
+          thisYear: thisYearRevenue,
+          allTime: allTimeRevenue,
+          deliveredOrders: allTimeDeliveredOrders,
+          selectedPeriodRevenue,
+          selectedPeriodOrders,
+        },
+        products: {
+          totalSoldUnits,
+          breakdown: productBreakdown,
+        },
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   listOrders,
   getOrderById,
   updateOrderStatus,
+  getRevenueOverview,
 };

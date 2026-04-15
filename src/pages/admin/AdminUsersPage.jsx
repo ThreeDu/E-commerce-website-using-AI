@@ -20,9 +20,15 @@ function AdminUsersPage() {
   const [deleting, setDeleting] = useState(false);
   const [userPendingDelete, setUserPendingDelete] = useState(null);
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
-  const [roleFilter, setRoleFilter] = useState(searchParams.get("role") || "all");
   const [sortBy, setSortBy] = useState(searchParams.get("sort") || "newest");
-  const [editForm, setEditForm] = useState({ name: "", email: "", role: "user" });
+  const [editForm, setEditForm] = useState({ name: "", email: "" });
+
+  const formatDateTime = useCallback((value) => {
+    if (!value) {
+      return "-";
+    }
+    return new Date(value).toLocaleString("vi-VN");
+  }, []);
 
   const loadUsers = useCallback(async () => {
     if (!auth?.token) {
@@ -51,26 +57,22 @@ function AdminUsersPage() {
       nextParams.set("q", searchTerm.trim());
     }
 
-    if (roleFilter !== "all") {
-      nextParams.set("role", roleFilter);
-    }
-
     if (sortBy !== "newest") {
       nextParams.set("sort", sortBy);
     }
 
     setSearchParams(nextParams, { replace: true });
-  }, [searchTerm, roleFilter, sortBy, setSearchParams]);
+  }, [searchTerm, sortBy, setSearchParams]);
 
   const startEdit = (user) => {
     setEditingUserId(user._id);
-    setEditForm({ name: user.name, email: user.email, role: user.role });
+    setEditForm({ name: user.name, email: user.email });
     setMessage("");
   };
 
   const cancelEdit = () => {
     setEditingUserId("");
-    setEditForm({ name: "", email: "", role: "user" });
+    setEditForm({ name: "", email: "" });
   };
 
   const handleEditChange = (event) => {
@@ -99,6 +101,11 @@ function AdminUsersPage() {
       return;
     }
 
+    if (userPendingDelete.role === "admin") {
+      setMessage("Không thể xóa tài khoản admin.");
+      return;
+    }
+
     try {
       setDeleting(true);
       await deleteAdminUser(auth.token, userPendingDelete._id);
@@ -120,9 +127,8 @@ function AdminUsersPage() {
         !normalizedSearch ||
         (user.name || "").toLowerCase().includes(normalizedSearch) ||
         (user.email || "").toLowerCase().includes(normalizedSearch);
-      const matchesRole = roleFilter === "all" || user.role === roleFilter;
 
-      return matchesSearch && matchesRole;
+      return matchesSearch;
     });
 
     list.sort((a, b) => {
@@ -139,12 +145,146 @@ function AdminUsersPage() {
     });
 
     return list;
-  }, [users, searchTerm, roleFilter, sortBy]);
+  }, [users, searchTerm, sortBy]);
+
+  const filteredAdmins = useMemo(
+    () => filteredUsers.filter((user) => user.role === "admin"),
+    [filteredUsers]
+  );
+
+  const filteredCustomers = useMemo(
+    () => filteredUsers.filter((user) => user.role !== "admin"),
+    [filteredUsers]
+  );
+
+  const totalUsers = users.length;
+  const totalAdmins = users.filter((user) => user.role === "admin").length;
+  const totalCustomers = users.filter((user) => user.role !== "admin").length;
+
+  const renderUsersTable = (tableTitle, tableDescription, list) => (
+    <div className="users-role-section">
+      <div className="users-role-header">
+        <h3>{tableTitle}</h3>
+        <p>{tableDescription}</p>
+      </div>
+
+      <div className="users-table-wrap">
+        <table className="users-table">
+          <thead>
+            <tr>
+              <th>Họ tên</th>
+              <th>Email</th>
+              <th>Vai trò</th>
+              <th>Ngày tạo</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((user) => (
+              <tr key={user._id}>
+                <td>
+                  {editingUserId === user._id ? (
+                    <input
+                      className="table-input"
+                      name="name"
+                      value={editForm.name}
+                      onChange={handleEditChange}
+                    />
+                  ) : (
+                    user.name
+                  )}
+                </td>
+                <td>
+                  {editingUserId === user._id ? (
+                    <input
+                      className="table-input"
+                      name="email"
+                      value={editForm.email}
+                      onChange={handleEditChange}
+                    />
+                  ) : (
+                    user.email
+                  )}
+                </td>
+                <td>
+                  <span className={`role-badge ${user.role === "admin" ? "admin" : "user"}`}>{user.role}</span>
+                </td>
+                <td>{formatDateTime(user.createdAt)}</td>
+                <td>
+                  {editingUserId === user._id ? (
+                    <div className="table-actions">
+                      <button type="button" onClick={() => handleSaveEdit(user._id)}>
+                        Lưu
+                      </button>
+                      <button type="button" onClick={cancelEdit}>
+                        Hủy
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="table-actions">
+                      <button type="button" onClick={() => startEdit(user)}>
+                        Sửa
+                      </button>
+                      {String(user._id) === String(currentUserId) ? (
+                        <button type="button" className="danger-btn" disabled>
+                          Tài khoản hiện tại
+                        </button>
+                      ) : user.role === "admin" ? (
+                        <button type="button" className="danger-btn" disabled>
+                          Tài khoản admin
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="danger-btn"
+                          onClick={() => setUserPendingDelete(user)}
+                        >
+                          Xóa
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {list.length === 0 && (
+              <tr>
+                <td colSpan="5" className="users-empty-cell">
+                  Không có dữ liệu ở nhóm này.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 
   return (
-    <main className="container page-content">
+    <main className="container page-content admin-users-page">
       <section className="hero-card admin-page-enter" aria-busy={loading || deleting}>
-        <h2>Quản lý người dùng</h2>
+        <div className="users-header-row">
+          <div>
+            <h2>Quản lý người dùng</h2>
+            <p className="users-subtitle">Theo dõi tài khoản, phân quyền và cập nhật thông tin người dùng trong hệ thống.</p>
+          </div>
+        </div>
+
+        <div className="users-metric-grid" aria-label="Thống kê người dùng">
+          <article className="users-metric-card">
+            <span>Tổng tài khoản</span>
+            <strong>{totalUsers}</strong>
+          </article>
+          <article className="users-metric-card admin">
+            <span>Admin</span>
+            <strong>{totalAdmins}</strong>
+          </article>
+          <article className="users-metric-card user">
+            <span>Người dùng</span>
+            <strong>{totalCustomers}</strong>
+          </article>
+        </div>
+
         {message && (
           <p className="form-message" role="status" aria-live="polite">
             {message}
@@ -164,19 +304,6 @@ function AdminUsersPage() {
           </div>
 
           <div className="users-filter-control">
-            <label htmlFor="users-role">Vai trò</label>
-            <select
-              id="users-role"
-              value={roleFilter}
-              onChange={(event) => setRoleFilter(event.target.value)}
-            >
-              <option value="all">Tất cả</option>
-              <option value="admin">admin</option>
-              <option value="user">user</option>
-            </select>
-          </div>
-
-          <div className="users-filter-control">
             <label htmlFor="users-sort">Sắp xếp</label>
             <select id="users-sort" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
               <option value="newest">Mới nhất</option>
@@ -190,101 +317,10 @@ function AdminUsersPage() {
         {loading ? (
           <p>Đang tải danh sách người dùng...</p>
         ) : (
-          <div className="users-table-wrap">
-            <table className="users-table">
-              <thead>
-                <tr>
-                  <th>Họ tên</th>
-                  <th>Email</th>
-                  <th>Vai trò</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user._id}>
-                    <td>
-                      {editingUserId === user._id ? (
-                        <input
-                          className="table-input"
-                          name="name"
-                          value={editForm.name}
-                          onChange={handleEditChange}
-                        />
-                      ) : (
-                        user.name
-                      )}
-                    </td>
-                    <td>
-                      {editingUserId === user._id ? (
-                        <input
-                          className="table-input"
-                          name="email"
-                          value={editForm.email}
-                          onChange={handleEditChange}
-                        />
-                      ) : (
-                        user.email
-                      )}
-                    </td>
-                    <td>
-                      {editingUserId === user._id ? (
-                        <select
-                          className="table-select"
-                          name="role"
-                          value={editForm.role}
-                          onChange={handleEditChange}
-                        >
-                          <option value="user">user</option>
-                          <option value="admin">admin</option>
-                        </select>
-                      ) : (
-                        user.role
-                      )}
-                    </td>
-                    <td>
-                      {editingUserId === user._id ? (
-                        <div className="table-actions">
-                          <button type="button" onClick={() => handleSaveEdit(user._id)}>
-                            Lưu
-                          </button>
-                          <button type="button" onClick={cancelEdit}>
-                            Hủy
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="table-actions">
-                          <button type="button" onClick={() => startEdit(user)}>
-                            Sửa
-                          </button>
-                          {String(user._id) === String(currentUserId) ? (
-                            <button type="button" className="danger-btn" disabled>
-                              Tài khoản hiện tại
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className="danger-btn"
-                              onClick={() => setUserPendingDelete(user)}
-                            >
-                              Xóa
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {filteredUsers.length === 0 && (
-                  <tr>
-                    <td colSpan="4" className="users-empty-cell">
-                      Không tìm thấy người dùng phù hợp bộ lọc.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {renderUsersTable("Tài khoản Admin", "Danh sách tài khoản có quyền quản trị hệ thống.", filteredAdmins)}
+            {renderUsersTable("Tài khoản Người dùng", "Danh sách tài khoản khách hàng đang hoạt động.", filteredCustomers)}
+          </>
         )}
       </section>
 

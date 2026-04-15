@@ -78,3 +78,87 @@ body {
 .product-card {
   padding: 18px;
 }
+
+@media (hover: hover) and (pointer: fine) {
+  :root {
+    --global-hover-lift: -2px;
+    --global-hover-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+    --global-btn-hover-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+  }
+
+  .hero-card,
+  .auth-form,
+  .product-card,
+  .shopx-panel,
+  .shopx-order-item,
+  .bento-card,
+  .neo-hero-main,
+  .neo-hero-side,
+  .neo-section,
+  .neo-stat-card,
+  .neo-bento-card,
+  .neo-info-bento article,
+  .dashboard-table-card,
+  .admin-metric-card,
+  .metric-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transform: translateY(0);
+  }
+
+  .hero-card:hover,
+  .auth-form:hover,
+  .product-card:hover,
+  .shopx-panel:hover,
+  .shopx-order-item:hover,
+  .bento-card:hover,
+  .neo-hero-main:hover,
+  .neo-hero-side:hover,
+  .neo-section:hover,
+  .neo-stat-card:hover,
+  .neo-bento-card:hover,
+  .neo-info-bento article:hover,
+  .dashboard-table-card:hover,
+  .admin-metric-card:hover,
+  .metric-card:hover {
+    transform: translateY(var(--global-hover-lift));
+    box-shadow: var(--global-hover-shadow);
+  }
+
+  button,
+  .shopx-btn,
+  .neo-btn,
+  .pager-btn,
+  .table-link-btn,
+  .primary-link-btn,
+  .secondary-btn,
+  .danger-btn,
+  .icon-action,
+  .auth-cta,
+  .account-dropdown-trigger,
+  .profile-account-trigger,
+  .profile-account-item,
+  .admin-sidebar-menu a,
+  .admin-sidebar .logout-btn {
+    transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+  }
+
+  button:hover:not(:disabled),
+  .shopx-btn:hover:not(:disabled),
+  .neo-btn:hover:not(:disabled),
+  .pager-btn:hover:not(:disabled),
+  .table-link-btn:hover:not(:disabled),
+  .primary-link-btn:hover:not(:disabled),
+  .secondary-btn:hover:not(:disabled),
+  .danger-btn:hover:not(:disabled),
+  .icon-action:hover,
+  .auth-cta:hover,
+  .account-dropdown-trigger:hover,
+  .profile-account-trigger:hover,
+  .profile-account-item:hover,
+  .admin-sidebar-menu a:hover,
+  .admin-sidebar .logout-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--global-btn-hover-shadow);
+    filter: saturate(1.03);
+  }
+}

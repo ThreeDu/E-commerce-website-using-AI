@@ -1,0 +1,241 @@
+.admin-notify-page {
+  display: grid;
+  gap: 14px;
+  background:
+    radial-gradient(circle at 88% -8%, rgba(255, 111, 60, 0.15), transparent 40%),
+    radial-gradient(circle at -5% 100%, rgba(15, 118, 110, 0.11), transparent 32%),
+    #ffffff;
+}
+
+.admin-notify-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-notify-header h2 {
+  margin: 0;
+}
+
+.admin-notify-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.admin-notify-actions p {
+  margin: 0;
+  color: #4f6078;
+  font-size: 13px;
+}
+
+.admin-notify-actions .secondary-btn {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 11px;
+  border: 1px solid #ced8e7;
+  background: #f8fbff;
+  color: #1e3a5f;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-notify-actions .secondary-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.admin-notify-summary {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-notify-card {
+  border-radius: 14px;
+  border: 1px solid #dbe6f5;
+  background: #f8fbff;
+  padding: 10px;
+  display: grid;
+  gap: 5px;
+}
+
+.admin-notify-card p {
+  margin: 0;
+  color: #5f7187;
+  font-size: 12px;
+}
+
+.admin-notify-card strong {
+  color: #0f2233;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.admin-notify-card.warning {
+  background: #fff8ec;
+  border-color: #f4dbb4;
+}
+
+.admin-notify-card.warning strong {
+  color: #9a3412;
+}
+
+.admin-notify-card.danger {
+  background: #fff2f2;
+  border-color: #f0c6c6;
+}
+
+.admin-notify-card.danger strong {
+  color: #b42318;
+}
+
+.admin-notify-card.info {
+  background: #f1f7ff;
+  border-color: #d2e4fb;
+}
+
+.admin-notify-card.info strong {
+  color: #1d4ed8;
+}
+
+.admin-notify-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.admin-notify-panel {
+  border: 1px solid #dbe6f5;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.admin-notify-panel header h3 {
+  margin: 0;
+  font-size: 1.04rem;
+}
+
+.admin-notify-panel header p {
+  margin: 4px 0 0;
+  color: #61738a;
+  font-size: 13px;
+}
+
+.admin-notify-panel.warning {
+  background: linear-gradient(180deg, #ffffff 0%, #fffdf8 100%);
+}
+
+.admin-notify-panel.danger {
+  background: linear-gradient(180deg, #ffffff 0%, #fff8f8 100%);
+}
+
+.admin-notify-panel.info {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.admin-notify-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.admin-notify-item {
+  border: 1px solid #e5edf8;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-notify-item-title {
+  margin: 0;
+  font-weight: 700;
+  color: #0f2233;
+}
+
+.admin-notify-item-meta {
+  margin: 4px 0 0;
+  color: #61738a;
+  font-size: 12px;
+}
+
+.admin-notify-item-right {
+  text-align: right;
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+}
+
+.admin-notify-item-right strong {
+  color: #0f2233;
+  font-size: 13px;
+}
+
+.admin-notify-item-right span {
+  color: #61738a;
+  font-size: 12px;
+}
+
+.admin-notify-item-right a {
+  color: #0f5ea8;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.admin-notify-item-right a:hover {
+  text-decoration: underline;
+}
+
+.admin-notify-empty {
+  margin: 0;
+  border: 1px dashed #cdd9e8;
+  border-radius: 12px;
+  padding: 12px;
+  color: #5f7187;
+  background: #fafcff;
+}
+
+@media (max-width: 1180px) {
+  .admin-notify-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 920px) {
+  .admin-notify-header {
+    flex-direction: column;
+  }
+
+  .admin-notify-actions {
+    justify-items: start;
+  }
+
+  .admin-notify-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-notify-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-notify-item {
+    flex-direction: column;
+  }
+
+  .admin-notify-item-right {
+    text-align: left;
+    justify-items: start;
+  }
+}

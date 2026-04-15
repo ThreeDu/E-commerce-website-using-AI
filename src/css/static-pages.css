@@ -1,0 +1,151 @@
+.static-page-wrap {
+  border: 1px solid #1d1d1f;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 100% -25%, rgba(15, 118, 110, 0.14), transparent 42%),
+    radial-gradient(circle at 0% 100%, rgba(255, 111, 60, 0.12), transparent 36%),
+    #ffffff;
+  padding: 24px;
+}
+
+.static-page-hero {
+  border: 1px solid rgba(29, 29, 31, 0.6);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.86);
+  padding: 24px;
+}
+
+.static-page-hero--contract {
+  background: linear-gradient(130deg, #ffffff 0%, #f0f9ff 100%);
+}
+
+.static-kicker {
+  margin: 0;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.static-page-hero h1 {
+  margin: 10px 0 0;
+  font-size: clamp(1.75rem, 3.2vw, 2.6rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: #111827;
+}
+
+.static-page-hero p {
+  margin: 14px 0 0;
+  max-width: 760px;
+  color: #334155;
+  line-height: 1.66;
+}
+
+.static-actions {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.static-btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid #1d1d1f;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.static-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+
+.static-btn--primary {
+  background: #0f314f;
+  color: #ffffff;
+}
+
+.static-btn--ghost {
+  background: #ffffff;
+  color: #111827;
+}
+
+.static-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.static-grid--contract {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.static-card {
+  border: 1px solid #1d1d1f;
+  border-radius: 18px;
+  background: #f9fbff;
+  padding: 16px;
+}
+
+.static-card h3 {
+  margin: 0;
+  font-size: 1.08rem;
+  color: #0f172a;
+}
+
+.static-card p {
+  margin: 10px 0 0;
+  color: #334155;
+  line-height: 1.6;
+}
+
+.static-footnote {
+  margin-top: 16px;
+  border: 1px dashed rgba(29, 29, 31, 0.45);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.static-footnote p {
+  margin: 0;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+@media (max-width: 900px) {
+  .static-grid,
+  .static-grid--contract {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .static-page-wrap {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .static-page-hero {
+    padding: 16px;
+  }
+
+  .static-grid,
+  .static-grid--contract {
+    grid-template-columns: 1fr;
+  }
+}

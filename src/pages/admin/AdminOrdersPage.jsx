@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { getAdminOrderById, getAdminOrders, updateAdminOrderStatus } from "../../services/admin/orderService";
+import { getAdminOrders, updateAdminOrderStatus } from "../../services/admin/orderService";
 import { getErrorMessage } from "../../utils/adminErrorUtils";
-import "../../css/admin/products.css";
+import "../../css/admin/orders.css";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Tất cả" },
@@ -16,6 +16,7 @@ const STATUS_OPTIONS = [
 
 function AdminOrdersPage() {
   const { auth } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [orders, setOrders] = useState([]);
@@ -24,8 +25,6 @@ function AdminOrdersPage() {
   const [message, setMessage] = useState("");
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [loadingOrderDetail, setLoadingOrderDetail] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all");
   const [page, setPage] = useState(Math.max(1, Number(searchParams.get("page") || 1) || 1));
@@ -123,24 +122,16 @@ function AdminOrdersPage() {
     }
   };
 
-  const handleViewOrderDetail = async (orderId) => {
+  const handleViewOrderDetail = (orderId) => {
     if (!orderId) {
       return;
     }
 
-    try {
-      setLoadingOrderDetail(true);
-      const data = await getAdminOrderById(auth.token, orderId);
-      setSelectedOrder(data.order || null);
-    } catch (error) {
-      setMessage(getErrorMessage(error, "Không thể lấy chi tiết đơn hàng."));
-    } finally {
-      setLoadingOrderDetail(false);
-    }
+    navigate(`/admin/orders/${orderId}`);
   };
 
   return (
-    <main className="container page-content">
+    <main className="container page-content admin-orders-page">
       <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading}>
         <div className="dashboard-header-row">
           <div>
@@ -185,18 +176,25 @@ function AdminOrdersPage() {
                   <th>Số SP</th>
                   <th>Tổng tiền</th>
                   <th>Trạng thái</th>
-                  <th>Chi tiết</th>
                 </tr>
               </thead>
               <tbody>
                 {orders.map((order) => (
                   <tr key={order._id}>
-                    <td className="order-id-cell">
+                    <td
+                      className="order-id-cell order-detail-trigger"
+                      onClick={() => handleViewOrderDetail(order._id)}
+                      title="Bấm để xem chi tiết đơn hàng"
+                    >
                       <div className="cell-title" title={order._id}>
                         {order._id}
                       </div>
                     </td>
-                    <td className="order-customer-cell">
+                    <td
+                      className="order-customer-cell order-detail-trigger"
+                      onClick={() => handleViewOrderDetail(order._id)}
+                      title="Bấm để xem chi tiết đơn hàng"
+                    >
                       <div className="cell-title">{order.user?.name || order.shippingAddress?.fullName || "-"}</div>
                       <div className="cell-subtext">{order.user?.email || "Khách vãng lai"}</div>
                     </td>
@@ -217,21 +215,11 @@ function AdminOrdersPage() {
                         ))}
                       </select>
                     </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="table-link-btn"
-                        onClick={() => handleViewOrderDetail(order._id)}
-                        disabled={loadingOrderDetail}
-                      >
-                        Chi tiết
-                      </button>
-                    </td>
                   </tr>
                 ))}
                 {!loading && orders.length === 0 && (
                   <tr>
-                    <td colSpan="7" className="table-empty-cell">
+                    <td colSpan="6" className="table-empty-cell">
                       Không có đơn hàng phù hợp bộ lọc.
                     </td>
                   </tr>
@@ -248,68 +236,23 @@ function AdminOrdersPage() {
           <div className="pagination-actions">
             <button
               type="button"
-              className="secondary-btn"
+              className="secondary-btn pager-btn"
               disabled={loading || page <= 1}
               onClick={() => setPage((prev) => Math.max(1, prev - 1))}
             >
-              Trước
+              ← Trước
             </button>
             <button
               type="button"
-              className="secondary-btn"
+              className="secondary-btn pager-btn"
               disabled={loading || page >= totalPages}
               onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
             >
-              Sau
+              Sau →
             </button>
           </div>
         </div>
       </section>
-
-      {selectedOrder && (
-        <div className="confirm-modal-backdrop" role="presentation">
-          <div className="confirm-modal order-detail-modal" role="dialog" aria-modal="true" aria-labelledby="order-detail-title">
-            <h3 id="order-detail-title">Chi tiết đơn hàng</h3>
-
-            <p>
-              <strong>Mã đơn:</strong> {selectedOrder._id}
-            </p>
-            <p>
-              <strong>Khách hàng:</strong> {selectedOrder.user?.name || selectedOrder.shippingAddress?.fullName || "-"}
-            </p>
-            <p>
-              <strong>Email:</strong> {selectedOrder.user?.email || "Khách vãng lai"}
-            </p>
-            <p>
-              <strong>Số điện thoại:</strong> {selectedOrder.shippingAddress?.phone || "-"}
-            </p>
-            <p>
-              <strong>Địa chỉ:</strong> {selectedOrder.shippingAddress?.address || "-"}
-            </p>
-            <p>
-              <strong>Tổng tiền:</strong> {formatCurrency(selectedOrder.totalPrice)}
-            </p>
-
-            <div className="order-detail-items">
-              <h4>Danh sách sản phẩm</h4>
-              {(selectedOrder.orderItems || []).map((item, index) => (
-                <div key={`${item.product || item.name}-${index}`} className="order-detail-item-row">
-                  <span>
-                    {item.name} x{item.quantity}
-                  </span>
-                  <span>{formatCurrency(Number(item.price || 0) * Number(item.quantity || 0))}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="confirm-modal-actions">
-              <button type="button" className="secondary-btn" onClick={() => setSelectedOrder(null)}>
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

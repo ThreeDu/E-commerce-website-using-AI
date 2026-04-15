@@ -530,109 +530,111 @@ function AdminListDiscountsPage() {
         {loading ? (
           <p>Đang tải danh sách mã giảm giá...</p>
         ) : (
-          <div className="dashboard-table-card">
-            <div className="users-table-wrap">
-              <table className="users-table dashboard-table">
-                <thead>
-                  <tr>
-                    <th>
-                      <input
-                        type="checkbox"
-                        aria-label="Chọn tất cả mã giảm giá trong trang"
-                        checked={isAllOnPageSelected}
-                        onChange={toggleSelectAllOnPage}
-                      />
-                    </th>
-                    <th>Mã giảm giá</th>
-                    <th>Giá trị & điều kiện</th>
-                    <th>Hiệu lực</th>
-                    <th>Trạng thái</th>
-                    <th>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedDiscounts.map((discount) => {
-                    const status = getDiscountStatus(discount);
+          <>
+            <div className="dashboard-table-card">
+              <div className="users-table-wrap">
+                <table className="users-table dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>
+                        <input
+                          type="checkbox"
+                          aria-label="Chọn tất cả mã giảm giá trong trang"
+                          checked={isAllOnPageSelected}
+                          onChange={toggleSelectAllOnPage}
+                        />
+                      </th>
+                      <th>Mã giảm giá</th>
+                      <th>Giá trị & điều kiện</th>
+                      <th>Hiệu lực</th>
+                      <th>Trạng thái</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedDiscounts.map((discount) => {
+                      const status = getDiscountStatus(discount);
 
-                    return (
-                      <tr key={discount._id}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            aria-label={`Chọn mã giảm giá ${discount.code}`}
-                            checked={selectedDiscountIds.includes(discount._id)}
-                            onChange={() => toggleDiscountSelect(discount._id)}
-                          />
-                        </td>
-                        <td>
-                          <div className="cell-title truncate-text" title={discount.code}>
-                            {discount.code}
-                          </div>
-                          <div className="cell-subtext">{discount.type === "percent" ? "Phần trăm" : "Số tiền"}</div>
-                        </td>
-                        <td>
-                          <div className="price-stack">
-                            <span className="pill price-pill">
-                              {discount.type === "percent"
-                                ? `${discount.value}%`
-                                : `${Number(discount.value).toLocaleString("vi-VN")} đ`}
-                            </span>
-                            <span className="cell-subtext truncate-text" title={`Đơn tối thiểu: ${Number(discount.minOrderValue || 0).toLocaleString("vi-VN")} đ`}>
-                              Đơn tối thiểu: {Number(discount.minOrderValue || 0).toLocaleString("vi-VN")} đ
-                            </span>
-                            <span className="cell-subtext">
-                              Số lượng còn lại: {getRemainingQuantity(discount).toLocaleString("vi-VN")}
-                            </span>
-                          </div>
-                        </td>
-                        <td>
-                          <div className="truncate-text" title={`${formatDateTime(discount.startDate)} - ${formatDateTime(discount.endDate)}`}>
-                            {formatDateTime(discount.startDate)} - {formatDateTime(discount.endDate)}
-                          </div>
-                        </td>
-                        <td>
-                          <span
-                            className={`pill status-pill ${
-                              status === "Hết hạn"
-                                ? "danger"
-                                : status === "Sắp mở"
-                                  ? "info"
-                                : status === "Hết mã"
-                                  ? "warning"
-                                  : status === "Hoạt động"
-                                    ? "success"
-                                    : "muted"
-                            }`}
-                          >
-                            {status}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="table-actions">
-                            <Link to={`/admin/discounts/edit/${discount._id}`} className="table-link-btn">
-                              <span aria-hidden="true">✎</span> Sửa
-                            </Link>
-                            <button
-                              type="button"
-                              className="danger-btn"
-                              onClick={() => setDiscountPendingDelete(discount)}
+                      return (
+                        <tr key={discount._id}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              aria-label={`Chọn mã giảm giá ${discount.code}`}
+                              checked={selectedDiscountIds.includes(discount._id)}
+                              onChange={() => toggleDiscountSelect(discount._id)}
+                            />
+                          </td>
+                          <td>
+                            <div className="cell-title truncate-text" title={discount.code}>
+                              {discount.code}
+                            </div>
+                            <div className="cell-subtext">{discount.type === "percent" ? "Phần trăm" : "Số tiền"}</div>
+                          </td>
+                          <td>
+                            <div className="price-stack">
+                              <span className="pill price-pill">
+                                {discount.type === "percent"
+                                  ? `${discount.value}%`
+                                  : `${Number(discount.value).toLocaleString("vi-VN")} đ`}
+                              </span>
+                              <span className="cell-subtext truncate-text" title={`Đơn tối thiểu: ${Number(discount.minOrderValue || 0).toLocaleString("vi-VN")} đ`}>
+                                Đơn tối thiểu: {Number(discount.minOrderValue || 0).toLocaleString("vi-VN")} đ
+                              </span>
+                              <span className="cell-subtext">
+                                Số lượng còn lại: {getRemainingQuantity(discount).toLocaleString("vi-VN")}
+                              </span>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="truncate-text" title={`${formatDateTime(discount.startDate)} - ${formatDateTime(discount.endDate)}`}>
+                              {formatDateTime(discount.startDate)} - {formatDateTime(discount.endDate)}
+                            </div>
+                          </td>
+                          <td>
+                            <span
+                              className={`pill status-pill ${
+                                status === "Hết hạn"
+                                  ? "danger"
+                                  : status === "Sắp mở"
+                                    ? "info"
+                                  : status === "Hết mã"
+                                    ? "warning"
+                                    : status === "Hoạt động"
+                                      ? "success"
+                                      : "muted"
+                              }`}
                             >
-                              <span aria-hidden="true">🗑</span> Xóa
-                            </button>
-                          </div>
+                              {status}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="table-actions">
+                              <Link to={`/admin/discounts/edit/${discount._id}`} className="table-link-btn">
+                                <span aria-hidden="true">✎</span> Sửa
+                              </Link>
+                              <button
+                                type="button"
+                                className="danger-btn"
+                                onClick={() => setDiscountPendingDelete(discount)}
+                              >
+                                <span aria-hidden="true">🗑</span> Xóa
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {paginatedDiscounts.length === 0 && (
+                      <tr>
+                        <td colSpan="6" className="table-empty-cell">
+                          Không tìm thấy mã giảm giá phù hợp bộ lọc.
                         </td>
                       </tr>
-                    );
-                  })}
-                  {paginatedDiscounts.length === 0 && (
-                    <tr>
-                      <td colSpan="6" className="table-empty-cell">
-                        Không tìm thấy mã giảm giá phù hợp bộ lọc.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div className="dashboard-pagination">
@@ -642,26 +644,26 @@ function AdminListDiscountsPage() {
               <div className="pagination-actions">
                 <button
                   type="button"
-                  className="secondary-btn"
+                  className="secondary-btn pager-btn"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 >
-                  Trước
+                  ← Trước
                 </button>
                 <span className="page-indicator">
                   Trang {currentPage}/{totalPages}
                 </span>
                 <button
                   type="button"
-                  className="secondary-btn"
+                  className="secondary-btn pager-btn"
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                 >
-                  Sau
+                  Sau →
                 </button>
               </div>
             </div>
-          </div>
+          </>
         )}
       </section>
 

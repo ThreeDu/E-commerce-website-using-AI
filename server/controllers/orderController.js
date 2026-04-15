@@ -1,5 +1,6 @@
 const Order = require("../models/Order");
 const Discount = require("../models/Discount");
+const Product = require("../models/Product");
 const { verifyUserRequest } = require("../routes/helpers/authHelpers");
 
 const CANCELLABLE_STATUSES = new Set(["pending", "confirmed"]);
@@ -108,6 +109,8 @@ const verifyCoupon = async (req, res) => {
 };
 
 const createOrder = async (req, res) => {
+  const decrementedStocks = [];
+
   try {
     const authUser = await verifyUserRequest(req, res);
     if (!authUser) {
@@ -123,6 +126,65 @@ const createOrder = async (req, res) => {
     const subtotalPrice = calculateSubtotal(orderItems);
     if (subtotalPrice <= 0) {
       return res.status(400).json({ message: "Dữ liệu đơn hàng không hợp lệ." });
+    }
+
+    // Gộp số lượng theo từng sản phẩm để tránh trừ kho sai khi cùng sản phẩm xuất hiện nhiều lần.
+    const quantityByProductId = new Map();
+    for (const item of orderItems) {
+      const productId = String(item?.product || "").trim();
+      const quantity = Number(item?.quantity || 0);
+
+      if (!productId || Number.isNaN(quantity) || quantity <= 0) {
+        return res.status(400).json({ message: "Sản phẩm trong đơn hàng không hợp lệ." });
+      }
+
+      quantityByProductId.set(productId, Number(quantityByProductId.get(productId) || 0) + quantity);
+    }
+
+    const productIds = Array.from(quantityByProductId.keys());
+    const existingProducts = await Product.find({ _id: { $in: productIds } }).select("_id name stock").lean();
+    const existingProductMap = new Map(existingProducts.map((product) => [String(product._id), product]));
+
+    for (const [productId, quantity] of quantityByProductId.entries()) {
+      const product = existingProductMap.get(productId);
+      if (!product) {
+        return res.status(400).json({ message: "Có sản phẩm không còn tồn tại." });
+      }
+
+      if (Number(product.stock || 0) < quantity) {
+        return res.status(400).json({
+          message: `Sản phẩm \"${product.name}\" chỉ còn ${Number(product.stock || 0)} trong kho, không đủ số lượng đặt.`,
+        });
+      }
+    }
+
+    for (const [productId, quantity] of quantityByProductId.entries()) {
+      const updatedProduct = await Product.findOneAndUpdate(
+        {
+          _id: productId,
+          stock: { $gte: quantity },
+        },
+        {
+          $inc: { stock: -quantity },
+        },
+        {
+          new: true,
+        }
+      );
+
+      if (!updatedProduct) {
+        if (decrementedStocks.length > 0) {
+          await Promise.all(
+            decrementedStocks.map((entry) =>
+              Product.updateOne({ _id: entry.productId }, { $inc: { stock: entry.quantity } })
+            )
+          );
+        }
+
+        return res.status(400).json({ message: "Tồn kho vừa thay đổi, vui lòng thử đặt lại đơn hàng." });
+      }
+
+      decrementedStocks.push({ productId, quantity });
     }
 
     let appliedDiscount = null;
@@ -165,6 +227,18 @@ const createOrder = async (req, res) => {
 
     return res.status(201).json({ message: "Đặt hàng thành công", order: createdOrder });
   } catch (error) {
+    if (decrementedStocks.length > 0) {
+      try {
+        await Promise.all(
+          decrementedStocks.map((entry) =>
+            Product.updateOne({ _id: entry.productId }, { $inc: { stock: entry.quantity } })
+          )
+        );
+      } catch (rollbackError) {
+        console.error("Lỗi khi hoàn kho sau thất bại tạo đơn hàng:", rollbackError);
+      }
+    }
+
     console.error("Lỗi khi tạo đơn hàng:", error);
     return res.status(500).json({ message: "Lỗi máy chủ khi tạo đơn hàng" });
   }

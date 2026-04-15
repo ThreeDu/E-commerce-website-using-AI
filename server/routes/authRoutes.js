@@ -17,6 +17,7 @@ const adminCategoryRoutes = require("./admin/categoryRoutes");
 const adminDiscountRoutes = require("./admin/discountRoutes");
 const adminSystemLogRoutes = require("./admin/systemLogRoutes");
 const adminOrderRoutes = require("./admin/orderRoutes");
+const adminNotificationRoutes = require("./admin/notificationRoutes");
 
 const router = express.Router();
 router.post("/register", register);
@@ -36,5 +37,6 @@ router.use("/admin/categories", adminCategoryRoutes);
 router.use("/admin/discounts", adminDiscountRoutes);
 router.use("/admin/orders", adminOrderRoutes);
 router.use("/admin/system-logs", adminSystemLogRoutes);
+router.use("/admin/notifications", adminNotificationRoutes);
 
 module.exports = router;
