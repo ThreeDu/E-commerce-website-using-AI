@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480" role="img" aria-label="Placeholder image">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f3f4f6" />
+      <stop offset="100%" stop-color="#e5e7eb" />
+    </linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#bg)" />
+  <g fill="none" stroke="#9ca3af" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="160" y="120" width="320" height="240" rx="24" />
+    <path d="M190 320l86-88 62 63 58-58 54 83" />
+    <circle cx="260" cy="190" r="24" />
+  </g>
+  <text x="320" y="390" text-anchor="middle" fill="#6b7280" font-size="28" font-family="Segoe UI, Arial, sans-serif">
+    Khong co anh
+  </text>
+</svg>

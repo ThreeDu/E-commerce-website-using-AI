@@ -4,7 +4,7 @@ import { useCart } from "../context/CartContext";
 function getProductImageSrc(item) {
   const rawValue = String(item?.image || item?.imageUrl || "").trim();
   if (!rawValue) {
-    return "/placeholder.jpg";
+    return "/placeholder.svg";
   }
 
   if (
@@ -72,7 +72,7 @@ function CartPage() {
                   style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "4px", marginRight: "16px", backgroundColor: "#e9ecef" }}
                   onError={(event) => {
                     event.currentTarget.onerror = null;
-                    event.currentTarget.src = "/placeholder.jpg";
+                    event.currentTarget.src = "/placeholder.svg";
                   }}
                 />
                 <div style={{ flex: 1 }}>

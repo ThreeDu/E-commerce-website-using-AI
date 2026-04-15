@@ -47,6 +47,26 @@
   text-transform: uppercase;
 }
 
+.system-log-action.create {
+  color: #166534;
+  background: #e7f9ef;
+}
+
+.system-log-action.update {
+  color: #1d4ed8;
+  background: #e8f1ff;
+}
+
+.system-log-action.delete {
+  color: #b42318;
+  background: #ffe8e8;
+}
+
+.system-log-action.other {
+  color: #475569;
+  background: #e8edf3;
+}
+
 .system-log-pagination {
   display: flex;
   justify-content: space-between;

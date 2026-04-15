@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 function getStatusInfo(order) {
@@ -27,7 +27,7 @@ function getStatusInfo(order) {
 function getProductImageSrc(product) {
   const rawValue = String(product?.image || product?.imageUrl || "").trim();
   if (!rawValue) {
-    return "/placeholder.jpg";
+    return "/placeholder.svg";
   }
 
   if (
@@ -45,6 +45,7 @@ function getProductImageSrc(product) {
 function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { auth } = useAuth();
 
   const [order, setOrder] = useState(null);
@@ -54,6 +55,10 @@ function OrderDetailPage() {
   const [cancelReason, setCancelReason] = useState("");
   const [cancelError, setCancelError] = useState("");
   const [cancelling, setCancelling] = useState(false);
+
+  const isAdminView = auth?.user?.role === "admin" && location.pathname.startsWith("/admin/orders/");
+  const detailEndpoint = isAdminView ? `/api/auth/admin/orders/${id}` : `/api/orders/my-orders/${id}`;
+  const backHref = isAdminView ? "/admin/orders" : "/order-history";
 
   const cancellable = useMemo(() => {
     const status = String(order?.status || "");
@@ -68,7 +73,7 @@ function OrderDetailPage() {
 
       try {
         setError("");
-        const response = await fetch(`/api/orders/my-orders/${id}`, {
+        const response = await fetch(detailEndpoint, {
           headers: {
             Authorization: `Bearer ${auth.token}`,
           },
@@ -80,7 +85,7 @@ function OrderDetailPage() {
           return;
         }
 
-        setOrder(data);
+        setOrder(data?.order || data || null);
       } catch (fetchError) {
         setError("Không thể kết nối tới máy chủ.");
       } finally {
@@ -89,9 +94,13 @@ function OrderDetailPage() {
     };
 
     fetchOrderDetail();
-  }, [auth?.token, id]);
+  }, [auth?.token, detailEndpoint]);
 
   const handleCancelOrder = async () => {
+    if (isAdminView) {
+      return;
+    }
+
     const trimmedReason = cancelReason.trim();
     if (trimmedReason.length < 5) {
       setCancelError("Vui lòng nhập lý do hủy tối thiểu 5 ký tự.");
@@ -141,10 +150,10 @@ function OrderDetailPage() {
         <p style={{ color: "#6c757d", marginBottom: "16px" }}>{error || "Đơn hàng có thể đã bị xóa hoặc bạn không có quyền truy cập."}</p>
         <button
           type="button"
-          onClick={() => navigate("/order-history")}
+          onClick={() => navigate(backHref)}
           style={{ padding: "10px 16px", border: "none", borderRadius: "6px", backgroundColor: "#0f172a", color: "#fff", fontWeight: "bold", cursor: "pointer" }}
         >
-          Quay lại lịch sử đơn
+          Quay lại danh sách đơn
         </button>
       </main>
     );
@@ -156,8 +165,8 @@ function OrderDetailPage() {
     <main className="container page-content" style={{ padding: "0 20px" }}>
       <div style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
         <h2 style={{ margin: 0, fontSize: "28px" }}>Chi tiết đơn hàng</h2>
-        <Link to="/order-history" style={{ color: "#2563eb", textDecoration: "none", fontWeight: "bold" }}>
-          ← Quay lại lịch sử đơn
+        <Link to={backHref} style={{ color: "#2563eb", textDecoration: "none", fontWeight: "bold" }}>
+          ← Quay lại danh sách đơn
         </Link>
       </div>
 
@@ -198,7 +207,7 @@ function OrderDetailPage() {
                   style={{ width: "76px", height: "76px", objectFit: "cover", borderRadius: "6px", backgroundColor: "#f8fafc" }}
                   onError={(event) => {
                     event.currentTarget.onerror = null;
-                    event.currentTarget.src = "/placeholder.jpg";
+                    event.currentTarget.src = "/placeholder.svg";
                   }}
                 />
                 <div>
@@ -240,7 +249,7 @@ function OrderDetailPage() {
           </p>
         ) : null}
 
-        {cancellable ? (
+        {!isAdminView && cancellable ? (
           <div style={{ marginTop: "16px", textAlign: "right" }}>
             <button
               type="button"
@@ -253,7 +262,7 @@ function OrderDetailPage() {
         ) : null}
       </section>
 
-      {showCancelModal ? (
+      {!isAdminView && showCancelModal ? (
         <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(15, 23, 42, 0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
           <div style={{ width: "100%", maxWidth: "460px", backgroundColor: "#fff", borderRadius: "12px", padding: "20px", border: "1px solid #e2e8f0" }}>
             <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Xác nhận hủy đơn hàng</h3>

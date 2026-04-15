@@ -1,0 +1,119 @@
+.admin-form-surface {
+  position: relative;
+  border: 1px solid rgba(13, 26, 38, 0.1);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 88% -8%, rgba(235, 91, 0, 0.12), transparent 34%),
+    radial-gradient(circle at -8% 100%, rgba(16, 55, 92, 0.08), transparent 32%),
+    #ffffff;
+  box-shadow: 0 18px 40px rgba(12, 26, 38, 0.08);
+  animation: adminSurfaceRise 0.35s ease both;
+}
+
+.admin-page-enter {
+  animation: adminSurfaceRise 0.35s ease both;
+}
+
+.admin-form-surface h2 {
+  margin: 0;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  font-size: 1.55rem;
+  letter-spacing: 0.01em;
+  color: #13263a;
+}
+
+.admin-surface-subtitle {
+  margin: 8px 0 0;
+  max-width: 760px;
+  color: #5a6d84;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.admin-form-surface .form-message {
+  margin-top: 12px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid #ffd8a8;
+  background: #fff8ef;
+  color: #9a3412;
+}
+
+.admin-form-surface form {
+  margin-top: 16px;
+}
+
+.admin-form-surface label {
+  color: #1f3348;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.admin-form-surface input,
+.admin-form-surface select,
+.admin-form-surface textarea {
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.12s ease;
+  background: #ffffff;
+}
+
+.admin-form-surface input:hover,
+.admin-form-surface select:hover,
+.admin-form-surface textarea:hover {
+  border-color: #b6c9dd;
+}
+
+.admin-form-surface input:focus,
+.admin-form-surface select:focus,
+.admin-form-surface textarea:focus {
+  border-color: #eb5b00;
+  box-shadow: 0 0 0 4px rgba(235, 91, 0, 0.15);
+  outline: none;
+}
+
+.admin-form-surface .field-error {
+  margin-top: 5px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-form-surface .add-form-actions button {
+  min-width: 124px;
+  border-radius: 999px;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+}
+
+.admin-form-surface .add-form-actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 9px 16px rgba(9, 26, 44, 0.14);
+}
+
+.admin-form-surface .add-form-actions button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.admin-form-note {
+  margin: 2px 0 0;
+  color: #63768e;
+  font-size: 12px;
+}
+
+@keyframes adminSurfaceRise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-form-surface,
+  .admin-page-enter {
+    animation: none;
+  }
+}

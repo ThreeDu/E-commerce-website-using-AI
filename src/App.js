@@ -1,10 +1,14 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import "./css/admin/forms.css";
+import "./css/admin/theme.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import HomePage from "./pages/HomePage";
+import AboutPage from "./pages/AboutPage";
+import ContractPage from "./pages/ContractPage";
 import ProductsPage from "./pages/ProductsPage";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
@@ -23,6 +27,7 @@ import AdminAddDiscountPage from "./pages/admin/discount/AdminAddDiscountPage";
 import AdminEditDiscountPage from "./pages/admin/discount/AdminEditDiscountPage";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 import AdminSystemLogsPage from "./pages/admin/AdminSystemLogsPage";
+import AdminNotificationsPage from "./pages/admin/AdminNotificationsPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
 import UserDashboard from "./pages/UserDashboard";
@@ -50,6 +55,8 @@ function App() {
           <Header />
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contract" element={<ContractPage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/products/:id" element={<ProductDetailPage />} />
             <Route path="/cart" element={<CartPage />} />
@@ -179,6 +186,22 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminOrdersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/notifications"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminNotificationsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/orders/:id"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <OrderDetailPage />
                 </ProtectedRoute>
               }
             />

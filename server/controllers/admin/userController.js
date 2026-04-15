@@ -1,16 +1,7 @@
-const express = require("express");
-const User = require("../models/User");
-const { verifyAdminRequest } = require("./helpers/authHelpers");
-const { logAdminAction } = require("../utils/adminAuditLogger");
+const User = require("../../models/User");
+const { logAdminAction } = require("../../utils/adminAuditLogger");
 
-const router = express.Router();
-
-router.get("/", async (req, res) => {
-  const adminUser = await verifyAdminRequest(req, res);
-  if (!adminUser) {
-    return;
-  }
-
+const listUsers = async (req, res) => {
   try {
     const users = await User.find()
       .select("_id name email role createdAt")
@@ -23,26 +14,17 @@ router.get("/", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
-});
+};
 
-router.put("/:id", async (req, res) => {
-  const adminUser = await verifyAdminRequest(req, res);
-  if (!adminUser) {
-    return;
-  }
-
+const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, email, role } = req.body;
 
-    if (!name || !email || !role) {
+    if (!name || !email) {
       return res
         .status(400)
-        .json({ message: "Họ tên, email và vai trò là bắt buộc." });
-    }
-
-    if (!["user", "admin"].includes(role)) {
-      return res.status(400).json({ message: "Vai trò không hợp lệ." });
+        .json({ message: "Họ tên và email là bắt buộc." });
     }
 
     const existedEmail = await User.findOne({ email, _id: { $ne: id } });
@@ -50,19 +32,24 @@ router.put("/:id", async (req, res) => {
       return res.status(409).json({ message: "Email đã tồn tại." });
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      id,
-      { name, email, role },
-      { new: true, runValidators: true }
-    ).select("_id name email role createdAt");
-
-    if (!updatedUser) {
+    const currentUser = await User.findById(id).select("_id role");
+    if (!currentUser) {
       return res.status(404).json({ message: "Không tìm thấy người dùng." });
     }
 
+    if (role !== undefined && role !== currentUser.role) {
+      return res.status(403).json({ message: "Không thể chỉnh sửa vai trò người dùng." });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { name, email },
+      { new: true, runValidators: true }
+    ).select("_id name email role createdAt");
+
     logAdminAction({
       req,
-      adminUser,
+      adminUser: req.adminUser,
       action: "update",
       resource: "user",
       resourceId: updatedUser._id,
@@ -79,19 +66,23 @@ router.put("/:id", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
-});
+};
 
-router.delete("/:id", async (req, res) => {
-  const adminUser = await verifyAdminRequest(req, res);
-  if (!adminUser) {
-    return;
-  }
-
+const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (String(adminUser._id) === String(id)) {
+    if (String(req.adminUser._id) === String(id)) {
       return res.status(400).json({ message: "Không thể tự xóa tài khoản admin hiện tại." });
+    }
+
+    const targetUser = await User.findById(id).select("_id role");
+    if (!targetUser) {
+      return res.status(404).json({ message: "Không tìm thấy người dùng." });
+    }
+
+    if (targetUser.role === "admin") {
+      return res.status(403).json({ message: "Không thể xóa tài khoản admin." });
     }
 
     const deletedUser = await User.findByIdAndDelete(id).select("_id name email role");
@@ -102,7 +93,7 @@ router.delete("/:id", async (req, res) => {
 
     logAdminAction({
       req,
-      adminUser,
+      adminUser: req.adminUser,
       action: "delete",
       resource: "user",
       resourceId: deletedUser._id,
@@ -119,6 +110,10 @@ router.delete("/:id", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
-});
+};
 
-module.exports = router;
+module.exports = {
+  listUsers,
+  updateUser,
+  deleteUser,
+};

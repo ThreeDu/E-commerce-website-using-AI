@@ -1,23 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
+import { getAdminCategories } from "../../../services/admin/categoryService";
 import { deleteAdminProduct, getAdminProducts } from "../../../services/admin/productService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
 import "../../../css/admin/products.css";
 
 const ITEMS_PER_PAGE = 8;
 
-const PRICE_FILTERS = {
-  all: () => true,
-  under500k: (price) => price < 500000,
-  from500kTo2m: (price) => price >= 500000 && price <= 2000000,
-  over2m: (price) => price > 2000000,
-};
-
 function getProductImageSrc(product) {
   const rawValue = String(product?.image || product?.imageUrl || "").trim();
   if (!rawValue) {
-    return "/placeholder.jpg";
+    return "/placeholder.svg";
   }
 
   if (
@@ -30,6 +24,14 @@ function getProductImageSrc(product) {
   }
 
   return `/${rawValue.replace(/^\/+/, "")}`;
+}
+
+function normalizeCategoryValue(value) {
+  return String(value || "")
+    .split(">")
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean)
+    .join(" > ");
 }
 
 function AdminListProductPage() {
@@ -47,14 +49,17 @@ function AdminListProductPage() {
   }, [searchParams]);
 
   const [products, setProducts] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [productPendingDelete, setProductPendingDelete] = useState(null);
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [message, setMessage] = useState(location.state?.successMessage || "");
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
-  const [categoryFilter, setCategoryFilter] = useState(searchParams.get("category") || "all");
-  const [priceFilter, setPriceFilter] = useState(searchParams.get("price") || "all");
+  const [categoryLevel1, setCategoryLevel1] = useState(searchParams.get("cat1") || "all");
+  const [categoryLevel2, setCategoryLevel2] = useState(searchParams.get("cat2") || "all");
+  const [categoryLevel3, setCategoryLevel3] = useState(searchParams.get("cat3") || "all");
+  const [priceSort, setPriceSort] = useState(searchParams.get("priceSort") || "default");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all");
   const [currentPage, setCurrentPage] = useState(initialPage);
 
@@ -78,12 +83,163 @@ function AdminListProductPage() {
     loadProducts();
   }, [loadProducts]);
 
-  const categories = useMemo(() => {
-    const values = products
-      .map((product) => (product.category || "Chưa phân loại").trim())
-      .filter(Boolean);
-    return Array.from(new Set(values));
-  }, [products]);
+  const loadCategories = useCallback(async () => {
+    if (!auth?.token) {
+      return;
+    }
+
+    try {
+      const data = await getAdminCategories(auth.token);
+      setAllCategories(data.categories || []);
+    } catch (error) {
+      setMessage((prev) => prev || getErrorMessage(error, "Không thể tải danh mục."));
+    }
+  }, [auth?.token]);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  const categoriesById = useMemo(() => {
+    const map = new Map();
+    allCategories.forEach((item) => {
+      map.set(String(item._id), item);
+    });
+    return map;
+  }, [allCategories]);
+
+  const childrenByParentId = useMemo(() => {
+    const map = new Map();
+
+    allCategories.forEach((item) => {
+      const parentKey = item.parentId ? String(item.parentId) : "root";
+      const list = map.get(parentKey) || [];
+      list.push(item);
+      map.set(parentKey, list);
+    });
+
+    const sortedMap = new Map();
+    map.forEach((list, key) => {
+      const sorted = [...list].sort((a, b) => (a.name || "").localeCompare(b.name || "", "vi", { sensitivity: "base" }));
+      sortedMap.set(key, sorted);
+    });
+
+    return sortedMap;
+  }, [allCategories]);
+
+  const level1Options = useMemo(() => childrenByParentId.get("root") || [], [childrenByParentId]);
+
+  const level2Options = useMemo(() => {
+    if (categoryLevel1 === "all") {
+      return [];
+    }
+    return childrenByParentId.get(String(categoryLevel1)) || [];
+  }, [childrenByParentId, categoryLevel1]);
+
+  const level3Options = useMemo(() => {
+    if (categoryLevel2 === "all") {
+      return [];
+    }
+    return childrenByParentId.get(String(categoryLevel2)) || [];
+  }, [childrenByParentId, categoryLevel2]);
+
+  const selectedCategoryId =
+    categoryLevel3 !== "all"
+      ? categoryLevel3
+      : categoryLevel2 !== "all"
+        ? categoryLevel2
+        : categoryLevel1 !== "all"
+          ? categoryLevel1
+          : null;
+
+  const selectedCategoryMatchers = useMemo(() => {
+    if (!selectedCategoryId) {
+      return null;
+    }
+
+    if (categoriesById.size === 0) {
+      return null;
+    }
+
+    const collectedNames = new Set();
+    const collectedPaths = new Set();
+    const queue = [String(selectedCategoryId)];
+    const visited = new Set();
+
+    while (queue.length > 0) {
+      const currentId = queue.shift();
+      if (visited.has(currentId)) {
+        continue;
+      }
+
+      visited.add(currentId);
+      const category = categoriesById.get(currentId);
+      if (category?.name) {
+        collectedNames.add(normalizeCategoryValue(category.name));
+
+        const pathParts = [category.name];
+        let cursor = category;
+        const parentVisited = new Set();
+
+        while (cursor?.parentId) {
+          const parentId = String(cursor.parentId);
+          if (parentVisited.has(parentId)) {
+            break;
+          }
+
+          parentVisited.add(parentId);
+          const parent = categoriesById.get(parentId);
+          if (!parent) {
+            break;
+          }
+
+          pathParts.unshift(parent.name);
+          cursor = parent;
+        }
+
+        collectedPaths.add(normalizeCategoryValue(pathParts.join(" > ")));
+      }
+
+      const children = childrenByParentId.get(currentId) || [];
+      children.forEach((child) => queue.push(String(child._id)));
+    }
+
+    return {
+      names: collectedNames,
+      paths: collectedPaths,
+    };
+  }, [selectedCategoryId, categoriesById, childrenByParentId]);
+
+  useEffect(() => {
+    if (categoryLevel1 === "all" && (categoryLevel2 !== "all" || categoryLevel3 !== "all")) {
+      setCategoryLevel2("all");
+      setCategoryLevel3("all");
+      return;
+    }
+
+    if (categoryLevel2 === "all" && categoryLevel3 !== "all") {
+      setCategoryLevel3("all");
+    }
+  }, [categoryLevel1, categoryLevel2, categoryLevel3]);
+
+  useEffect(() => {
+    if (categoryLevel1 !== "all" && !level1Options.some((item) => String(item._id) === String(categoryLevel1))) {
+      setCategoryLevel1("all");
+      setCategoryLevel2("all");
+      setCategoryLevel3("all");
+      return;
+    }
+
+    if (categoryLevel2 !== "all" && !level2Options.some((item) => String(item._id) === String(categoryLevel2))) {
+      setCategoryLevel2("all");
+      setCategoryLevel3("all");
+      return;
+    }
+
+    if (categoryLevel3 !== "all" && !level3Options.some((item) => String(item._id) === String(categoryLevel3))) {
+      setCategoryLevel3("all");
+    }
+  }, [categoryLevel1, categoryLevel2, categoryLevel3, level1Options, level2Options, level3Options]);
 
   const getStockStatus = useCallback((stock) => {
     const numericStock = Number(stock || 0);
@@ -109,25 +265,34 @@ function AdminListProductPage() {
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
-    const priceMatcher = PRICE_FILTERS[priceFilter] || PRICE_FILTERS.all;
 
-    return products.filter((product) => {
+    const result = products.filter((product) => {
       const categoryName = product.category || "Chưa phân loại";
-      const finalPrice = Number(product.finalPrice ?? product.price ?? 0);
       const stockStatus = getStockStatus(product.stock);
+      const normalizedCategory = normalizeCategoryValue(categoryName);
 
       const matchesSearch =
         !normalizedSearch ||
         (product.name || "").toLowerCase().includes(normalizedSearch) ||
         categoryName.toLowerCase().includes(normalizedSearch);
 
-      const matchesCategory = categoryFilter === "all" || categoryName === categoryFilter;
-      const matchesPrice = priceMatcher(finalPrice);
+      const matchesCategory =
+        !selectedCategoryMatchers ||
+        selectedCategoryMatchers.paths.has(normalizedCategory) ||
+        selectedCategoryMatchers.names.has(normalizedCategory);
       const matchesStatus = statusFilter === "all" || stockStatus === statusFilter;
 
-      return matchesSearch && matchesCategory && matchesPrice && matchesStatus;
+      return matchesSearch && matchesCategory && matchesStatus;
     });
-  }, [products, searchTerm, categoryFilter, priceFilter, statusFilter, getStockStatus]);
+
+    if (priceSort === "asc") {
+      result.sort((a, b) => Number(a.finalPrice ?? a.price ?? 0) - Number(b.finalPrice ?? b.price ?? 0));
+    } else if (priceSort === "desc") {
+      result.sort((a, b) => Number(b.finalPrice ?? b.price ?? 0) - Number(a.finalPrice ?? a.price ?? 0));
+    }
+
+    return result;
+  }, [products, searchTerm, selectedCategoryMatchers, statusFilter, getStockStatus, priceSort]);
 
   useEffect(() => {
     if (!hasInitializedFilters.current) {
@@ -136,7 +301,7 @@ function AdminListProductPage() {
     }
 
     setCurrentPage(1);
-  }, [searchTerm, categoryFilter, priceFilter, statusFilter]);
+  }, [searchTerm, categoryLevel1, categoryLevel2, categoryLevel3, statusFilter, priceSort]);
 
   useEffect(() => {
     const nextParams = new URLSearchParams();
@@ -145,12 +310,20 @@ function AdminListProductPage() {
       nextParams.set("q", searchTerm.trim());
     }
 
-    if (categoryFilter !== "all") {
-      nextParams.set("category", categoryFilter);
+    if (categoryLevel1 !== "all") {
+      nextParams.set("cat1", categoryLevel1);
     }
 
-    if (priceFilter !== "all") {
-      nextParams.set("price", priceFilter);
+    if (categoryLevel2 !== "all") {
+      nextParams.set("cat2", categoryLevel2);
+    }
+
+    if (categoryLevel3 !== "all") {
+      nextParams.set("cat3", categoryLevel3);
+    }
+
+    if (priceSort !== "default") {
+      nextParams.set("priceSort", priceSort);
     }
 
     if (statusFilter !== "all") {
@@ -162,7 +335,27 @@ function AdminListProductPage() {
     }
 
     setSearchParams(nextParams, { replace: true });
-  }, [searchTerm, categoryFilter, priceFilter, statusFilter, currentPage, setSearchParams]);
+  }, [
+    searchTerm,
+    categoryLevel1,
+    categoryLevel2,
+    categoryLevel3,
+    priceSort,
+    statusFilter,
+    currentPage,
+    setSearchParams,
+  ]);
+
+  const handleCategoryLevel1Change = (nextValue) => {
+    setCategoryLevel1(nextValue);
+    setCategoryLevel2("all");
+    setCategoryLevel3("all");
+  };
+
+  const handleCategoryLevel2Change = (nextValue) => {
+    setCategoryLevel2(nextValue);
+    setCategoryLevel3("all");
+  };
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
 
@@ -262,9 +455,23 @@ function AdminListProductPage() {
     }
   };
 
+  const totalProducts = products.length;
+  const inStockCount = products.filter((item) => Number(item.stock || 0) > 10).length;
+  const lowStockCount = products.filter(
+    (item) => Number(item.stock || 0) > 0 && Number(item.stock || 0) <= 10
+  ).length;
+  const outStockCount = products.filter((item) => Number(item.stock || 0) <= 0).length;
+
+  const percent = (value) => {
+    if (!totalProducts) {
+      return "0%";
+    }
+    return `${Math.round((value / totalProducts) * 100)}%`;
+  };
+
   return (
-    <main className="container page-content">
-      <section className="hero-card dashboard-surface" aria-busy={loading}>
+    <main className="container page-content admin-products-page">
+      <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading}>
         <div className="dashboard-header-row">
           <div>
             <h2>Quản lý sản phẩm</h2>
@@ -284,19 +491,23 @@ function AdminListProductPage() {
         <div className="dashboard-metric-grid">
           <article className="metric-card">
             <span>Tổng sản phẩm</span>
-            <strong>{products.length}</strong>
+            <strong>{totalProducts}</strong>
+            <small className="metric-note">Toàn bộ sản phẩm trong kho</small>
           </article>
-          <article className="metric-card">
+          <article className="metric-card success">
             <span>Còn hàng</span>
-            <strong>{products.filter((item) => Number(item.stock || 0) > 10).length}</strong>
+            <strong>{inStockCount}</strong>
+            <small className="metric-note">Chiếm {percent(inStockCount)}</small>
           </article>
           <article className="metric-card warning">
             <span>Sắp hết</span>
-            <strong>{products.filter((item) => Number(item.stock || 0) > 0 && Number(item.stock || 0) <= 10).length}</strong>
+            <strong>{lowStockCount}</strong>
+            <small className="metric-note">Chiếm {percent(lowStockCount)}</small>
           </article>
           <article className="metric-card danger">
             <span>Hết hàng</span>
-            <strong>{products.filter((item) => Number(item.stock || 0) <= 0).length}</strong>
+            <strong>{outStockCount}</strong>
+            <small className="metric-note">Chiếm {percent(outStockCount)}</small>
           </article>
         </div>
 
@@ -313,28 +524,67 @@ function AdminListProductPage() {
           </div>
 
           <div className="filter-control">
-            <label htmlFor="product-category">Danh mục</label>
+            <label htmlFor="product-category-level-1">Danh mục cấp 1</label>
             <select
-              id="product-category"
-              value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.target.value)}
+              id="product-category-level-1"
+              value={categoryLevel1}
+              onChange={(event) => handleCategoryLevel1Change(event.target.value)}
             >
-              <option value="all">Tất cả danh mục</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
+              <option value="all">Tất cả cấp 1</option>
+              {level1Options.map((category) => (
+                <option key={category._id} value={category._id}>
+                  {category.name}
                 </option>
               ))}
             </select>
           </div>
 
+          {categoryLevel1 !== "all" && (
+            <div className="filter-control">
+              <label htmlFor="product-category-level-2">Danh mục cấp 2</label>
+              <select
+                id="product-category-level-2"
+                value={categoryLevel2}
+                onChange={(event) => handleCategoryLevel2Change(event.target.value)}
+              >
+                <option value="all">Tất cả cấp 2</option>
+                {level2Options.map((category) => (
+                  <option key={category._id} value={category._id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {categoryLevel2 !== "all" && (
+            <div className="filter-control">
+              <label htmlFor="product-category-level-3">Danh mục cấp 3</label>
+              <select
+                id="product-category-level-3"
+                value={categoryLevel3}
+                onChange={(event) => setCategoryLevel3(event.target.value)}
+              >
+                <option value="all">Tất cả cấp 3</option>
+                {level3Options.map((category) => (
+                  <option key={category._id} value={category._id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="filter-control">
-            <label htmlFor="product-price">Khoảng giá</label>
-            <select id="product-price" value={priceFilter} onChange={(event) => setPriceFilter(event.target.value)}>
-              <option value="all">Tất cả mức giá</option>
-              <option value="under500k">Dưới 500.000 đ</option>
-              <option value="from500kTo2m">500.000 đ - 2.000.000 đ</option>
-              <option value="over2m">Trên 2.000.000 đ</option>
+            <label htmlFor="product-price-sort">Sắp xếp giá</label>
+            <select
+              id="product-price-sort"
+              value={priceSort}
+              onChange={(event) => setPriceSort(event.target.value)}
+            >
+              <option value="default">Mặc định</option>
+              <option value="asc">Giá thấp đến cao</option>
+              <option value="desc">Giá cao đến thấp</option>
             </select>
           </div>
 
@@ -381,97 +631,105 @@ function AdminListProductPage() {
         {loading ? (
           <p>Đang tải danh sách sản phẩm...</p>
         ) : (
-          <div className="dashboard-table-card">
-            <div className="users-table-wrap">
-              <table className="users-table dashboard-table">
-                <thead>
-                  <tr>
-                    <th>
-                      <input
-                        type="checkbox"
-                        aria-label="Chọn tất cả sản phẩm trong trang"
-                        checked={isAllOnPageSelected}
-                        onChange={toggleSelectAllOnPage}
-                      />
-                    </th>
-                    <th>Ảnh</th>
-                    <th>Sản phẩm</th>
-                    <th>Giá & giảm</th>
-                    <th>Tồn kho</th>
-                    <th>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedProducts.map((product) => (
-                    <tr key={product._id}>
-                      <td>
+          <>
+            <div className="dashboard-table-card">
+              <div className="users-table-wrap">
+                <table className="users-table dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>
                         <input
                           type="checkbox"
-                          aria-label={`Chọn sản phẩm ${product.name}`}
-                          checked={selectedProductIds.includes(product._id)}
-                          onChange={() => toggleProductSelect(product._id)}
+                          aria-label="Chọn tất cả sản phẩm trong trang"
+                          checked={isAllOnPageSelected}
+                          onChange={toggleSelectAllOnPage}
                         />
-                      </td>
-                      <td>
-                        <img
-                          src={getProductImageSrc(product)}
-                          alt={product.name}
-                          className="admin-product-thumb"
-                          onError={(event) => {
-                            event.currentTarget.onerror = null;
-                            event.currentTarget.src = "/placeholder.jpg";
-                          }}
-                        />
-                      </td>
-                      <td>
-                        <div className="cell-title truncate-text" title={product.name}>
-                          {product.name}
-                        </div>
-                        <div className="cell-subtext truncate-text" title={product.category || "Chưa phân loại"}>
-                          {product.category || "Chưa phân loại"}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="price-stack">
-                          <span className="pill final-price-pill">
-                            {Number(product.finalPrice ?? product.price).toLocaleString("vi-VN")} đ
-                          </span>
-                          <span className="cell-subtext truncate-text" title={`Giá gốc: ${Number(product.price).toLocaleString("vi-VN")} đ`}>
-                            Giá gốc: {Number(product.price).toLocaleString("vi-VN")} đ
-                          </span>
-                          <span className="cell-subtext">Giảm: {product.discountPercent ?? 0}%</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`pill stock-pill ${getStockStatus(product.stock)}`}>
-                          {product.stock ?? 0} - {getStockStatusLabel(product.stock)}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="table-actions">
-                          <Link to={`/admin/products/edit/${product._id}`} className="table-link-btn">
-                            <span aria-hidden="true">✎</span> Sửa
+                      </th>
+                      <th>Ảnh</th>
+                      <th>Sản phẩm</th>
+                      <th>Giá & giảm</th>
+                      <th>Tồn kho</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedProducts.map((product) => (
+                      <tr key={product._id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            aria-label={`Chọn sản phẩm ${product.name}`}
+                            checked={selectedProductIds.includes(product._id)}
+                            onChange={() => toggleProductSelect(product._id)}
+                          />
+                        </td>
+                        <td>
+                          <Link to={`/products/${product._id}`} className="product-detail-link" title={`Xem chi tiết ${product.name}`}>
+                            <img
+                              src={getProductImageSrc(product)}
+                              alt={product.name}
+                              className="admin-product-thumb"
+                              onError={(event) => {
+                                event.currentTarget.onerror = null;
+                                event.currentTarget.src = "/placeholder.svg";
+                              }}
+                            />
                           </Link>
-                          <button
-                            type="button"
-                            className="danger-btn"
-                            onClick={() => setProductPendingDelete(product)}
+                        </td>
+                        <td>
+                          <Link
+                            to={`/products/${product._id}`}
+                            className="cell-title truncate-text product-detail-link"
+                            title={product.name}
                           >
-                            <span aria-hidden="true">🗑</span> Xóa
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {paginatedProducts.length === 0 && (
-                    <tr>
-                      <td colSpan="6" className="table-empty-cell">
-                        Không tìm thấy sản phẩm phù hợp bộ lọc.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                            {product.name}
+                          </Link>
+                          <div className="cell-subtext truncate-text" title={product.category || "Chưa phân loại"}>
+                            {product.category || "Chưa phân loại"}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="price-stack">
+                            <span className="pill final-price-pill">
+                              {Number(product.finalPrice ?? product.price).toLocaleString("vi-VN")} đ
+                            </span>
+                            <span className="cell-subtext truncate-text" title={`Giá gốc: ${Number(product.price).toLocaleString("vi-VN")} đ`}>
+                              Giá gốc: {Number(product.price).toLocaleString("vi-VN")} đ
+                            </span>
+                            <span className="cell-subtext">Giảm: {product.discountPercent ?? 0}%</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`pill stock-pill ${getStockStatus(product.stock)}`}>
+                            {product.stock ?? 0} - {getStockStatusLabel(product.stock)}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="table-actions">
+                            <Link to={`/admin/products/edit/${product._id}`} className="table-link-btn">
+                              <span aria-hidden="true">✎</span> Sửa
+                            </Link>
+                            <button
+                              type="button"
+                              className="danger-btn"
+                              onClick={() => setProductPendingDelete(product)}
+                            >
+                              <span aria-hidden="true">🗑</span> Xóa
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {paginatedProducts.length === 0 && (
+                      <tr>
+                        <td colSpan="6" className="table-empty-cell">
+                          Không tìm thấy sản phẩm phù hợp bộ lọc.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div className="dashboard-pagination">
@@ -481,26 +739,26 @@ function AdminListProductPage() {
               <div className="pagination-actions">
                 <button
                   type="button"
-                  className="secondary-btn"
+                  className="secondary-btn pager-btn"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 >
-                  Trước
+                  ← Trước
                 </button>
                 <span className="page-indicator">
                   Trang {currentPage}/{totalPages}
                 </span>
                 <button
                   type="button"
-                  className="secondary-btn"
+                  className="secondary-btn pager-btn"
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                 >
-                  Sau
+                  Sau →
                 </button>
               </div>
             </div>
-          </div>
+          </>
         )}
       </section>
 

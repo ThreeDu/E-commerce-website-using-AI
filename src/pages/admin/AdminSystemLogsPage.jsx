@@ -9,6 +9,12 @@ import "../../css/admin/systemLogs.css";
 const ACTION_OPTIONS = ["all", "create", "update", "delete"];
 const RESOURCE_OPTIONS = ["all", "product", "discount", "category", "user"];
 
+const ACTION_TONE_CLASS = {
+  create: "create",
+  update: "update",
+  delete: "delete",
+};
+
 function AdminSystemLogsPage() {
   const { auth } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -107,9 +113,14 @@ function AdminSystemLogsPage() {
     return "Không có bản ghi phù hợp bộ lọc.";
   }, [loading]);
 
+  const getActionToneClass = useCallback((action) => {
+    const key = String(action || "").toLowerCase();
+    return ACTION_TONE_CLASS[key] || "other";
+  }, []);
+
   return (
     <main className="container page-content">
-      <section className="hero-card dashboard-surface" aria-busy={loading}>
+      <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading}>
         <div className="dashboard-header-row">
           <div>
             <h2>Log hệ thống</h2>
@@ -188,7 +199,9 @@ function AdminSystemLogsPage() {
                       <div className="cell-subtext">IP: {item.ip || "-"}</div>
                     </td>
                     <td>
-                      <span className="pill status-pill info system-log-action">{item.action || "-"}</span>
+                      <span className={`pill system-log-action ${getActionToneClass(item.action)}`}>
+                        {item.action || "-"}
+                      </span>
                     </td>
                     <td>
                       <div className="cell-title">{item.resource || "-"}</div>
@@ -226,19 +239,19 @@ function AdminSystemLogsPage() {
           <div className="pagination-actions">
             <button
               type="button"
-              className="secondary-btn"
+              className="secondary-btn pager-btn"
               disabled={page <= 1 || loading}
               onClick={() => setPage((prev) => Math.max(1, prev - 1))}
             >
-              Trước
+              ← Trước
             </button>
             <button
               type="button"
-              className="secondary-btn"
+              className="secondary-btn pager-btn"
               disabled={page >= totalPages || loading}
               onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
             >
-              Sau
+              Sau →
             </button>
           </div>
         </div>

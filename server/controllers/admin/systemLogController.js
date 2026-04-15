@@ -1,15 +1,6 @@
-const express = require("express");
-const AuditLog = require("../models/AuditLog");
-const { verifyAdminRequest } = require("./helpers/authHelpers");
+const AuditLog = require("../../models/AuditLog");
 
-const router = express.Router();
-
-router.get("/", async (req, res) => {
-  const adminUser = await verifyAdminRequest(req, res);
-  if (!adminUser) {
-    return;
-  }
-
+const listSystemLogs = async (req, res) => {
   try {
     const {
       page = "1",
@@ -39,11 +30,7 @@ router.get("/", async (req, res) => {
 
     if (q && String(q).trim()) {
       const keyword = new RegExp(String(q).trim(), "i");
-      filter.$or = [
-        { adminEmail: keyword },
-        { resourceId: keyword },
-        { path: keyword },
-      ];
+      filter.$or = [{ adminEmail: keyword }, { resourceId: keyword }, { path: keyword }];
     }
 
     const total = await AuditLog.countDocuments(filter);
@@ -64,6 +51,8 @@ router.get("/", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
-});
+};
 
-module.exports = router;
+module.exports = {
+  listSystemLogs,
+};

@@ -7,7 +7,7 @@ import "../css/shop-experience.css";
 function getProductImageSrc(product) {
   const rawValue = String(product?.image || product?.imageUrl || "").trim();
   if (!rawValue) {
-    return "/placeholder.jpg";
+    return "/placeholder.svg";
   }
 
   if (
@@ -20,6 +20,32 @@ function getProductImageSrc(product) {
   }
 
   return `/${rawValue.replace(/^\/+/, "")}`;
+}
+
+function getProductPricing(product) {
+  const basePrice = Math.max(0, Number(product?.price || 0));
+  const rawDiscountPercent = Math.max(0, Math.min(100, Number(product?.discountPercent || 0)));
+  const finalPriceFromApi = Math.max(0, Number(product?.finalPrice || 0));
+
+  const fallbackFinalPrice = Math.round(basePrice * (1 - rawDiscountPercent / 100));
+  const finalPrice =
+    finalPriceFromApi > 0 && finalPriceFromApi < basePrice ? finalPriceFromApi : fallbackFinalPrice;
+
+  const hasDiscount = basePrice > 0 && finalPrice < basePrice;
+  const discountPercent = hasDiscount
+    ? Math.max(1, Math.round(((basePrice - finalPrice) / basePrice) * 100))
+    : 0;
+
+  return {
+    basePrice,
+    finalPrice: hasDiscount ? finalPrice : basePrice,
+    hasDiscount,
+    discountPercent,
+  };
+}
+
+function isOutOfStock(product) {
+  return Number(product?.stock || 0) <= 0;
 }
 
 function ProductDetailPage() {
@@ -44,6 +70,10 @@ function ProductDetailPage() {
   const handleAddToCart = () => {
     if (!auth?.token) {
       navigate("/login", { state: { from: `/products/${id}` } });
+      return;
+    }
+
+    if (!product || isOutOfStock(product)) {
       return;
     }
 
@@ -301,7 +331,7 @@ function ProductDetailPage() {
   const handleUpdateReview = async (reviewId) => {
     const trimmedComment = String(editReviewForm.comment || "").trim();
     if (trimmedComment.length < 5) {
-      setReviewActionError("Noi dung danh gia phai toi thieu 5 ky tu.");
+      setReviewActionError("Nội dung đánh giá phải tối thiểu 5 ký tự.");
       return;
     }
 
@@ -323,7 +353,7 @@ function ProductDetailPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        setReviewActionError(data?.message || "Khong the cap nhat danh gia.");
+        setReviewActionError(data?.message || "Không thể cập nhật đánh giá.");
         return;
       }
 
@@ -350,10 +380,10 @@ function ProductDetailPage() {
         };
       });
 
-      setReviewActionMessage("Cap nhat danh gia thanh cong.");
+      setReviewActionMessage("Cập nhật đánh giá thành công.");
       handleCancelEditReview();
     } catch (error) {
-      setReviewActionError("Khong the ket noi toi may chu.");
+      setReviewActionError("Không thể kết nối tới máy chủ.");
     } finally {
       setReviewActionLoadingId("");
     }
@@ -382,7 +412,7 @@ function ProductDetailPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        setReviewActionError(data?.message || "Khong the xoa danh gia.");
+        setReviewActionError(data?.message || "Không thể xóa đánh giá.");
         return;
       }
 
@@ -399,10 +429,10 @@ function ProductDetailPage() {
         };
       });
 
-      setReviewActionMessage("Da xoa danh gia.");
+      setReviewActionMessage("Đã xóa đánh giá.");
       setReviewDeleteTargetId("");
     } catch (error) {
-      setReviewActionError("Khong the ket noi toi may chu.");
+      setReviewActionError("Không thể kết nối tới máy chủ.");
     } finally {
       setReviewActionLoadingId("");
     }
@@ -421,50 +451,44 @@ function ProductDetailPage() {
     );
   }
 
+  const pricing = getProductPricing(product);
+  const outOfStock = isOutOfStock(product);
+
   return (
     <main className="container page-content">
       <div className="shopx-page">
-        <nav className="shopx-breadcrumb" aria-label="breadcrumb">
-          <ol>
-            <li>
-              <Link to="/">Trang chu</Link>
-            </li>
-            <li>/</li>
-            <li>
-              <Link to="/products">San pham</Link>
-            </li>
-            <li>/</li>
-            <li aria-current="page">{product.name}</li>
-          </ol>
-        </nav>
-
         <section className="shopx-panel shopx-detail">
-          <div>
+          <div className={`shopx-detail-media ${outOfStock ? "is-out-of-stock" : ""}`}>
+            {pricing.hasDiscount ? <span className="shopx-sale-badge">-{pricing.discountPercent}%</span> : null}
+            {outOfStock ? <span className="shopx-stock-badge">Hết hàng</span> : null}
             <img
               src={getProductImageSrc(product)}
               alt={product.name}
               className="shopx-detail-image"
               onError={(event) => {
                 event.currentTarget.onerror = null;
-                event.currentTarget.src = "/placeholder.jpg";
+                event.currentTarget.src = "/placeholder.svg";
               }}
             />
           </div>
           <div>
             <h1 className="shopx-detail-name">{product.name}</h1>
             <p className="shopx-subtitle" style={{ marginTop: "12px" }}>
-              Danh muc: <strong>{product.category}</strong>
+              Danh mục: <strong>{product.category}</strong>
             </p>
 
             <div className="shopx-meta-row" style={{ marginTop: "12px" }}>
               <span className="shopx-chip shopx-chip--rating">
-                {Number(product.averageRating || 0).toFixed(1)} sao ({Number(product.totalRatings || 0)} danh gia)
+                {Number(product.averageRating || 0).toFixed(1)} sao ({Number(product.totalRatings || 0)} đánh giá)
               </span>
-              <span className="shopx-chip shopx-chip--views">{Number(product.totalViews || 0)} luot xem</span>
-              <span className="shopx-chip shopx-chip--sold">{Number(product.totalPurchases || 0)} luot mua</span>
+              <span className="shopx-chip shopx-chip--views">{Number(product.totalViews || 0)} lượt xem</span>
+              <span className="shopx-chip shopx-chip--sold">{Number(product.totalPurchases || 0)} lượt mua</span>
             </div>
 
-            <p className="shopx-price">{Number(product.price || 0).toLocaleString("vi-VN")} đ</p>
+            <p className="shopx-price">{pricing.finalPrice.toLocaleString("vi-VN")} đ</p>
+            {pricing.hasDiscount ? (
+              <p className="shopx-old-price">{pricing.basePrice.toLocaleString("vi-VN")} đ</p>
+            ) : null}
             <p className="shopx-detail-desc">{product.description}</p>
 
             <div className="shopx-detail-actions">
@@ -472,23 +496,28 @@ function ProductDetailPage() {
                 type="button"
                 disabled={isWishlistLoading}
                 onClick={handleToggleWishlist}
-                className={`shopx-btn shopx-btn--ghost ${isWishlisted ? "shopx-btn--active" : ""}`}
+                className={`shopx-btn shopx-btn--ghost shopx-btn--wishlist ${isWishlisted ? "shopx-btn--active" : ""}`}
               >
-                {isWishlistLoading ? "Dang xu ly..." : isWishlisted ? "Da yeu thich" : "Them yeu thich"}
+                {isWishlistLoading ? "Đang xử lý..." : isWishlisted ? "Đã yêu thích" : "Thêm yêu thích"}
               </button>
-              <button type="button" onClick={handleAddToCart} className="shopx-btn shopx-btn--primary">
-                Them vao gio hang
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                className={`shopx-btn shopx-btn--primary shopx-btn--cart ${outOfStock ? "shopx-btn--out-of-stock" : ""}`}
+                disabled={outOfStock}
+              >
+                {outOfStock ? "Hết hàng" : "Thêm vào giỏ hàng"}
               </button>
             </div>
           </div>
         </section>
 
         <section className="shopx-panel shopx-review-box">
-          <h3 style={{ marginTop: 0 }}>Danh gia san pham</h3>
+          <h3 style={{ marginTop: 0 }}>Đánh giá sản phẩm</h3>
 
           {!auth?.token ? (
             <p className="shopx-subtitle">
-              Vui long <Link to="/login">dang nhap</Link> de gui danh gia sau khi don hang da giao.
+              Vui lòng <Link to="/login">đăng nhập</Link> để gửi đánh giá sau khi đơn hàng đã giao.
             </p>
           ) : eligibility.canReview ? (
             <form onSubmit={handleSubmitReview} style={{ marginBottom: "16px" }}>
@@ -501,7 +530,7 @@ function ProductDetailPage() {
                 >
                   {eligibility.availableOrders.map((order) => (
                     <option key={order._id} value={order._id}>
-                      Don {String(order._id).slice(-8).toUpperCase()} - {new Date(order.createdAt).toLocaleDateString("vi-VN")}
+                      Đơn {String(order._id).slice(-8).toUpperCase()} - {new Date(order.createdAt).toLocaleDateString("vi-VN")}
                     </option>
                   ))}
                 </select>
@@ -521,7 +550,7 @@ function ProductDetailPage() {
               <textarea
                 className="shopx-textarea"
                 rows={4}
-                placeholder="Chia se trai nghiem cua ban..."
+                placeholder="Chia sẻ trải nghiệm của bạn..."
                 value={reviewForm.comment}
                 onChange={(event) => setReviewForm((prev) => ({ ...prev, comment: event.target.value }))}
               />
@@ -530,11 +559,11 @@ function ProductDetailPage() {
               {reviewMessage ? <p className="shopx-msg shopx-msg--ok">{reviewMessage}</p> : null}
 
               <button type="submit" disabled={reviewSubmitting} className="shopx-btn shopx-btn--primary" style={{ marginTop: "10px" }}>
-                {reviewSubmitting ? "Dang gui..." : "Gui danh gia"}
+                {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
               </button>
             </form>
           ) : (
-            <p className="shopx-subtitle">Ban chi co the danh gia san pham sau khi da nhan hang thanh cong.</p>
+            <p className="shopx-subtitle">Bạn chỉ có thể đánh giá sản phẩm sau khi đã nhận hàng thành công.</p>
           )}
 
           {reviewActionError ? <p className="shopx-msg shopx-msg--error">{reviewActionError}</p> : null}
@@ -542,7 +571,7 @@ function ProductDetailPage() {
 
           <div className="shopx-review-list">
             {(product.reviews || []).length === 0 ? (
-              <p className="shopx-subtitle">Chua co danh gia nao cho san pham nay.</p>
+              <p className="shopx-subtitle">Chưa có đánh giá nào cho sản phẩm này.</p>
             ) : (
               (product.reviews || []).map((review) => {
                 const reviewerId = String(review?.user?._id || review?.user || "");
@@ -552,7 +581,7 @@ function ProductDetailPage() {
                 return (
                   <article key={review._id} className="shopx-review-item">
                     <div className="shopx-review-head">
-                      <span className="shopx-review-name">{review.user?.name || "Nguoi dung"}</span>
+                      <span className="shopx-review-name">{review.user?.name || "Người dùng"}</span>
                       <span className="shopx-chip shopx-chip--rating">{Number(review.rating || 0).toFixed(1)} sao</span>
                     </div>
 
@@ -584,10 +613,10 @@ function ProductDetailPage() {
                             disabled={reviewActionLoadingId === String(review._id)}
                             onClick={() => handleUpdateReview(review._id)}
                           >
-                            {reviewActionLoadingId === String(review._id) ? "Dang luu..." : "Luu sua"}
+                            {reviewActionLoadingId === String(review._id) ? "Đang lưu..." : "Lưu sửa"}
                           </button>
                           <button type="button" className="shopx-btn shopx-btn--ghost" onClick={handleCancelEditReview}>
-                            Huy
+                            Hủy
                           </button>
                         </div>
                       </div>
@@ -601,7 +630,7 @@ function ProductDetailPage() {
                         {isMine ? (
                           <div className="shopx-review-actions">
                             <button type="button" className="shopx-btn shopx-btn--ghost" onClick={() => handleStartEditReview(review)}>
-                              Sua
+                              Sửa
                             </button>
                             <button
                               type="button"
@@ -609,7 +638,7 @@ function ProductDetailPage() {
                               disabled={reviewActionLoadingId === String(review._id)}
                               onClick={() => handleDeleteReview(review._id)}
                             >
-                              {reviewActionLoadingId === String(review._id) ? "Dang xoa..." : "Xoa"}
+                              {reviewActionLoadingId === String(review._id) ? "Đang xóa..." : "Xóa"}
                             </button>
                           </div>
                         ) : null}
@@ -623,11 +652,11 @@ function ProductDetailPage() {
         </section>
 
         {reviewDeleteTargetId ? (
-          <div className="shopx-modal-backdrop" role="dialog" aria-modal="true" aria-label="Xac nhan xoa danh gia">
+          <div className="shopx-modal-backdrop" role="dialog" aria-modal="true" aria-label="Xác nhận xóa đánh giá">
             <div className="shopx-modal-card">
-              <h4 style={{ margin: "0 0 8px" }}>Xac nhan xoa danh gia</h4>
+              <h4 style={{ margin: "0 0 8px" }}>Xác nhận xóa đánh giá</h4>
               <p className="shopx-subtitle" style={{ marginTop: 0 }}>
-                Hanh dong nay se xoa vinh vien danh gia cua ban cho san pham nay.
+                Hành động này sẽ xóa vĩnh viễn đánh giá của bạn cho sản phẩm này.
               </p>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "10px" }}>
                 <button
@@ -636,7 +665,7 @@ function ProductDetailPage() {
                   onClick={() => setReviewDeleteTargetId("")}
                   disabled={reviewActionLoadingId === reviewDeleteTargetId}
                 >
-                  Huy
+                  Hủy
                 </button>
                 <button
                   type="button"
@@ -644,7 +673,7 @@ function ProductDetailPage() {
                   onClick={handleConfirmDeleteReview}
                   disabled={reviewActionLoadingId === reviewDeleteTargetId}
                 >
-                  {reviewActionLoadingId === reviewDeleteTargetId ? "Dang xoa..." : "Xac nhan xoa"}
+                  {reviewActionLoadingId === reviewDeleteTargetId ? "Đang xóa..." : "Xác nhận xóa"}
                 </button>
               </div>
             </div>

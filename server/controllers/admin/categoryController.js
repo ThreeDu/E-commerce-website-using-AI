@@ -1,9 +1,5 @@
-const express = require("express");
-const Category = require("../models/Category");
-const { verifyAdminRequest } = require("./helpers/authHelpers");
-const { logAdminAction } = require("../utils/adminAuditLogger");
-
-const router = express.Router();
+const Category = require("../../models/Category");
+const { logAdminAction } = require("../../utils/adminAuditLogger");
 
 const validateParentForThreeLevels = async (parentId, currentCategoryId = null) => {
   const parentCategory = await Category.findById(parentId).select("_id parentId");
@@ -41,12 +37,7 @@ const validateParentForThreeLevels = async (parentId, currentCategoryId = null) 
   return { parentCategory };
 };
 
-router.get("/", async (req, res) => {
-  const adminUser = await verifyAdminRequest(req, res);
-  if (!adminUser) {
-    return;
-  }
-
+const listCategories = async (req, res) => {
   try {
     const categories = await Category.find().sort({ createdAt: -1 });
 
@@ -57,14 +48,9 @@ router.get("/", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
-});
+};
 
-router.post("/", async (req, res) => {
-  const adminUser = await verifyAdminRequest(req, res);
-  if (!adminUser) {
-    return;
-  }
-
+const createCategory = async (req, res) => {
   try {
     const { name, parentId } = req.body;
 
@@ -99,7 +85,7 @@ router.post("/", async (req, res) => {
 
     logAdminAction({
       req,
-      adminUser,
+      adminUser: req.adminUser,
       action: "create",
       resource: "category",
       resourceId: category._id,
@@ -116,14 +102,9 @@ router.post("/", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
-});
+};
 
-router.put("/:id", async (req, res) => {
-  const adminUser = await verifyAdminRequest(req, res);
-  if (!adminUser) {
-    return;
-  }
-
+const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, parentId } = req.body;
@@ -169,7 +150,7 @@ router.put("/:id", async (req, res) => {
 
     logAdminAction({
       req,
-      adminUser,
+      adminUser: req.adminUser,
       action: "update",
       resource: "category",
       resourceId: updatedCategory._id,
@@ -186,14 +167,9 @@ router.put("/:id", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
-});
+};
 
-router.delete("/:id", async (req, res) => {
-  const adminUser = await verifyAdminRequest(req, res);
-  if (!adminUser) {
-    return;
-  }
-
+const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
     const category = await Category.findById(id);
@@ -213,7 +189,7 @@ router.delete("/:id", async (req, res) => {
 
     logAdminAction({
       req,
-      adminUser,
+      adminUser: req.adminUser,
       action: "delete",
       resource: "category",
       resourceId: category._id,
@@ -230,6 +206,11 @@ router.delete("/:id", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
-});
+};
 
-module.exports = router;
+module.exports = {
+  listCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+};

@@ -1,0 +1,195 @@
+body.admin-sidebar-active {
+  --admin-shop-bg: #f8f9fa;
+  --admin-shop-surface: #ffffff;
+  --admin-shop-ink: #1d1d1f;
+  --admin-shop-muted: #6c7d90;
+  --admin-shop-line: rgba(0, 0, 0, 0.1);
+  --admin-shop-primary: #0f766e;
+  --admin-shop-accent: #ff6f3c;
+  --admin-shop-accent-soft: #ffe8dc;
+  --admin-shop-soft-blue: #eef5ff;
+  --admin-shop-soft-orange: #fff1e4;
+  --admin-shop-success: #166534;
+  --admin-shop-radius-lg: 24px;
+  --admin-shop-radius-md: 20px;
+  --admin-shop-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  background: var(--admin-shop-bg);
+}
+
+body.admin-sidebar-active .page-content {
+  padding-top: 28px;
+  padding-bottom: 28px;
+}
+
+body.admin-sidebar-active .hero-card {
+  background: var(--admin-shop-surface);
+  border: 1px solid var(--admin-shop-line);
+  border-radius: var(--admin-shop-radius-lg);
+  box-shadow: var(--admin-shop-shadow);
+}
+
+body.admin-sidebar-active .hero-card h2 {
+  margin-top: 0;
+  color: var(--admin-shop-ink);
+  letter-spacing: -0.01em;
+}
+
+body.admin-sidebar-active .dashboard-subtitle,
+body.admin-sidebar-active .admin-surface-subtitle {
+  color: var(--admin-shop-muted);
+}
+
+body.admin-sidebar-active .dashboard-surface,
+body.admin-sidebar-active .admin-form-surface {
+  background:
+    radial-gradient(circle at 88% -8%, rgba(255, 111, 60, 0.12), transparent 36%),
+    radial-gradient(circle at -8% 100%, rgba(15, 118, 110, 0.1), transparent 30%),
+    #ffffff;
+}
+
+body.admin-sidebar-active .primary-link-btn,
+body.admin-sidebar-active .add-form-actions button:first-child,
+body.admin-sidebar-active .confirm-modal-actions .danger-btn,
+body.admin-sidebar-active .bulk-action-buttons .danger-btn {
+  background: linear-gradient(120deg, #0f766e, #0f314f);
+  color: #fff;
+  border-color: transparent;
+}
+
+body.admin-sidebar-active .table-actions .danger-btn,
+body.admin-sidebar-active .bulk-action-buttons .danger-btn {
+  background: var(--admin-shop-accent-soft);
+  color: #9a3412;
+  border-color: rgba(154, 52, 18, 0.18);
+}
+
+body.admin-sidebar-active .filter-control input,
+body.admin-sidebar-active .filter-control select,
+body.admin-sidebar-active .users-filter-control input,
+body.admin-sidebar-active .users-filter-control select,
+body.admin-sidebar-active .system-log-filter-control input,
+body.admin-sidebar-active .system-log-filter-control select,
+body.admin-sidebar-active .admin-form-surface input,
+body.admin-sidebar-active .admin-form-surface select,
+body.admin-sidebar-active .admin-form-surface textarea,
+body.admin-sidebar-active .table-input,
+body.admin-sidebar-active .table-select {
+  border: 1px solid var(--admin-shop-line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+body.admin-sidebar-active .filter-control select,
+body.admin-sidebar-active .users-filter-control select,
+body.admin-sidebar-active .system-log-filter-control select,
+body.admin-sidebar-active .table-select,
+body.admin-sidebar-active .order-status-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M7 10l5 5 5-5' stroke='%23607489' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+}
+
+body.admin-sidebar-active .filter-control input:focus,
+body.admin-sidebar-active .filter-control select:focus,
+body.admin-sidebar-active .users-filter-control input:focus,
+body.admin-sidebar-active .users-filter-control select:focus,
+body.admin-sidebar-active .system-log-filter-control input:focus,
+body.admin-sidebar-active .system-log-filter-control select:focus,
+body.admin-sidebar-active .admin-form-surface input:focus,
+body.admin-sidebar-active .admin-form-surface select:focus,
+body.admin-sidebar-active .admin-form-surface textarea:focus,
+body.admin-sidebar-active .table-input:focus,
+body.admin-sidebar-active .table-select:focus {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.13);
+  outline: none;
+}
+
+body.admin-sidebar-active .dashboard-table-card,
+body.admin-sidebar-active .confirm-modal {
+  border: 1px solid var(--admin-shop-line);
+  border-radius: var(--admin-shop-radius-md);
+  box-shadow: var(--admin-shop-shadow);
+}
+
+body.admin-sidebar-active .users-table th {
+  background: #f2f7ff;
+  color: #4a5c75;
+}
+
+body.admin-sidebar-active .users-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+body.admin-sidebar-active .pill,
+body.admin-sidebar-active .order-status-pill {
+  border: 1px solid var(--admin-shop-line);
+}
+
+body.admin-sidebar-active .metric-card,
+body.admin-sidebar-active .admin-metric-card {
+  border-radius: 16px;
+  border: 1px solid var(--admin-shop-line);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.03);
+}
+
+body.admin-sidebar-active .pager-btn {
+  min-height: 34px;
+  min-width: 92px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1px solid #cdd9e8;
+  background: #f9fbfe;
+  color: #5f6f85;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+body.admin-sidebar-active .pager-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #eef4fb;
+  color: #3f4f67;
+  box-shadow: 0 6px 14px rgba(15, 49, 79, 0.1);
+}
+
+body.admin-sidebar-active .pager-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+body.admin-sidebar-active .dashboard-pagination,
+body.admin-sidebar-active .system-log-pagination {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #dce5f0;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+body.admin-sidebar-active .dashboard-pagination p,
+body.admin-sidebar-active .system-log-pagination p,
+body.admin-sidebar-active .page-indicator {
+  color: #4f6078;
+  font-weight: 600;
+}
+
+body.admin-sidebar-active .pagination-actions {
+  gap: 10px;
+}
+
+@media (max-width: 768px) {
+  body.admin-sidebar-active .page-content {
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+}

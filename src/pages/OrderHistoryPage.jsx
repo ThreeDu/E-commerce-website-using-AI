@@ -71,35 +71,31 @@ function OrderHistoryPage() {
       <div className="shopx-page">
         <div className="shopx-panel shopx-hero" style={{ marginBottom: "14px" }}>
           <div>
-            <h1 className="shopx-title">Lich su don hang</h1>
-            <p className="shopx-subtitle">Theo doi trang thai, tong chi tieu va quay lai don hang de thao tac nhanh.</p>
-          </div>
-          <div className="shopx-pills">
-            <span className="shopx-pill">{orders.length} don hang</span>
-            <span className="shopx-pill">{deliveredCount} da giao</span>
+            <h1 className="shopx-title">Lịch sử đơn hàng</h1>
+            <p className="shopx-subtitle">Theo dõi trạng thái, tổng chi tiêu và quay lại đơn hàng để thao tác nhanh.</p>
           </div>
         </div>
 
         {orders.length === 0 ? (
           <div className="shopx-empty">
-            <p>Ban chua co don hang nao.</p>
+            <p>Bạn chưa có đơn hàng nào.</p>
             <Link to="/products" className="shopx-btn shopx-btn--primary" style={{ display: "inline-block", textDecoration: "none", marginTop: "10px" }}>
-              Bat dau mua sam
+              Bắt đầu mua sắm
             </Link>
           </div>
         ) : (
           <>
             <div className="shopx-order-summary">
               <div className="shopx-panel">
-                <strong>Tong don</strong>
+                <strong>Tổng đơn</strong>
                 <p style={{ margin: "8px 0 0", fontSize: "24px", fontWeight: 700 }}>{orders.length}</p>
               </div>
               <div className="shopx-panel">
-                <strong>Da giao thanh cong</strong>
+                <strong>Đã giao thành công</strong>
                 <p style={{ margin: "8px 0 0", fontSize: "24px", fontWeight: 700 }}>{deliveredCount}</p>
               </div>
               <div className="shopx-panel">
-                <strong>Tong chi tieu</strong>
+                <strong>Tổng chi tiêu</strong>
                 <p style={{ margin: "8px 0 0", fontSize: "24px", fontWeight: 700 }}>
                   {totalSpend.toLocaleString("vi-VN")} đ
                 </p>
@@ -110,14 +106,18 @@ function OrderHistoryPage() {
               const statusInfo = getStatusInfo(order);
 
               return (
-                <article key={order._id} className="shopx-order-item">
+                <Link
+                  key={order._id}
+                  to={`/order-history/${order._id}`}
+                  className="shopx-order-item shopx-order-item--link"
+                >
                   <div className="shopx-order-head">
                     <div>
                       <p style={{ margin: "0 0 6px", color: "#64748b" }}>
-                        Ma don: <strong style={{ color: "#1e293b" }}>{order._id}</strong>
+                        Mã đơn: <strong style={{ color: "#1e293b" }}>{order._id}</strong>
                       </p>
                       <p style={{ margin: 0, color: "#64748b" }}>
-                        Ngay dat: <strong>{new Date(order.createdAt).toLocaleDateString("vi-VN")}</strong>
+                        Ngày đặt: <strong>{new Date(order.createdAt).toLocaleDateString("vi-VN")}</strong>
                       </p>
                     </div>
                     <div style={{ textAlign: "right" }}>
@@ -138,17 +138,7 @@ function OrderHistoryPage() {
                       </div>
                     ))}
                   </div>
-
-                  <div style={{ marginTop: "12px", textAlign: "right" }}>
-                    <Link
-                      to={`/order-history/${order._id}`}
-                      className="shopx-btn shopx-btn--primary"
-                      style={{ display: "inline-block", textDecoration: "none" }}
-                    >
-                      Xem chi tiet don
-                    </Link>
-                  </div>
-                </article>
+                </Link>
               );
             })}
           </>

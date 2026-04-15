@@ -277,7 +277,7 @@ function AdminEditProductPage() {
   if (loading) {
     return (
       <main className="container page-content">
-        <section className="hero-card">
+        <section className="hero-card admin-form-surface">
           <p>Đang tải thông tin sản phẩm...</p>
         </section>
       </main>
@@ -286,8 +286,9 @@ function AdminEditProductPage() {
 
   return (
     <main className="container page-content">
-      <section className="hero-card">
+      <section className="hero-card admin-form-surface">
         <h2>Sửa sản phẩm</h2>
+        <p className="admin-surface-subtitle">Cập nhật thông tin sản phẩm, kiểm tra ảnh và giá để tránh sai lệch dữ liệu bán hàng.</p>
         {message && <p className="form-message">{message}</p>}
 
         <form className="admin-product-add-form" onSubmit={handleSubmit}>

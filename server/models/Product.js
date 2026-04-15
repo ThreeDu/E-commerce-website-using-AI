@@ -51,7 +51,7 @@ const productSchema = new mongoose.Schema(
     },
     image: {
       type: String,
-      default: "/placeholder.jpg", // URL ảnh mặc định
+      default: "/placeholder.svg", // URL ảnh mặc định
     },
     discountPercent: {
       type: Number,

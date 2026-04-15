@@ -24,42 +24,61 @@
   font-size: 14px;
 }
 
-.dashboard-metric-grid {
+.admin-discounts-page .dashboard-metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin: 14px 0 18px;
+  gap: 8px;
+  margin: 6px 0 10px;
+  grid-auto-rows: 1fr;
 }
 
-.metric-card {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  border: 1px solid #e3ebf5;
-  border-radius: 14px;
-  padding: 12px;
-  display: grid;
-  gap: 5px;
+.admin-discounts-page .metric-card {
+  background: #fff;
+  border: 1px solid rgba(19, 38, 58, 0.12);
+  border-radius: 9px;
+  padding: 7px 10px;
+  min-height: 58px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
-.metric-card span {
+.admin-discounts-page .metric-card > * {
+  margin-left: 3px;
+}
+
+.admin-discounts-page .metric-card span {
   color: #607089;
-  font-size: 13px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
 }
 
-.metric-card strong {
-  font-size: 24px;
+.admin-discounts-page .metric-card strong {
+  font-size: 18px;
   line-height: 1;
   color: #0f2233;
 }
 
-.metric-card.success strong {
+.admin-discounts-page .metric-note {
+  color: #97a4b6;
+  font-size: 9px;
+  line-height: 1.1;
+}
+
+.admin-discounts-page .metric-card.success strong {
   color: #166534;
 }
 
-.metric-card.warning strong {
+.admin-discounts-page .metric-card.warning strong {
   color: #b45309;
 }
 
-.metric-card.danger strong {
+.admin-discounts-page .metric-card.danger strong {
   color: #b42318;
 }
 
@@ -127,51 +146,30 @@
 }
 
 .users-table-wrap {
+  margin-top: 16px;
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
+  border: 1px solid #dde7f3;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.dashboard-table-card .users-table-wrap {
+  margin-top: 0;
+  border: none;
+  border-radius: 0;
 }
 
 .users-table {
   width: 100%;
-  min-width: 1022px;
   border-collapse: collapse;
   background: #fff;
 }
 
 .dashboard-table {
-  table-layout: fixed;
+  table-layout: auto;
   width: 100%;
-}
-
-.dashboard-table th:nth-child(1),
-.dashboard-table td:nth-child(1) {
-  width: 42px;
-}
-
-.dashboard-table th:nth-child(2),
-.dashboard-table td:nth-child(2) {
-  width: 180px;
-}
-
-.dashboard-table th:nth-child(3),
-.dashboard-table td:nth-child(3) {
-  width: 250px;
-}
-
-.dashboard-table th:nth-child(4),
-.dashboard-table td:nth-child(4) {
-  width: 220px;
-}
-
-.dashboard-table th:nth-child(5),
-.dashboard-table td:nth-child(5) {
-  width: 140px;
-}
-
-.dashboard-table th:nth-child(6),
-.dashboard-table td:nth-child(6) {
-  width: 190px;
 }
 
 .dashboard-table th:first-child,
@@ -185,8 +183,6 @@
   padding: 14px 14px;
   border-bottom: 1px solid #edf2f8;
   vertical-align: middle;
-  white-space: nowrap;
-  overflow: hidden;
   box-sizing: border-box;
 }
 
@@ -502,13 +498,19 @@
   border-color: #b42318;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 760px) {
   .dashboard-filter-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .dashboard-metric-grid {
+  .admin-discounts-page .dashboard-metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-discounts-page .dashboard-metric-grid {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -214,7 +214,7 @@ function AdminEditDiscountPage() {
   if (loading) {
     return (
       <main className="container page-content">
-        <section className="hero-card">
+        <section className="hero-card admin-form-surface">
           <p>Đang tải thông tin mã giảm giá...</p>
         </section>
       </main>
@@ -223,8 +223,9 @@ function AdminEditDiscountPage() {
 
   return (
     <main className="container page-content">
-      <section className="hero-card">
+      <section className="hero-card admin-form-surface">
         <h2>Sửa mã giảm giá</h2>
+        <p className="admin-surface-subtitle">Điều chỉnh hiệu lực, mức giảm và trạng thái mã để chương trình vận hành đúng kế hoạch.</p>
         {message && <p className="form-message">{message}</p>}
 
         <form className="discount-form" onSubmit={handleSubmit}>

@@ -22,7 +22,7 @@ function IconVoucher() {
 function normalizeImageSrc(value) {
   const raw = String(value || "").trim();
   if (!raw) {
-    return "/placeholder.jpg";
+    return "/placeholder.svg";
   }
 
   if (
@@ -333,7 +333,7 @@ function UserDashboard() {
                 <figure key={item._id} className="wishlist-item">
                   <img src={normalizeImageSrc(item.image)} alt={item.name} onError={(event) => {
                     event.currentTarget.onerror = null;
-                    event.currentTarget.src = "/placeholder.jpg";
+                    event.currentTarget.src = "/placeholder.svg";
                   }} />
                   <figcaption>{item.name}</figcaption>
                   <button
@@ -356,7 +356,7 @@ function UserDashboard() {
           <div className="payment-list">
             <div className="payment-chip visa">VISA •••• 2048</div>
             <div className="payment-chip master">MASTER •••• 8812</div>
-            <div className="payment-chip momo">MoMo Wallet</div>
+            <div className="payment-chip momo">Ví MoMo</div>
           </div>
         </article>
 

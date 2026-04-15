@@ -1,16 +1,7 @@
-const express = require("express");
-const Product = require("../models/Product");
-const { verifyAdminRequest } = require("./helpers/authHelpers");
-const { logAdminAction } = require("../utils/adminAuditLogger");
+const Product = require("../../models/Product");
+const { logAdminAction } = require("../../utils/adminAuditLogger");
 
-const router = express.Router();
-
-router.get("/", async (req, res) => {
-  const adminUser = await verifyAdminRequest(req, res);
-  if (!adminUser) {
-    return;
-  }
-
+const listProducts = async (req, res) => {
   try {
     const products = await Product.find().sort({ createdAt: -1 });
 
@@ -21,14 +12,9 @@ router.get("/", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
-});
+};
 
-router.get("/:id", async (req, res) => {
-  const adminUser = await verifyAdminRequest(req, res);
-  if (!adminUser) {
-    return;
-  }
-
+const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
     const product = await Product.findById(id);
@@ -44,14 +30,9 @@ router.get("/:id", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
-});
+};
 
-router.post("/", async (req, res) => {
-  const adminUser = await verifyAdminRequest(req, res);
-  if (!adminUser) {
-    return;
-  }
-
+const createProduct = async (req, res) => {
   try {
     const { name, image, imageUrl, price, discountPercent, category, stock, description } = req.body;
     const normalizedImage = String(image || imageUrl || "").trim();
@@ -92,7 +73,7 @@ router.post("/", async (req, res) => {
 
     logAdminAction({
       req,
-      adminUser,
+      adminUser: req.adminUser,
       action: "create",
       resource: "product",
       resourceId: newProduct._id,
@@ -109,14 +90,9 @@ router.post("/", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
-});
+};
 
-router.put("/:id", async (req, res) => {
-  const adminUser = await verifyAdminRequest(req, res);
-  if (!adminUser) {
-    return;
-  }
-
+const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, image, imageUrl, price, discountPercent, category, stock, description } = req.body;
@@ -166,7 +142,7 @@ router.put("/:id", async (req, res) => {
 
     logAdminAction({
       req,
-      adminUser,
+      adminUser: req.adminUser,
       action: "update",
       resource: "product",
       resourceId: updatedProduct._id,
@@ -183,14 +159,9 @@ router.put("/:id", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
-});
+};
 
-router.delete("/:id", async (req, res) => {
-  const adminUser = await verifyAdminRequest(req, res);
-  if (!adminUser) {
-    return;
-  }
-
+const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const deletedProduct = await Product.findByIdAndDelete(id);
@@ -201,7 +172,7 @@ router.delete("/:id", async (req, res) => {
 
     logAdminAction({
       req,
-      adminUser,
+      adminUser: req.adminUser,
       action: "delete",
       resource: "product",
       resourceId: deletedProduct._id,
@@ -218,6 +189,12 @@ router.delete("/:id", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
-});
+};
 
-module.exports = router;
+module.exports = {
+  listProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+};

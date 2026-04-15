@@ -99,7 +99,7 @@ function Header() {
 
         <aside className={`admin-sidebar ${isSidebarOpen ? "open" : ""}`}>
           <div className="admin-sidebar-header">
-            <h1 className="brand">AI Shop</h1>
+            <h1 className="brand">Admin Control Panel</h1>
             <button
               type="button"
               className="sidebar-close-btn"
@@ -113,6 +113,9 @@ function Header() {
           <nav className="admin-sidebar-menu">
             <NavLink to="/admin/dashboard" className={({ isActive }) => (isActive ? "active" : "")}>
               Bảng điều khiển
+            </NavLink>
+            <NavLink to="/admin/notifications" className={({ isActive }) => (isActive ? "active" : "")}> 
+              Trung tâm thông báo
             </NavLink>
             <NavLink to="/admin/categories" className={({ isActive }) => (isActive ? "active" : "")}>
               Quản lý danh mục
@@ -174,8 +177,8 @@ function Header() {
         <nav className="nav-menu" aria-label="Main navigation">
           <Link to="/">Home</Link>
           <Link to="/products">Shop</Link>
-          <a href="/#about">About</a>
-          <a href="/#contact">Contact</a>
+          <Link to="/about">About</Link>
+          <Link to="/contract">Contract</Link>
         </nav>
 
         <form className="nav-search" onSubmit={handleSearchSubmit}>

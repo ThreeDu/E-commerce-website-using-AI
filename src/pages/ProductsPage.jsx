@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
@@ -7,7 +7,7 @@ import "../css/shop-experience.css";
 function getProductImageSrc(product) {
   const rawValue = String(product?.image || product?.imageUrl || "").trim();
   if (!rawValue) {
-    return "/placeholder.jpg";
+    return "/placeholder.svg";
   }
 
   if (
@@ -22,13 +22,45 @@ function getProductImageSrc(product) {
   return `/${rawValue.replace(/^\/+/, "")}`;
 }
 
+function getProductPricing(product) {
+  const basePrice = Math.max(0, Number(product?.price || 0));
+  const rawDiscountPercent = Math.max(0, Math.min(100, Number(product?.discountPercent || 0)));
+  const finalPriceFromApi = Math.max(0, Number(product?.finalPrice || 0));
+
+  const fallbackFinalPrice = Math.round(basePrice * (1 - rawDiscountPercent / 100));
+  const finalPrice =
+    finalPriceFromApi > 0 && finalPriceFromApi < basePrice ? finalPriceFromApi : fallbackFinalPrice;
+
+  const hasDiscount = basePrice > 0 && finalPrice < basePrice;
+  const discountPercent = hasDiscount
+    ? Math.max(1, Math.round(((basePrice - finalPrice) / basePrice) * 100))
+    : 0;
+
+  return {
+    basePrice,
+    finalPrice: hasDiscount ? finalPrice : basePrice,
+    hasDiscount,
+    discountPercent,
+  };
+}
+
+function isOutOfStock(product) {
+  return Number(product?.stock || 0) <= 0;
+}
+
+function normalizeCategoryId(value) {
+  return String(value || "").trim();
+}
+
 function ProductsPage() {
   const { addToCart } = useCart();
   const { auth } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState("all");
+  const [categoryLevel1, setCategoryLevel1] = useState("all");
+  const [categoryLevel2, setCategoryLevel2] = useState("all");
+  const [categoryLevel3, setCategoryLevel3] = useState("all");
   const [sortBy, setSortBy] = useState("best-selling");
   const [maxPrice, setMaxPrice] = useState(100000000); // Mức giá đang chọn (mặc định để rất lớn)
   const [maxPossiblePrice, setMaxPossiblePrice] = useState(100000000); // Mức giá lớn nhất có trong data
@@ -144,16 +176,80 @@ function ProductsPage() {
     }
   }, [location.search]);
 
+  const categoryItems = useMemo(
+    () => categories.filter((item) => item._id !== "all"),
+    [categories]
+  );
+
+  const categoryMap = useMemo(
+    () => new Map(categoryItems.map((item) => [normalizeCategoryId(item._id), item])),
+    [categoryItems]
+  );
+
+  const level1Categories = categoryItems.filter((item) => !item.parentId);
+
+  const level2Categories =
+    categoryLevel1 === "all"
+      ? []
+      : categoryItems.filter(
+          (item) => normalizeCategoryId(item.parentId) === normalizeCategoryId(categoryLevel1)
+        );
+
+  const level3Categories =
+    categoryLevel2 === "all"
+      ? []
+      : categoryItems.filter(
+          (item) => normalizeCategoryId(item.parentId) === normalizeCategoryId(categoryLevel2)
+        );
+
+  const selectedCategoryId =
+    categoryLevel3 !== "all"
+      ? categoryLevel3
+      : categoryLevel2 !== "all"
+        ? categoryLevel2
+        : categoryLevel1;
+
   useEffect(() => {
     if (categories.length <= 1) {
       return;
     }
 
+    const applyCategoryLevels = (targetId) => {
+      const normalizedId = normalizeCategoryId(targetId);
+      const target = categoryMap.get(normalizedId);
+      if (!target) {
+        return false;
+      }
+
+      const path = [];
+      let cursor = target;
+      const visited = new Set();
+
+      while (cursor) {
+        const cursorId = normalizeCategoryId(cursor._id);
+        if (!cursorId || visited.has(cursorId)) {
+          break;
+        }
+
+        visited.add(cursorId);
+        path.unshift(cursor);
+
+        const parentId = normalizeCategoryId(cursor.parentId);
+        if (!parentId) {
+          break;
+        }
+        cursor = categoryMap.get(parentId);
+      }
+
+      setCategoryLevel1(normalizeCategoryId(path[0]?._id) || "all");
+      setCategoryLevel2(normalizeCategoryId(path[1]?._id) || "all");
+      setCategoryLevel3(normalizeCategoryId(path[2]?._id) || "all");
+      return true;
+    };
+
     const stateCategoryId = location.state?.categoryId;
     if (stateCategoryId) {
-      const matchedById = categories.find((item) => String(item._id) === String(stateCategoryId));
-      if (matchedById) {
-        setSelectedCategoryId(String(matchedById._id));
+      if (applyCategoryLevels(stateCategoryId)) {
         return;
       }
     }
@@ -163,29 +259,23 @@ function ProductsPage() {
       return;
     }
 
-    const matchedByPath = categories.find((item) => item.path === stateCategory);
-    if (matchedByPath) {
-      setSelectedCategoryId(String(matchedByPath._id));
+    const matchedByPath = categoryItems.find((item) => item.path === stateCategory);
+    if (matchedByPath && applyCategoryLevels(matchedByPath._id)) {
       return;
     }
 
-    const matchedByName = categories.find((item) => item.name === stateCategory);
+    const matchedByName = categoryItems.find((item) => item.name === stateCategory);
     if (matchedByName) {
-      setSelectedCategoryId(String(matchedByName._id));
+      applyCategoryLevels(matchedByName._id);
     }
-  }, [categories, location.state?.category, location.state?.categoryId]);
+  }, [categories, categoryItems, categoryMap, location.state?.category, location.state?.categoryId]);
 
   const categoriesById = new Map(
-    categories
-      .filter((item) => item._id !== "all")
-      .map((item) => [String(item._id), item])
+    categoryItems.map((item) => [String(item._id), item])
   );
 
   const childrenByParentId = new Map();
-  categories.forEach((item) => {
-    if (item._id === "all") {
-      return;
-    }
+  categoryItems.forEach((item) => {
 
     const key = item.parentId ? String(item.parentId) : "root";
     const next = childrenByParentId.get(key) || [];
@@ -328,19 +418,9 @@ function ProductsPage() {
   return (
     <main className="container page-content">
       <div className="shopx-page">
-        <nav className="shopx-breadcrumb" aria-label="breadcrumb">
-          <ol>
-            <li>
-              <Link to="/">Trang chủ</Link>
-            </li>
-            <li>/</li>
-            <li aria-current="page">Sản phẩm</li>
-          </ol>
-        </nav>
-
         <div className="shopx-shell">
           <aside className="shopx-panel shopx-panel--sticky">
-            <h3 className="shopx-filter-title">Bộ lọc thông minh</h3>
+            <h3 className="shopx-filter-title">Bộ lọc</h3>
             <div className="shopx-field">
               <input
                 className="shopx-input"
@@ -362,17 +442,57 @@ function ProductsPage() {
 
             <div className="shopx-field">
               <h4 style={{ margin: 0 }}>Danh mục</h4>
-              <ul className="shopx-list">
-                {categories.map((cat) => (
-                  <li
-                    key={cat._id || cat.path}
-                    onClick={() => setSelectedCategoryId(String(cat._id))}
-                    className={`shopx-list-item ${selectedCategoryId === String(cat._id) ? "is-active" : ""}`}
-                  >
-                    {cat.path}
-                  </li>
+              <select
+                className="shopx-select"
+                value={categoryLevel1}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setCategoryLevel1(nextValue);
+                  setCategoryLevel2("all");
+                  setCategoryLevel3("all");
+                }}
+              >
+                <option value="all">Tất cả danh mục</option>
+                {level1Categories.map((cat) => (
+                  <option key={cat._id} value={String(cat._id)}>
+                    {cat.name}
+                  </option>
                 ))}
-              </ul>
+              </select>
+
+              {categoryLevel1 !== "all" && (
+                <select
+                  className="shopx-select"
+                  value={categoryLevel2}
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+                    setCategoryLevel2(nextValue);
+                    setCategoryLevel3("all");
+                  }}
+                >
+                  <option value="all">Tất cả thương hiệu</option>
+                  {level2Categories.map((cat) => (
+                    <option key={cat._id} value={String(cat._id)}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {categoryLevel2 !== "all" && level3Categories.length > 0 && (
+                <select
+                  className="shopx-select"
+                  value={categoryLevel3}
+                  onChange={(event) => setCategoryLevel3(event.target.value)}
+                >
+                  <option value="all">Tất cả dòng sản phẩm</option>
+                  {level3Categories.map((cat) => (
+                    <option key={cat._id} value={String(cat._id)}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="shopx-field">
@@ -397,37 +517,39 @@ function ProductsPage() {
           <section>
             <div className="shopx-panel shopx-hero">
               <div>
-                <h1 className="shopx-title">Kho san pham cong nghe</h1>
+                <h1 className="shopx-title">Kho sản phẩm</h1>
                 <p className="shopx-subtitle">
-                  Loc theo danh muc va gia de tim dung san pham can mua. The hien ro danh gia, luot xem va luot mua.
+                  Các sản phẩm hiện tại đang được bày bán.
                 </p>
-              </div>
-              <div className="shopx-pills">
-                <span className="shopx-pill">{allProducts.length} San pham</span>
-                <span className="shopx-pill">{filteredProducts.length} Ket qua</span>
               </div>
             </div>
 
             {loading ? (
-              <div className="shopx-empty">Dang tai danh sach san pham...</div>
+              <div className="shopx-empty">Đang tải danh sách sản phẩm...</div>
             ) : filteredProducts.length > 0 ? (
               <div className="shopx-grid">
                 {filteredProducts.map((product) => {
                   const productId = String(product._id);
                   const isWishlisted = wishlistIds.includes(productId);
                   const isPending = pendingWishlistIds.includes(productId);
+                  const outOfStock = isOutOfStock(product);
+                  const pricing = getProductPricing(product);
 
                   return (
                     <article key={productId} className="shopx-card">
                       <Link to={`/products/${product._id}`} style={{ textDecoration: "none" }}>
-                        <div className="shopx-card-image-wrap">
+                        <div className={`shopx-card-image-wrap ${outOfStock ? "is-out-of-stock" : ""}`}>
+                          {pricing.hasDiscount ? (
+                            <span className="shopx-sale-badge">-{pricing.discountPercent}%</span>
+                          ) : null}
+                          {outOfStock ? <span className="shopx-stock-badge">Hết hàng</span> : null}
                           <img
                             src={getProductImageSrc(product)}
                             alt={product.name}
                             className="shopx-card-image"
                             onError={(event) => {
                               event.currentTarget.onerror = null;
-                              event.currentTarget.src = "/placeholder.jpg";
+                              event.currentTarget.src = "/placeholder.svg";
                             }}
                           />
                         </div>
@@ -436,27 +558,31 @@ function ProductsPage() {
                           <span className="shopx-chip shopx-chip--rating">
                             {Number(product.averageRating || 0).toFixed(1)} sao ({Number(product.totalRatings || 0)})
                           </span>
-                          <span className="shopx-chip shopx-chip--views">{Number(product.totalViews || 0)} luot xem</span>
-                          <span className="shopx-chip shopx-chip--sold">{Number(product.totalPurchases || 0)} luot mua</span>
+                          <span className="shopx-chip shopx-chip--views">{Number(product.totalViews || 0)} lượt xem</span>
+                          <span className="shopx-chip shopx-chip--sold">{Number(product.totalPurchases || 0)} lượt mua</span>
                         </div>
-                        <p className="shopx-price">{Number(product.price || 0).toLocaleString("vi-VN")} đ</p>
+                        <p className="shopx-price">{pricing.finalPrice.toLocaleString("vi-VN")} đ</p>
+                        {pricing.hasDiscount ? (
+                          <p className="shopx-old-price">{pricing.basePrice.toLocaleString("vi-VN")} đ</p>
+                        ) : null}
                       </Link>
 
                       <div className="shopx-card-actions">
                         <button
                           type="button"
                           disabled={isPending}
-                          className={`shopx-btn shopx-btn--ghost ${isWishlisted ? "shopx-btn--active" : ""}`}
+                          className={`shopx-btn shopx-btn--ghost shopx-btn--wishlist ${isWishlisted ? "shopx-btn--active" : ""}`}
                           onClick={() => handleToggleWishlist(productId)}
                         >
-                          {isPending ? "Dang xu ly..." : isWishlisted ? "Da yeu thich" : "Them yeu thich"}
+                          {isPending ? "Đang xử lý..." : isWishlisted ? "Đã yêu thích" : "Thêm yêu thích"}
                         </button>
                         <button
                           type="button"
-                          className="shopx-btn shopx-btn--primary"
+                          className={`shopx-btn shopx-btn--primary shopx-btn--cart ${outOfStock ? "shopx-btn--out-of-stock" : ""}`}
+                          disabled={outOfStock}
                           onClick={() => handleAddToCart(product)}
                         >
-                          Them vao gio
+                          {outOfStock ? "Hết hàng" : "Thêm vào giỏ"}
                         </button>
                       </div>
                     </article>
@@ -464,7 +590,7 @@ function ProductsPage() {
                 })}
               </div>
             ) : (
-              <div className="shopx-empty">Khong tim thay san pham phu hop.</div>
+              <div className="shopx-empty">Không tìm thấy sản phẩm phù hợp.</div>
             )}
           </section>
         </div>

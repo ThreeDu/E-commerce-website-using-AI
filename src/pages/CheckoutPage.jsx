@@ -166,7 +166,7 @@ function CheckoutPage() {
       if (response.ok) {
         alert(`Đặt hàng thành công!\nCảm ơn ${formData.fullName} đã mua sắm tại AI Shop.`);
         clearCart(); // Làm sạch giỏ hàng
-        navigate("/"); // Chuyển người dùng về trang chủ
+        navigate("/order-history"); // Chuyển người dùng sang trang đơn hàng của tôi
       } else {
         const errorData = await response.json();
         alert(`Lỗi đặt hàng: ${errorData.message}`);
