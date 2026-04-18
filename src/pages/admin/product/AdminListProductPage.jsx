@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
+import { useStatusMessageBridge } from "../../../hooks/useStatusMessageBridge";
 import { getAdminCategories } from "../../../services/admin/categoryService";
 import { deleteAdminProduct, getAdminProducts } from "../../../services/admin/productService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
@@ -62,6 +63,8 @@ function AdminListProductPage() {
   const [priceSort, setPriceSort] = useState(searchParams.get("priceSort") || "default");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all");
   const [currentPage, setCurrentPage] = useState(initialPage);
+
+  useStatusMessageBridge(message, { title: "Sản phẩm" });
 
   const loadProducts = useCallback(async () => {
     if (!auth?.token) {

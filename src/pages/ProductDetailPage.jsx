@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useNotification } from "../context/NotificationContext";
 import "../css/shop-experience.css";
 
 function getProductImageSrc(product) {
@@ -52,6 +53,7 @@ function ProductDetailPage() {
   const { id } = useParams();
   const { addToCart } = useCart();
   const { auth } = useAuth();
+  const { success, error: notifyError, warning } = useNotification();
   const navigate = useNavigate();
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isWishlistLoading, setIsWishlistLoading] = useState(false);
@@ -275,6 +277,7 @@ function ProductDetailPage() {
 
   const handleToggleWishlist = async () => {
     if (!auth?.token) {
+      warning("Vui lòng đăng nhập để sử dụng danh sách yêu thích.", { title: "Yêu thích" });
       navigate("/login", { state: { from: `/products/${id}` } });
       return;
     }
@@ -299,6 +302,7 @@ function ProductDetailPage() {
 
       const data = await response.json();
       if (!response.ok) {
+        notifyError(data?.message || "Không thể cập nhật danh sách yêu thích.", { title: "Yêu thích" });
         return;
       }
 
@@ -306,8 +310,17 @@ function ProductDetailPage() {
         ? data.wishlist.some((item) => String(item._id) === String(product._id))
         : false;
       setIsWishlisted(existed);
+
+      const productName = String(product?.name || "sản phẩm");
+      success(
+        existed
+          ? `Đã thêm ${productName} vào danh sách yêu thích.`
+          : `Đã xóa ${productName} khỏi danh sách yêu thích.`,
+        { title: "Yêu thích" }
+      );
     } catch (error) {
       console.error("Lỗi cập nhật wishlist:", error);
+      notifyError("Không thể kết nối đến máy chủ.", { title: "Yêu thích" });
     } finally {
       setIsWishlistLoading(false);
     }

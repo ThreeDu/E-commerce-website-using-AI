@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { loginUser } from "../../services/auth/authService";
 import { useAuth } from "../../context/AuthContext";
+import { useNotification } from "../../context/NotificationContext";
 
 function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { success } = useNotification();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,7 +25,7 @@ function LoginPage() {
     try {
       const data = await loginUser(formData);
       login({ token: data.token, user: data.user });
-      setMessage("Đăng nhập thành công.");
+      success("Bạn đã đăng nhập thành công.", { title: "Xác thực" });
 
       if (data.user.role === "admin") {
         navigate("/admin/dashboard");

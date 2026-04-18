@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useNotification } from "../context/NotificationContext";
 
 function getStatusInfo(order) {
   const status = String(order?.status || "").trim() || (order?.isDelivered ? "delivered" : "pending");
@@ -47,13 +48,13 @@ function OrderDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { auth } = useAuth();
+  const { success, error: notifyError, warning } = useNotification();
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
-  const [cancelError, setCancelError] = useState("");
   const [cancelling, setCancelling] = useState(false);
 
   const isAdminView = auth?.user?.role === "admin" && location.pathname.startsWith("/admin/orders/");
@@ -103,12 +104,11 @@ function OrderDetailPage() {
 
     const trimmedReason = cancelReason.trim();
     if (trimmedReason.length < 5) {
-      setCancelError("Vui lòng nhập lý do hủy tối thiểu 5 ký tự.");
+      warning("Vui lòng nhập lý do hủy tối thiểu 5 ký tự.", { title: "Hủy đơn hàng" });
       return;
     }
 
     setCancelling(true);
-    setCancelError("");
     try {
       const response = await fetch(`/api/orders/my-orders/${id}/cancel`, {
         method: "PUT",
@@ -121,15 +121,16 @@ function OrderDetailPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        setCancelError(data?.message || "Không thể hủy đơn hàng.");
+        notifyError(data?.message || "Không thể hủy đơn hàng.", { title: "Hủy đơn hàng" });
         return;
       }
 
       setOrder(data.order);
       setShowCancelModal(false);
       setCancelReason("");
+      success("Đơn hàng đã được hủy thành công.", { title: "Hủy đơn hàng" });
     } catch (submitError) {
-      setCancelError("Không thể kết nối tới máy chủ.");
+      notifyError("Không thể kết nối tới máy chủ.", { title: "Hủy đơn hàng" });
     } finally {
       setCancelling(false);
     }
@@ -274,14 +275,12 @@ function OrderDetailPage() {
               placeholder="Nhập lý do hủy đơn..."
               style={{ width: "100%", boxSizing: "border-box", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "10px", resize: "vertical" }}
             />
-            {cancelError ? <p style={{ color: "#b91c1c", marginBottom: 0 }}>{cancelError}</p> : null}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "14px" }}>
               <button
                 type="button"
                 onClick={() => {
                   setShowCancelModal(false);
                   setCancelReason("");
-                  setCancelError("");
                 }}
                 style={{ padding: "10px 14px", borderRadius: "6px", border: "1px solid #cbd5e1", backgroundColor: "#fff", color: "#111827", fontWeight: "bold", cursor: "pointer" }}
               >

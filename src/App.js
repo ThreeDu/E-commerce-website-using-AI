@@ -3,9 +3,11 @@ import "./css/admin/forms.css";
 import "./css/admin/theme.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import StatusNotificationCenter from "./components/StatusNotificationCenter";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import HomePage from "./pages/HomePage";
 import AboutPage from "./pages/AboutPage";
 import ContractPage from "./pages/ContractPage";
@@ -49,11 +51,13 @@ function GuestRoute({ children }) {
 function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-      <BrowserRouter>
-        <div className="app-shell">
-          <Header />
-          <Routes>
+      <NotificationProvider>
+        <CartProvider>
+          <BrowserRouter>
+            <StatusNotificationCenter />
+            <div className="app-shell">
+              <Header />
+              <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contract" element={<ContractPage />} />
@@ -214,11 +218,12 @@ function App() {
               }
             />
             <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <Footer />
-        </div>
-      </BrowserRouter>
-      </CartProvider>
+              </Routes>
+              <Footer />
+            </div>
+          </BrowserRouter>
+        </CartProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

@@ -153,7 +153,7 @@ function HomePage() {
               onClick={() => handleCategoryClick(category)}
               className={`neo-bento-card neo-cat-${index % 5}`}
             >
-              <span>Danh mục</span>
+              <span>Dòng sản phẩm</span>
               <strong>{category.name}</strong>
             </button>
           ))}

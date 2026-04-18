@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
+import { useStatusMessageBridge } from "../../../hooks/useStatusMessageBridge";
 import {
   deleteAdminCategory,
   getAdminCategories,
@@ -20,6 +21,8 @@ function AdminListCategoriesPage() {
   const [editingCategory, setEditingCategory] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedCategoryIds, setExpandedCategoryIds] = useState(new Set());
+
+  useStatusMessageBridge(message, { title: "Danh mục" });
 
   const loadCategories = useCallback(async () => {
     if (!auth?.token) {

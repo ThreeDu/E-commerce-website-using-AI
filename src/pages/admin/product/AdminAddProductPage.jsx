@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
+import { useStatusMessageBridge } from "../../../hooks/useStatusMessageBridge";
 import { createAdminProduct } from "../../../services/admin/productService";
 import { getAdminCategories } from "../../../services/admin/categoryService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
@@ -27,6 +28,8 @@ function AdminAddProductPage() {
     discountPercent: "0",
     description: "",
   });
+
+  useStatusMessageBridge(message, { title: "Sản phẩm" });
 
   useEffect(() => {
     const loadCategories = async () => {

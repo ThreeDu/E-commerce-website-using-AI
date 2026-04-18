@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
+import { useStatusMessageBridge } from "../../../hooks/useStatusMessageBridge";
 import {
   deleteAdminDiscount,
   getAdminDiscounts,
@@ -46,6 +47,8 @@ function AdminListDiscountsPage() {
   const [timeFilter, setTimeFilter] = useState(searchParams.get("time") || "all");
   const [remainingFilter, setRemainingFilter] = useState(searchParams.get("remaining") || "all");
   const [currentPage, setCurrentPage] = useState(initialPage);
+
+  useStatusMessageBridge(message, { title: "Mã giảm giá" });
 
   const loadDiscounts = useCallback(async () => {
     if (!auth?.token) {

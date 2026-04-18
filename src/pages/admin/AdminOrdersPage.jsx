@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useStatusMessageBridge } from "../../hooks/useStatusMessageBridge";
 import { getAdminOrders, updateAdminOrderStatus } from "../../services/admin/orderService";
 import { getErrorMessage } from "../../utils/adminErrorUtils";
 import "../../css/admin/orders.css";
@@ -28,6 +29,8 @@ function AdminOrdersPage() {
 
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all");
   const [page, setPage] = useState(Math.max(1, Number(searchParams.get("page") || 1) || 1));
+
+  useStatusMessageBridge(message, { title: "Đơn hàng" });
 
   useEffect(() => {
     const nextParams = new URLSearchParams();

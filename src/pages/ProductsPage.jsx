@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useNotification } from "../context/NotificationContext";
 import "../css/shop-experience.css";
 
 function getProductImageSrc(product) {
@@ -55,6 +56,7 @@ function normalizeCategoryId(value) {
 function ProductsPage() {
   const { addToCart } = useCart();
   const { auth } = useAuth();
+  const { success, error: notifyError, warning } = useNotification();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -70,6 +72,11 @@ function ProductsPage() {
   const [pendingWishlistIds, setPendingWishlistIds] = useState([]);
   const [categories, setCategories] = useState([{ _id: "all", name: "Tất cả", path: "Tất cả" }]);
   const [loading, setLoading] = useState(true);
+
+  const productNameById = useMemo(
+    () => new Map(allProducts.map((item) => [String(item._id), String(item.name || "sản phẩm")])),
+    [allProducts]
+  );
 
   useEffect(() => {
     const fetchWishlist = async () => {
@@ -375,6 +382,7 @@ function ProductsPage() {
 
   const handleToggleWishlist = async (productId) => {
     if (!auth?.token) {
+      warning("Vui lòng đăng nhập để sử dụng danh sách yêu thích.", { title: "Yêu thích" });
       navigate("/login", { state: { from: "/products" } });
       return;
     }
@@ -384,6 +392,7 @@ function ProductsPage() {
     }
 
     const isWishlisted = wishlistIds.includes(productId);
+    const productName = productNameById.get(String(productId)) || "sản phẩm";
     setPendingWishlistIds((prev) => [...prev, productId]);
 
     try {
@@ -401,6 +410,7 @@ function ProductsPage() {
 
       const data = await response.json();
       if (!response.ok) {
+        notifyError(data?.message || "Không thể cập nhật danh sách yêu thích.", { title: "Yêu thích" });
         return;
       }
 
@@ -408,8 +418,17 @@ function ProductsPage() {
         ? data.wishlist.map((item) => String(item._id))
         : [];
       setWishlistIds(ids);
+
+      const isNowWishlisted = ids.includes(String(productId));
+      success(
+        isNowWishlisted
+          ? `Đã thêm ${productName} vào danh sách yêu thích.`
+          : `Đã xóa ${productName} khỏi danh sách yêu thích.`,
+        { title: "Yêu thích" }
+      );
     } catch (error) {
       console.error("Lỗi cập nhật wishlist:", error);
+      notifyError("Không thể kết nối đến máy chủ.", { title: "Yêu thích" });
     } finally {
       setPendingWishlistIds((prev) => prev.filter((id) => id !== productId));
     }

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerUser } from "../../services/auth/authService";
+import { useNotification } from "../../context/NotificationContext";
 
 function RegisterPage() {
   const navigate = useNavigate();
+  const { success } = useNotification();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -24,7 +26,9 @@ function RegisterPage() {
 
     try {
       const data = await registerUser(formData);
-      setMessage(data.message || "Đăng ký thành công. Mời bạn đăng nhập.");
+      success(data.message || "Đăng ký thành công. Mời bạn đăng nhập.", {
+        title: "Xác thực",
+      });
       setTimeout(() => navigate("/login"), 900);
     } catch (error) {
       setMessage(error.message);

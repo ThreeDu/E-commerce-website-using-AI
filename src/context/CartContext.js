@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./AuthContext";
+import { useNotification } from "./NotificationContext";
 
 const CartContext = createContext();
 
@@ -11,6 +12,7 @@ function getCartStorageKey(userId) {
 
 export function CartProvider({ children }) {
   const { auth } = useAuth();
+  const { success } = useNotification();
   const userId = auth?.user?.id || null;
   const storageKey = useMemo(() => getCartStorageKey(userId), [userId]);
 
@@ -22,9 +24,6 @@ export function CartProvider({ children }) {
       return [];
     }
   });
-  const [toast, setToast] = useState({ show: false, message: "" });
-  const toastTimeoutRef = useRef(null);
-
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey);
@@ -51,19 +50,23 @@ export function CartProvider({ children }) {
       return [...prevCart, { ...product, quantity: 1 }];
     });
     
-    // Hiển thị thông báo Toast
-    setToast({ show: true, message: `Đã thêm ${product.name} vào giỏ hàng!` });
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-    toastTimeoutRef.current = setTimeout(() => {
-      setToast({ show: false, message: "" });
-    }, 3000); // Tự động ẩn sau 3 giây
+    success(`Đã thêm ${product.name} vào giỏ hàng!`, {
+      title: "Giỏ hàng",
+      duration: 3000,
+    });
   };
 
   // Xóa sản phẩm khỏi giỏ hàng
   const removeFromCart = (productId) => {
+    const removedItem = cart.find((item) => item.id === productId);
     setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
+
+    if (removedItem) {
+      success(`Đã xóa ${removedItem.name} khỏi giỏ hàng.`, {
+        title: "Giỏ hàng",
+        duration: 3000,
+      });
+    }
   };
 
   // Cập nhật số lượng sản phẩm (cộng/trừ)
@@ -78,33 +81,7 @@ export function CartProvider({ children }) {
     setCart([]);
   };
 
-  return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart }}>
-      {children}
-      
-      {/* Giao diện Toast hiển thị trên cùng */}
-      {toast.show && (
-        <div style={{
-          position: "fixed",
-          bottom: "24px",
-          right: "24px",
-          backgroundColor: "#333",
-          color: "#fff",
-          padding: "16px 24px",
-          borderRadius: "8px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-          zIndex: 9999,
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          fontSize: "16px"
-        }}>
-          <span style={{ color: "#4caf50", fontSize: "20px" }}>✔</span>
-          {toast.message}
-        </div>
-      )}
-    </CartContext.Provider>
-  );
+  return <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart }}>{children}</CartContext.Provider>;
 }
 
 export const useCart = () => useContext(CartContext);
