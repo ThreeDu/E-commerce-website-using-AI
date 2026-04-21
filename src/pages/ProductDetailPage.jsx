@@ -502,7 +502,6 @@ function ProductDetailPage() {
             {pricing.hasDiscount ? (
               <p className="shopx-old-price">{pricing.basePrice.toLocaleString("vi-VN")} đ</p>
             ) : null}
-            <p className="shopx-detail-desc">{product.description}</p>
 
             <div className="shopx-detail-actions">
               <button
@@ -522,6 +521,8 @@ function ProductDetailPage() {
                 {outOfStock ? "Hết hàng" : "Thêm vào giỏ hàng"}
               </button>
             </div>
+
+            <p className="shopx-detail-desc">{product.description}</p>
           </div>
         </section>
 

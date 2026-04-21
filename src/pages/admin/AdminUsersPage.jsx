@@ -288,12 +288,6 @@ function AdminUsersPage() {
           </article>
         </div>
 
-        {message && (
-          <p className="form-message" role="status" aria-live="polite">
-            {message}
-          </p>
-        )}
-
         <div className="users-filter-bar">
           <div className="users-filter-control users-search-control">
             <label htmlFor="users-search">Tìm kiếm</label>

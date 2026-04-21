@@ -391,12 +391,6 @@ function AdminListDiscountsPage() {
           </Link>
         </div>
 
-        {message && (
-          <p className="form-message" role="status" aria-live="polite">
-            {message}
-          </p>
-        )}
-
         <div className="dashboard-metric-grid">
           <article className="metric-card">
             <span>Tổng mã</span>

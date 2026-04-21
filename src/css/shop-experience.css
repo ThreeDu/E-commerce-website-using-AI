@@ -452,6 +452,7 @@
 .shopx-detail-desc {
   color: #334155;
   line-height: 1.68;
+  white-space: pre-line;
   margin-bottom: 0;
 }
 

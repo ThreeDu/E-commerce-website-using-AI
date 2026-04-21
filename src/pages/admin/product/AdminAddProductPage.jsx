@@ -369,6 +369,9 @@ function AdminAddProductPage() {
             <button type="submit" disabled={loading}>
               {loading ? "Đang thêm..." : "Thêm sản phẩm"}
             </button>
+            <button type="button" className="secondary-btn" onClick={() => navigate("/admin/products/import")}>
+              Import Excel
+            </button>
             <button type="button" className="secondary-btn" onClick={() => navigate("/admin/products")}>
               Quay lại
             </button>

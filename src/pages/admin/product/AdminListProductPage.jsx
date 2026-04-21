@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
-import { useStatusMessageBridge } from "../../../hooks/useStatusMessageBridge";
+import { useNotification } from "../../../context/NotificationContext";
 import { getAdminCategories } from "../../../services/admin/categoryService";
 import { deleteAdminProduct, getAdminProducts } from "../../../services/admin/productService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
@@ -37,9 +37,12 @@ function normalizeCategoryValue(value) {
 
 function AdminListProductPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { auth } = useAuth();
+  const { success, warning, error: notifyError } = useNotification();
   const hasInitializedFilters = useRef(false);
+  const consumedSuccessStateRef = useRef(new Set());
 
   const initialPage = useMemo(() => {
     const parsed = Number(searchParams.get("page") || 1);
@@ -55,7 +58,6 @@ function AdminListProductPage() {
   const [deleting, setDeleting] = useState(false);
   const [productPendingDelete, setProductPendingDelete] = useState(null);
   const [selectedProductIds, setSelectedProductIds] = useState([]);
-  const [message, setMessage] = useState(location.state?.successMessage || "");
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
   const [categoryLevel1, setCategoryLevel1] = useState(searchParams.get("cat1") || "all");
   const [categoryLevel2, setCategoryLevel2] = useState(searchParams.get("cat2") || "all");
@@ -64,7 +66,21 @@ function AdminListProductPage() {
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all");
   const [currentPage, setCurrentPage] = useState(initialPage);
 
-  useStatusMessageBridge(message, { title: "Sản phẩm" });
+  useEffect(() => {
+    const successMessage = location.state?.successMessage;
+    if (!successMessage) {
+      return;
+    }
+
+    const stateKey = `${location.key || "no-key"}::${successMessage}`;
+    if (consumedSuccessStateRef.current.has(stateKey)) {
+      return;
+    }
+
+    consumedSuccessStateRef.current.add(stateKey);
+    success(successMessage, { title: "Sản phẩm" });
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.key, location.pathname, location.state, navigate, success]);
 
   const loadProducts = useCallback(async () => {
     if (!auth?.token) {
@@ -76,11 +92,11 @@ function AdminListProductPage() {
       const data = await getAdminProducts(auth.token);
       setProducts(data.products || []);
     } catch (error) {
-      setMessage(getErrorMessage(error, "Không thể tải danh sách sản phẩm."));
+      notifyError(getErrorMessage(error, "Không thể tải danh sách sản phẩm."), { title: "Sản phẩm" });
     } finally {
       setLoading(false);
     }
-  }, [auth?.token]);
+  }, [auth?.token, notifyError]);
 
   useEffect(() => {
     loadProducts();
@@ -95,9 +111,9 @@ function AdminListProductPage() {
       const data = await getAdminCategories(auth.token);
       setAllCategories(data.categories || []);
     } catch (error) {
-      setMessage((prev) => prev || getErrorMessage(error, "Không thể tải danh mục."));
+      notifyError(getErrorMessage(error, "Không thể tải danh mục."), { title: "Sản phẩm" });
     }
-  }, [auth?.token]);
+  }, [auth?.token, notifyError]);
 
   useEffect(() => {
     loadCategories();
@@ -439,20 +455,22 @@ function AdminListProductPage() {
         }
 
         if (failedCount > 0) {
-          setMessage(`Đã xóa ${succeededIds.length} sản phẩm, ${failedCount} sản phẩm thất bại.`);
+          warning(`Đã xóa ${succeededIds.length} sản phẩm, ${failedCount} sản phẩm thất bại.`, {
+            title: "Sản phẩm",
+          });
         } else {
-          setMessage(`Đã xóa ${succeededIds.length} sản phẩm thành công.`);
+          success(`Đã xóa ${succeededIds.length} sản phẩm thành công.`, { title: "Sản phẩm" });
         }
       } else {
         await deleteAdminProduct(auth.token, productPendingDelete._id);
         setProducts((prev) => prev.filter((product) => product._id !== productPendingDelete._id));
         setSelectedProductIds((prev) => prev.filter((id) => id !== productPendingDelete._id));
-        setMessage("Xóa sản phẩm thành công.");
+        success("Xóa sản phẩm thành công.", { title: "Sản phẩm" });
       }
 
       setProductPendingDelete(null);
     } catch (error) {
-      setMessage(getErrorMessage(error, "Không thể xóa sản phẩm."));
+      notifyError(getErrorMessage(error, "Không thể xóa sản phẩm."), { title: "Sản phẩm" });
     } finally {
       setDeleting(false);
     }
@@ -480,16 +498,15 @@ function AdminListProductPage() {
             <h2>Quản lý sản phẩm</h2>
             <p className="dashboard-subtitle">Theo dõi kho hàng và giá bán trong một bảng điều khiển tập trung.</p>
           </div>
-          <Link to="/admin/products/add" className="primary-link-btn">
-            + Thêm sản phẩm
-          </Link>
+          <div className="bulk-action-buttons">
+            <Link to="/admin/products/import" className="secondary-btn">
+              Import Excel
+            </Link>
+            <Link to="/admin/products/add" className="primary-link-btn">
+              + Thêm sản phẩm
+            </Link>
+          </div>
         </div>
-
-        {message && (
-          <p className="form-message" role="status" aria-live="polite">
-            {message}
-          </p>
-        )}
 
         <div className="dashboard-metric-grid">
           <article className="metric-card">

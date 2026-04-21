@@ -1,70 +1,72 @@
 import { useEffect, useRef } from "react";
 import { useNotification } from "../context/NotificationContext";
 
-function inferTypeFromMessage(message) {
-  const text = String(message || "").toLowerCase();
+function inferTypeFromMessage(content) {
+	const normalized = String(content || "").toLowerCase();
 
-  const hasSuccessSignal = /thanh cong|thành công|da |đã /.test(text);
-  const hasErrorSignal = /khong the|không thể|loi|lỗi|that bai|thất bại|khong duoc|không được/.test(text);
-  const hasWarningSignal = /canh bao|cảnh báo|sap het|sắp hết|het han|hết hạn/.test(text);
+	if (
+		normalized.includes("không thể") ||
+		normalized.includes("that bai") ||
+		normalized.includes("thất bại") ||
+		normalized.includes("lỗi") ||
+		normalized.includes("error")
+	) {
+		return "error";
+	}
 
-  if ((hasSuccessSignal && hasErrorSignal) || hasWarningSignal) {
-    return "warning";
-  }
+	if (
+		normalized.includes("cảnh báo") ||
+		normalized.includes("canh bao") ||
+		normalized.includes("chú ý") ||
+		normalized.includes("chu y") ||
+		normalized.includes("warning")
+	) {
+		return "warning";
+	}
 
-  if (hasErrorSignal) {
-    return "error";
-  }
-
-  if (hasSuccessSignal) {
-    return "success";
-  }
-
-  return "info";
+	return "success";
 }
 
-export function useStatusMessageBridge(
-  message,
-  {
-    title,
-    duration = 4500,
-    type,
-  } = {}
-) {
-  const previousMessageRef = useRef("");
-  const { success, error, warning, info } = useNotification();
+export function useStatusMessageBridge(message, options = {}) {
+	const { success, error, warning, info } = useNotification();
+	const previousMessageRef = useRef("");
 
-  useEffect(() => {
-    const content = String(message || "").trim();
+	useEffect(() => {
+		const content = String(message || "").trim();
+		if (!content) {
+			previousMessageRef.current = "";
+			return;
+		}
 
-    if (!content) {
-      previousMessageRef.current = "";
-      return;
-    }
+		if (previousMessageRef.current === content) {
+			return;
+		}
 
-    if (content === previousMessageRef.current) {
-      return;
-    }
+		previousMessageRef.current = content;
 
-    previousMessageRef.current = content;
+		const finalType = options.type || inferTypeFromMessage(content);
+		const notificationOptions = {
+			title: options.title,
+			duration: options.duration,
+		};
 
-    const finalType = type || inferTypeFromMessage(content);
+		if (finalType === "error") {
+			error(content, notificationOptions);
+			return;
+		}
 
-    if (finalType === "success") {
-      success(content, { title: title || "Thành công", duration });
-      return;
-    }
+		if (finalType === "warning") {
+			warning(content, notificationOptions);
+			return;
+		}
 
-    if (finalType === "error") {
-      error(content, { title: title || "Lỗi", duration });
-      return;
-    }
+		if (finalType === "info") {
+			info(content, notificationOptions);
+			return;
+		}
 
-    if (finalType === "warning") {
-      warning(content, { title: title || "Cảnh báo", duration });
-      return;
-    }
-
-    info(content, { title: title || "Thông báo", duration });
-  }, [message, title, duration, type, success, error, warning, info]);
+		success(content, notificationOptions);
+	}, [error, info, message, options.duration, options.title, options.type, success, warning]);
 }
+
+export default useStatusMessageBridge;

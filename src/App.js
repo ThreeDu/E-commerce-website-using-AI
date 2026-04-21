@@ -22,6 +22,7 @@ import AdminListCategoriesPage from "./pages/admin/category/AdminListCategoriesP
 import AdminAddCategoryPage from "./pages/admin/category/AdminAddCategoryPage";
 import AdminListProductPage from "./pages/admin/product/AdminListProductPage";
 import AdminAddProductPage from "./pages/admin/product/AdminAddProductPage";
+import AdminBulkImportProductPage from "./pages/admin/product/AdminBulkImportProductPage";
 import AdminEditProductPage from "./pages/admin/product/AdminEditProductPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminListDiscountsPage from "./pages/admin/discount/AdminListDiscountsPage";
@@ -142,6 +143,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminAddProductPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/products/import"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminBulkImportProductPage />
                 </ProtectedRoute>
               }
             />

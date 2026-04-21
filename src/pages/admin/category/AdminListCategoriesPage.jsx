@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
-import { useStatusMessageBridge } from "../../../hooks/useStatusMessageBridge";
+import { useNotification } from "../../../context/NotificationContext";
 import {
   deleteAdminCategory,
   getAdminCategories,
@@ -12,17 +12,36 @@ import "../../../css/admin/categories.css";
 
 function AdminListCategoriesPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { auth } = useAuth();
+  const { success, error: notifyError } = useNotification();
+  const consumedSuccessStateRef = useRef(new Set());
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [categoryPendingDelete, setCategoryPendingDelete] = useState(null);
-  const [message, setMessage] = useState(location.state?.successMessage || "");
   const [editingCategory, setEditingCategory] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedCategoryIds, setExpandedCategoryIds] = useState(new Set());
 
-  useStatusMessageBridge(message, { title: "Danh mục" });
+  useEffect(() => {
+    const successMessage = location.state?.successMessage;
+    if (!successMessage) {
+      return;
+    }
+
+    const stateKey = `${location.key || "no-key"}::${successMessage}`;
+    if (consumedSuccessStateRef.current.has(stateKey)) {
+      return;
+    }
+
+    consumedSuccessStateRef.current.add(stateKey);
+
+    success(successMessage, { title: "Danh mục" });
+
+    // Consume one-time router state to avoid duplicate toasts on re-render/remount.
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.key, location.pathname, location.state, navigate, success]);
 
   const loadCategories = useCallback(async () => {
     if (!auth?.token) {
@@ -34,11 +53,11 @@ function AdminListCategoriesPage() {
       const data = await getAdminCategories(auth.token);
       setCategories(data.categories || []);
     } catch (error) {
-      setMessage(getErrorMessage(error, "Không thể tải danh sách danh mục."));
+      notifyError(getErrorMessage(error, "Không thể tải danh sách danh mục."), { title: "Danh mục" });
     } finally {
       setLoading(false);
     }
-  }, [auth?.token]);
+  }, [auth?.token, notifyError]);
 
   useEffect(() => {
     loadCategories();
@@ -196,13 +215,12 @@ function AdminListCategoriesPage() {
 
     try {
       setDeleting(true);
-      setMessage("");
       await deleteAdminCategory(auth.token, categoryPendingDelete._id);
-      setMessage("Xóa danh mục thành công.");
+      success("Xóa danh mục thành công.", { title: "Danh mục" });
       setCategoryPendingDelete(null);
       await loadCategories();
     } catch (error) {
-      setMessage(getErrorMessage(error, "Không thể xóa danh mục."));
+      notifyError(getErrorMessage(error, "Không thể xóa danh mục."), { title: "Danh mục" });
     } finally {
       setDeleting(false);
     }
@@ -223,7 +241,7 @@ function AdminListCategoriesPage() {
 
   const handleSaveEdit = async () => {
     if (!editingCategory?.name?.trim()) {
-      setMessage("Tên danh mục không được để trống.");
+      notifyError("Tên danh mục không được để trống.", { title: "Danh mục" });
       return;
     }
 
@@ -241,16 +259,15 @@ function AdminListCategoriesPage() {
     }
 
     try {
-      setMessage("");
       await updateAdminCategory(auth.token, editingCategory._id, {
         name: editingCategory.name.trim(),
         parentId: editingCategory.parentId || null,
       });
       setEditingCategory(null);
-      setMessage("Cập nhật danh mục thành công.");
+      success("Cập nhật danh mục thành công.", { title: "Danh mục" });
       await loadCategories();
     } catch (error) {
-      setMessage(getErrorMessage(error, "Không thể cập nhật danh mục."));
+      notifyError(getErrorMessage(error, "Không thể cập nhật danh mục."), { title: "Danh mục" });
     }
   };
 
@@ -265,11 +282,6 @@ function AdminListCategoriesPage() {
           Danh sách hiển thị theo cấu trúc cha-con: cấp 1 (danh mục chính), cấp 2 và cấp 3 tương
           ứng.
         </p>
-        {message && (
-          <p className="form-message" role="status" aria-live="polite">
-            {message}
-          </p>
-        )}
 
         <div className="admin-page-toolbar">
           <Link to="/admin/categories/add" className="primary-link-btn">
