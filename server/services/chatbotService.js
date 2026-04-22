@@ -14,6 +14,30 @@ const knnCache = {
   actorProductWeights: new Map(),
 };
 
+const DEFAULT_EXPLICIT_PRICE_TERMS = [
+  "gia",
+  "duoi",
+  "toi da",
+  "khong qua",
+  "tren",
+  "toi thieu",
+  "ngan sach",
+  "budget",
+  "price",
+  "cost",
+  "vnd",
+  "dong",
+];
+
+const DEFAULT_PRICE_TERMS = [
+  ...DEFAULT_EXPLICIT_PRICE_TERMS,
+  "tu ",
+  "k",
+  "nghin",
+  "tr",
+  "trieu",
+];
+
 function cleanupOldSessions() {
   const now = Date.now();
   for (const [sessionId, session] of sessionStore.entries()) {
@@ -65,6 +89,24 @@ function tokenize(value) {
     .filter((item) => item.length >= 2);
 }
 
+function getConfiguredTerms(envKey, defaultTerms) {
+  const raw = String(process.env[envKey] || "").trim();
+  if (!raw) {
+    return defaultTerms;
+  }
+
+  const customTerms = raw
+    .split(",")
+    .map((item) => normalizeText(item))
+    .filter(Boolean);
+
+  if (customTerms.length === 0) {
+    return defaultTerms;
+  }
+
+  return Array.from(new Set([...defaultTerms, ...customTerms]));
+}
+
 function getEffectivePrice(product) {
   const originalPrice = Number(product?.price || 0);
   const discountedPrice = Number(product?.finalPrice || 0);
@@ -92,34 +134,14 @@ function parseBudgetFromText(message) {
   const hasGroupedAmount = Boolean(groupedMatch);
   const hasCurrencySymbol = /đ|₫|vnđ|vnd|dong/.test(normalizedRaw);
 
-  const hasExplicitPriceSignal = includesAny(text, [
-    "gia",
-    "duoi",
-    "toi da",
-    "khong qua",
-    "tren",
-    "toi thieu",
-    "ngan sach",
-    "budget",
-    "vnd",
-    "dong",
-  ]);
+  const explicitPriceTerms = getConfiguredTerms(
+    "CHATBOT_PRICE_EXPLICIT_TERMS",
+    DEFAULT_EXPLICIT_PRICE_TERMS
+  );
+  const priceTerms = getConfiguredTerms("CHATBOT_PRICE_TERMS", DEFAULT_PRICE_TERMS);
 
-  const hasPriceSignal = includesAny(text, [
-    "gia",
-    "duoi",
-    "toi da",
-    "khong qua",
-    "tren",
-    "toi thieu",
-    "tu ",
-    "vnd",
-    "dong",
-    "k",
-    "nghin",
-    "tr",
-    "trieu",
-  ]);
+  const hasExplicitPriceSignal = includesAny(text, explicitPriceTerms);
+  const hasPriceSignal = includesAny(text, priceTerms);
 
   if (!hasPriceSignal && !hasExplicitPriceSignal && !hasGroupedAmount && !hasCurrencySymbol) {
     return null;
