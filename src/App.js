@@ -3,10 +3,11 @@ import "./css/admin/forms.css";
 import "./css/admin/theme.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-import ChatbotWidget from "./components/ChatbotWidget";
+import StatusNotificationCenter from "./components/StatusNotificationCenter";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import HomePage from "./pages/HomePage";
 import AboutPage from "./pages/AboutPage";
 import ContractPage from "./pages/ContractPage";
@@ -21,6 +22,7 @@ import AdminListCategoriesPage from "./pages/admin/category/AdminListCategoriesP
 import AdminAddCategoryPage from "./pages/admin/category/AdminAddCategoryPage";
 import AdminListProductPage from "./pages/admin/product/AdminListProductPage";
 import AdminAddProductPage from "./pages/admin/product/AdminAddProductPage";
+import AdminBulkImportProductPage from "./pages/admin/product/AdminBulkImportProductPage";
 import AdminEditProductPage from "./pages/admin/product/AdminEditProductPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminListDiscountsPage from "./pages/admin/discount/AdminListDiscountsPage";
@@ -29,6 +31,7 @@ import AdminEditDiscountPage from "./pages/admin/discount/AdminEditDiscountPage"
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 import AdminSystemLogsPage from "./pages/admin/AdminSystemLogsPage";
 import AdminNotificationsPage from "./pages/admin/AdminNotificationsPage";
+import AdminAnalyticsPage from "./pages/admin/AdminAnalyticsPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
 import UserDashboard from "./pages/UserDashboard";
@@ -50,11 +53,13 @@ function GuestRoute({ children }) {
 function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-      <BrowserRouter>
-        <div className="app-shell">
-          <Header />
-          <Routes>
+      <NotificationProvider>
+        <CartProvider>
+          <BrowserRouter>
+            <StatusNotificationCenter />
+            <div className="app-shell">
+              <Header />
+              <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contract" element={<ContractPage />} />
@@ -143,6 +148,14 @@ function App() {
               }
             />
             <Route
+              path="/admin/products/import"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminBulkImportProductPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/products/edit/:id"
               element={
                 <ProtectedRoute requiredRole="admin">
@@ -199,6 +212,14 @@ function App() {
               }
             />
             <Route
+              path="/admin/analytics"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminAnalyticsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/orders/:id"
               element={
                 <ProtectedRoute requiredRole="admin">
@@ -215,12 +236,12 @@ function App() {
               }
             />
             <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <ChatbotWidget />
-          <Footer />
-        </div>
-      </BrowserRouter>
-      </CartProvider>
+              </Routes>
+              <Footer />
+            </div>
+          </BrowserRouter>
+        </CartProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

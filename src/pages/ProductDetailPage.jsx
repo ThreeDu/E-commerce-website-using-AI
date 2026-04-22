@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useNotification } from "../context/NotificationContext";
+import { trackEvent } from "../services/analyticsService";
 import "../css/shop-experience.css";
 
 function getProductImageSrc(product) {
@@ -52,6 +54,7 @@ function ProductDetailPage() {
   const { id } = useParams();
   const { addToCart } = useCart();
   const { auth } = useAuth();
+  const { success, error: notifyError, warning } = useNotification();
   const navigate = useNavigate();
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isWishlistLoading, setIsWishlistLoading] = useState(false);
@@ -78,6 +81,17 @@ function ProductDetailPage() {
     }
 
     addToCart({ ...product, id: product._id });
+    trackEvent({
+      eventName: "add_to_cart",
+      token: auth?.token,
+      metadata: {
+        productId: String(product._id),
+        productName: String(product.name || ""),
+        category: String(product.category || ""),
+        quantity: 1,
+        price: Number(product.finalPrice || product.price || 0),
+      },
+    });
   };
 
   
@@ -92,6 +106,16 @@ function ProductDetailPage() {
         if (response.ok) {
           const data = await response.json();
           setProduct(data);
+          trackEvent({
+            eventName: "product_view",
+            token: auth?.token,
+            metadata: {
+              productId: String(data?._id || id),
+              productName: String(data?.name || ""),
+              category: String(data?.category || ""),
+              price: Number(data?.finalPrice || data?.price || 0),
+            },
+          });
         }
       } catch (error) {
         console.error("Lỗi khi tải chi tiết sản phẩm:", error);
@@ -100,7 +124,7 @@ function ProductDetailPage() {
       }
     };
     fetchProduct();
-  }, [id]);
+  }, [auth?.token, id]);
 
   useEffect(() => {
     const trackView = async () => {
@@ -275,6 +299,7 @@ function ProductDetailPage() {
 
   const handleToggleWishlist = async () => {
     if (!auth?.token) {
+      warning("Vui lòng đăng nhập để sử dụng danh sách yêu thích.", { title: "Yêu thích" });
       navigate("/login", { state: { from: `/products/${id}` } });
       return;
     }
@@ -299,6 +324,7 @@ function ProductDetailPage() {
 
       const data = await response.json();
       if (!response.ok) {
+        notifyError(data?.message || "Không thể cập nhật danh sách yêu thích.", { title: "Yêu thích" });
         return;
       }
 
@@ -306,8 +332,27 @@ function ProductDetailPage() {
         ? data.wishlist.some((item) => String(item._id) === String(product._id))
         : false;
       setIsWishlisted(existed);
+
+      const productName = String(product?.name || "sản phẩm");
+      success(
+        existed
+          ? `Đã thêm ${productName} vào danh sách yêu thích.`
+          : `Đã xóa ${productName} khỏi danh sách yêu thích.`,
+        { title: "Yêu thích" }
+      );
+
+      trackEvent({
+        eventName: existed ? "wishlist_add" : "wishlist_remove",
+        token: auth?.token,
+        metadata: {
+          productId: String(product._id),
+          productName: String(productName),
+          category: String(product.category || ""),
+        },
+      });
     } catch (error) {
       console.error("Lỗi cập nhật wishlist:", error);
+      notifyError("Không thể kết nối đến máy chủ.", { title: "Yêu thích" });
     } finally {
       setIsWishlistLoading(false);
     }
@@ -489,7 +534,6 @@ function ProductDetailPage() {
             {pricing.hasDiscount ? (
               <p className="shopx-old-price">{pricing.basePrice.toLocaleString("vi-VN")} đ</p>
             ) : null}
-            <p className="shopx-detail-desc">{product.description}</p>
 
             <div className="shopx-detail-actions">
               <button
@@ -509,6 +553,8 @@ function ProductDetailPage() {
                 {outOfStock ? "Hết hàng" : "Thêm vào giỏ hàng"}
               </button>
             </div>
+
+            <p className="shopx-detail-desc">{product.description}</p>
           </div>
         </section>
 

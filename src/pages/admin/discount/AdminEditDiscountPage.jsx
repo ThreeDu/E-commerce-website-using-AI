@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
+import { useStatusMessageBridge } from "../../../hooks/useStatusMessageBridge";
 import { getAdminDiscountById, updateAdminDiscount } from "../../../services/admin/discountService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
 import "../../../css/admin/discounts.css";
@@ -70,6 +71,8 @@ function AdminEditDiscountPage() {
     usageLimit: "0",
     isActive: true,
   });
+
+  useStatusMessageBridge(message, { title: "Mã giảm giá" });
 
   useEffect(() => {
     const loadDiscount = async () => {

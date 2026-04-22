@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
+import { useStatusMessageBridge } from "../../../hooks/useStatusMessageBridge";
 import { getAdminProductById, updateAdminProduct } from "../../../services/admin/productService";
 import { getAdminCategories } from "../../../services/admin/categoryService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
@@ -32,6 +33,8 @@ function AdminEditProductPage() {
     discountPercent: "0",
     description: "",
   });
+
+  useStatusMessageBridge(message, { title: "Sản phẩm" });
 
   const finalPricePreview = useMemo(() => {
     const price = Number(formData.price || 0);

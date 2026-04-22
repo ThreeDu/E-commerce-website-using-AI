@@ -1,5 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBell,
+  faBoxOpen,
+  faCartShopping,
+  faChartLine,
+  faFileLines,
+  faGaugeHigh,
+  faTags,
+  faTableCellsLarge,
+  faUsers,
+} from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import "../css/header.css";
@@ -111,29 +123,41 @@ function Header() {
           </div>
 
           <nav className="admin-sidebar-menu">
-            <NavLink to="/admin/dashboard" className={({ isActive }) => (isActive ? "active" : "")}>
-              Bảng điều khiển
+            <NavLink to="/admin/dashboard" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
+              <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faGaugeHigh} /></span>
+              <span className="admin-sidebar-link-title">Bảng điều khiển</span>
             </NavLink>
-            <NavLink to="/admin/notifications" className={({ isActive }) => (isActive ? "active" : "")}> 
-              Trung tâm thông báo
+            <NavLink to="/admin/notifications" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}> 
+              <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faBell} /></span>
+              <span className="admin-sidebar-link-title">Trung tâm thông báo</span>
             </NavLink>
-            <NavLink to="/admin/categories" className={({ isActive }) => (isActive ? "active" : "")}>
-              Quản lý danh mục
+            <NavLink to="/admin/analytics" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
+              <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faChartLine} /></span>
+              <span className="admin-sidebar-link-title">Analytics Funnel</span>
             </NavLink>
-            <NavLink to="/admin/products" className={({ isActive }) => (isActive ? "active" : "")}>
-              Quản lý sản phẩm
+            <NavLink to="/admin/categories" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
+              <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faTableCellsLarge} /></span>
+              <span className="admin-sidebar-link-title">Quản lý danh mục</span>
             </NavLink>
-            <NavLink to="/admin/discounts" className={({ isActive }) => (isActive ? "active" : "")}>
-              Quản lý mã giảm giá
+            <NavLink to="/admin/products" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
+              <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faBoxOpen} /></span>
+              <span className="admin-sidebar-link-title">Quản lý sản phẩm</span>
             </NavLink>
-            <NavLink to="/admin/orders" className={({ isActive }) => (isActive ? "active" : "")}>
-              Quản lý đơn hàng
+            <NavLink to="/admin/discounts" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
+              <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faTags} /></span>
+              <span className="admin-sidebar-link-title">Quản lý mã giảm giá</span>
             </NavLink>
-            <NavLink to="/admin/users" className={({ isActive }) => (isActive ? "active" : "")}>
-              Quản lý người dùng
+            <NavLink to="/admin/orders" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
+              <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faCartShopping} /></span>
+              <span className="admin-sidebar-link-title">Quản lý đơn hàng</span>
             </NavLink>
-            <NavLink to="/admin/system-logs" className={({ isActive }) => (isActive ? "active" : "")}> 
-              Log hệ thống
+            <NavLink to="/admin/users" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
+              <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faUsers} /></span>
+              <span className="admin-sidebar-link-title">Quản lý người dùng</span>
+            </NavLink>
+            <NavLink to="/admin/system-logs" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}> 
+              <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faFileLines} /></span>
+              <span className="admin-sidebar-link-title">Log hệ thống</span>
             </NavLink>
           </nav>
 

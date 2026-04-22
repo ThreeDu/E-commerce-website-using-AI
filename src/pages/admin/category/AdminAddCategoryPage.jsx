@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
+import { useStatusMessageBridge } from "../../../hooks/useStatusMessageBridge";
 import { createAdminCategory, getAdminCategories } from "../../../services/admin/categoryService";
 import "../../../css/admin/categories.css";
 
@@ -17,6 +18,8 @@ function AdminAddCategoryPage() {
   const [level, setLevel] = useState("1");
   const [selectedMainId, setSelectedMainId] = useState("");
   const [selectedLevel2Id, setSelectedLevel2Id] = useState("");
+
+  useStatusMessageBridge(message, { title: "Danh mục" });
 
   const loadCategories = useCallback(async () => {
     if (!auth?.token) {

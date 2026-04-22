@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useStatusMessageBridge } from "../../hooks/useStatusMessageBridge";
 import { getAdminNotifications } from "../../services/admin/notificationService";
 import { getErrorMessage } from "../../utils/adminErrorUtils";
 import "../../css/admin/notifications.css";
@@ -45,6 +46,8 @@ function AdminNotificationsPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [payload, setPayload] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  useStatusMessageBridge(errorMessage, { title: "Thông báo quản trị", type: "error" });
 
   const loadNotifications = useCallback(
     async ({ silent = false } = {}) => {

@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useNotification } from "../context/NotificationContext";
+import { trackEvent } from "../services/analyticsService";
 
 function CheckoutPage() {
   const { cart, clearCart } = useCart();
   const navigate = useNavigate();
   const { auth } = useAuth(); // Lấy thông tin đăng nhập
+  const { success, error, warning } = useNotification();
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -110,7 +113,7 @@ function CheckoutPage() {
     setFormError("");
 
     if (!auth?.token) {
-      alert("Vui lòng đăng nhập để đặt hàng.");
+      warning("Vui lòng đăng nhập để đặt hàng.", { title: "Chưa đăng nhập" });
       navigate("/login");
       return;
     }
@@ -164,16 +167,36 @@ function CheckoutPage() {
       });
 
       if (response.ok) {
-        alert(`Đặt hàng thành công!\nCảm ơn ${formData.fullName} đã mua sắm tại AI Shop.`);
+        trackEvent({
+          eventName: "checkout_success",
+          token: auth?.token,
+          metadata: {
+            totalPrice: Number(finalTotal || 0),
+            originalSubtotal: Number(totalPrice || 0),
+            discountAmount: Number(discountAmount || 0),
+            itemCount: cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+            productCount: cart.length,
+            paymentMethod: String(formData.paymentMethod || ""),
+            discountCode: String(couponInfo?.coupon?.code || ""),
+          },
+        });
+
+        success(`Cảm ơn ${formData.fullName} đã mua sắm tại AI Shop.`, {
+          title: "Đặt hàng thành công",
+        });
         clearCart(); // Làm sạch giỏ hàng
         navigate("/order-history"); // Chuyển người dùng sang trang đơn hàng của tôi
       } else {
         const errorData = await response.json();
-        alert(`Lỗi đặt hàng: ${errorData.message}`);
+        error(errorData.message || "Không thể tạo đơn hàng mới.", {
+          title: "Đặt hàng thất bại",
+        });
       }
     } catch (error) {
       console.error("Lỗi khi gọi API đặt hàng:", error);
-      alert("Có lỗi xảy ra khi kết nối đến máy chủ.");
+      error("Có lỗi xảy ra khi kết nối đến máy chủ.", {
+        title: "Lỗi kết nối",
+      });
     }
   };
 
