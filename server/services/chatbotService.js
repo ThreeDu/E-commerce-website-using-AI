@@ -65,10 +65,81 @@ function tokenize(value) {
     .filter((item) => item.length >= 2);
 }
 
+function getEffectivePrice(product) {
+  const originalPrice = Number(product?.price || 0);
+  const discountedPrice = Number(product?.finalPrice || 0);
+
+  if (discountedPrice > 0) {
+    return discountedPrice;
+  }
+
+  return originalPrice > 0 ? originalPrice : 0;
+}
+
 function parseBudgetFromText(message) {
+  const rawText = String(message || "");
   const text = normalizeText(message);
   if (!text) {
     return null;
+  }
+
+  const normalizedRaw = rawText
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, " ");
+
+  const groupedMatch = normalizedRaw.match(/(\d{1,3}(?:[\.,\s]\d{3})+)\s*(trieu|tr|k|nghin)?/);
+  const hasGroupedAmount = Boolean(groupedMatch);
+  const hasCurrencySymbol = /đ|₫|vnđ|vnd|dong/.test(normalizedRaw);
+
+  const hasExplicitPriceSignal = includesAny(text, [
+    "gia",
+    "duoi",
+    "toi da",
+    "khong qua",
+    "tren",
+    "toi thieu",
+    "ngan sach",
+    "budget",
+    "vnd",
+    "dong",
+  ]);
+
+  const hasPriceSignal = includesAny(text, [
+    "gia",
+    "duoi",
+    "toi da",
+    "khong qua",
+    "tren",
+    "toi thieu",
+    "tu ",
+    "vnd",
+    "dong",
+    "k",
+    "nghin",
+    "tr",
+    "trieu",
+  ]);
+
+  if (!hasPriceSignal && !hasExplicitPriceSignal && !hasGroupedAmount && !hasCurrencySymbol) {
+    return null;
+  }
+
+  // Hỗ trợ định dạng tiền kiểu 32.000.000 hoặc 20 370 000.
+  if (groupedMatch) {
+    const groupedNumeric = Number(String(groupedMatch[1]).replace(/[\.,\s]/g, ""));
+    if (groupedNumeric && !Number.isNaN(groupedNumeric)) {
+      const groupedUnit = String(groupedMatch[2] || "").trim();
+      if (groupedUnit === "trieu" || groupedUnit === "tr") {
+        return groupedNumeric * 1000000;
+      }
+
+      if (groupedUnit === "k" || groupedUnit === "nghin") {
+        return groupedNumeric * 1000;
+      }
+
+      return groupedNumeric;
+    }
   }
 
   const directMatch = text.match(/(\d+[\d\.]*)\s*(trieu|tr|k|nghin)?/);
@@ -82,6 +153,20 @@ function parseBudgetFromText(message) {
   }
 
   const unit = directMatch[2] || "";
+  if (!unit && !hasExplicitPriceSignal && !hasCurrencySymbol) {
+    return null;
+  }
+
+  // Tránh hiểu nhầm "co iphone 15 k" (k = không) thành ngân sách 15k.
+  if (!hasExplicitPriceSignal && unit === "k" && numeric < 100) {
+    return null;
+  }
+
+  // Nếu không có ngữ cảnh giá rõ ràng và số quá nhỏ (mã model), bỏ qua.
+  if (!hasExplicitPriceSignal && !unit && numeric < 1000) {
+    return null;
+  }
+
   if (unit === "trieu" || unit === "tr") {
     return numeric * 1000000;
   }
@@ -90,11 +175,64 @@ function parseBudgetFromText(message) {
     return numeric * 1000;
   }
 
-  if (numeric < 1000) {
+  if (numeric < 1000 && hasExplicitPriceSignal) {
     return numeric * 1000000;
   }
 
   return numeric;
+}
+
+function parsePriceConstraint(message) {
+  const text = normalizeText(message);
+  if (!text) {
+    return null;
+  }
+
+  const budget = parseBudgetFromText(message);
+  if (!budget || budget <= 0) {
+    return null;
+  }
+
+  if (includesAny(text, ["duoi", "toi da", "max", "khong qua", "under", "nho hon", "<"])) {
+    return { minPrice: 0, maxPrice: budget, source: "max", strictUpperBound: true };
+  }
+
+  if (includesAny(text, ["tren", "toi thieu", "min", "hon", "greater", ">", "tu"])) {
+    return { minPrice: budget, maxPrice: null, source: "min" };
+  }
+
+  return { minPrice: 0, maxPrice: budget, source: "implicit-max", strictUpperBound: false };
+}
+
+function buildCategoryConstraint(message) {
+  const text = normalizeText(message);
+  const tokenSet = new Set(tokenize(message));
+  const aliases = {
+    "dien thoai": ["dien thoai", "smartphone", "phone"],
+    laptop: ["laptop", "notebook", "ultrabook"],
+    "phu kien": ["phu kien", "accessory", "tai nghe", "chuot", "ban phim", "webcam", "man hinh", "dong ho"],
+  };
+
+  for (const [category, keywords] of Object.entries(aliases)) {
+    const matched = keywords.some((keyword) => {
+      const normalizedKeyword = normalizeText(keyword);
+      if (!normalizedKeyword) {
+        return false;
+      }
+
+      if (normalizedKeyword.includes(" ")) {
+        return text.includes(normalizedKeyword);
+      }
+
+      return tokenSet.has(normalizedKeyword);
+    });
+
+    if (matched) {
+      return category;
+    }
+  }
+
+  return "";
 }
 
 function includesAny(text, keywords) {
@@ -103,10 +241,6 @@ function includesAny(text, keywords) {
 
 function detectIntent(message) {
   const plain = normalizeText(message);
-
-  if (!plain) {
-    return "unknown";
-  }
 
   if (includesAny(plain, ["xin chao", "chao", "hello", "hi"])) {
     return "greeting";
@@ -419,17 +553,25 @@ function rankWithLtr({ product, queryTokens, behaviorProfile, knnScore, budget, 
 
   let priceFitFeature = 0.45;
   if (budget && budget > 0) {
-    const delta = Math.abs(Number(product.price || 0) - budget);
+    const delta = Math.abs(getEffectivePrice(product) - budget);
     priceFitFeature = Math.max(0, 1 - delta / budget);
   }
 
-  const ltrScore =
-    semanticFeature * 0.38 +
-    Math.min(1, Number(knnScore || 0)) * 0.22 +
-    Math.min(1, behaviorFeature) * 0.16 +
-    popularityFeature * 0.14 +
-    ratingFeature * 0.06 +
-    priceFitFeature * 0.04;
+  const isBudgetDriven = Boolean(budget && budget > 0 && semanticFeature < 0.15);
+
+  const ltrScore = isBudgetDriven
+    ? semanticFeature * 0.2 +
+      Math.min(1, Number(knnScore || 0)) * 0.1 +
+      Math.min(1, behaviorFeature) * 0.1 +
+      popularityFeature * 0.1 +
+      ratingFeature * 0.05 +
+      priceFitFeature * 0.45
+    : semanticFeature * 0.38 +
+      Math.min(1, Number(knnScore || 0)) * 0.22 +
+      Math.min(1, behaviorFeature) * 0.16 +
+      popularityFeature * 0.14 +
+      ratingFeature * 0.06 +
+      priceFitFeature * 0.04;
 
   return {
     ltrScore,
@@ -537,13 +679,123 @@ function buildRecommendationReason(item) {
 
 async function findRecommendedProducts(message, context = {}, options = {}) {
   const queryTokens = tokenize(message);
+  const informativeQueryTokens = queryTokens.filter(
+    (token) =>
+      !/^\d+$/.test(token) &&
+      token.length >= 3 &&
+      ![
+        "co",
+        "khong",
+        "ngan",
+        "sach",
+        "duoi",
+        "tren",
+        "toi",
+        "da",
+        "min",
+        "max",
+        "gia",
+        "mua",
+        "san",
+        "pham",
+        "goi",
+        "y",
+      ].includes(token)
+  );
+  const hasNumericToken = queryTokens.some((token) => /^\d+$/.test(token));
   const behaviorProfile = buildBehaviorProfile(context.userBehavior);
-  const budget = parseBudgetFromText(message);
+  const priceConstraint = parsePriceConstraint(message);
+  const budget = priceConstraint?.maxPrice || parseBudgetFromText(message);
+  const categoryConstraint = buildCategoryConstraint(message);
 
-  const products = await Product.find({ stock: { $gt: 0 } })
-    .select("_id name price description category image averageRating totalRatings totalViews stock")
+  const dbFilter = {
+    stock: { $gt: 0 },
+  };
+
+  const rawProducts = await Product.find(dbFilter)
+    .select(
+      "_id name price finalPrice discountPercent description category image averageRating totalRatings totalViews stock"
+    )
     .limit(260)
     .lean();
+
+  let products = categoryConstraint
+    ? rawProducts.filter((item) => {
+        const normalizedCategory = normalizeText(item.category);
+        return (
+          normalizedCategory === categoryConstraint ||
+          normalizedCategory.startsWith(`${categoryConstraint} `)
+        );
+      })
+    : rawProducts;
+
+  const normalizedMessage = normalizeText(message);
+  const numericTokens = queryTokens.filter((token) => /^\d+$/.test(token));
+  const hasKnownBrandHint = includesAny(normalizedMessage, [
+    "iphone",
+    "samsung",
+    "xiaomi",
+    "oppo",
+    "vivo",
+    "realme",
+    "macbook",
+    "ipad",
+  ]);
+
+  const shouldUseStrictNameFilter =
+    informativeQueryTokens.length > 0 && (hasNumericToken || hasKnownBrandHint);
+
+  if (shouldUseStrictNameFilter) {
+    const hardNameMatches = products.filter((item) => {
+      const normalizedName = normalizeText(item.name);
+      const tokenOverlap = informativeQueryTokens.reduce(
+        (count, token) => count + (normalizedName.includes(token) ? 1 : 0),
+        0
+      );
+      const numericMatched =
+        numericTokens.length === 0 || numericTokens.some((token) => normalizedName.includes(token));
+
+      return tokenOverlap >= 1 && numericMatched;
+    });
+
+    if (hardNameMatches.length > 0) {
+      products = hardNameMatches;
+    }
+  }
+
+  if (priceConstraint?.minPrice != null || priceConstraint?.maxPrice != null) {
+    const minPrice =
+      priceConstraint.minPrice != null ? Number(priceConstraint.minPrice) : null;
+    const maxPrice =
+      priceConstraint.maxPrice != null
+        ? Number(priceConstraint.maxPrice)
+        : null;
+    const allowSlightOverBudget =
+      priceConstraint.source === "implicit-max" && priceConstraint.strictUpperBound !== true;
+    const effectiveMax =
+      maxPrice != null
+        ? allowSlightOverBudget
+          ? Math.round(maxPrice * 1.05)
+          : maxPrice
+        : null;
+
+    products = products.filter((item) => {
+      const sellingPrice = getEffectivePrice(item);
+      if (minPrice != null && sellingPrice < minPrice) {
+        return false;
+      }
+
+      if (effectiveMax != null && sellingPrice > effectiveMax) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  if (products.length === 0) {
+    return [];
+  }
 
   const purchaseMap = await getPurchaseMapByProductIds(products.map((item) => item._id));
   await refreshKnnCache();
@@ -555,8 +807,13 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
   });
   const knnScores = computeKnnScores(seedProductIds);
 
-  const scored = products
+  const rankedCandidates = products
     .map((product) => {
+      const nameTokens = new Set(tokenize(product.name));
+      const nameOverlap = informativeQueryTokens.reduce(
+        (count, token) => count + (nameTokens.has(token) ? 1 : 0),
+        0
+      );
       const totalPurchases = purchaseMap.get(String(product._id)) || 0;
       const knnScore = Number(knnScores.get(String(product._id)) || 0);
       const ltr = rankWithLtr({
@@ -573,27 +830,65 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
         totalPurchases,
         knnScore,
         ltrScore: ltr.ltrScore,
+        nameOverlap,
+        priceDelta: Math.abs(getEffectivePrice(product) - Number(budget || 0)),
         matched: ltr.matched,
       };
     })
-    .filter((item) => item.ltrScore > 0.06)
-    .sort((a, b) => b.ltrScore - a.ltrScore)
-    .slice(0, 5)
-    .map((item) => ({
-      _id: item._id,
-      name: item.name,
-      category: item.category,
-      price: item.price,
-      image: item.image,
-      averageRating: item.averageRating,
-      totalRatings: item.totalRatings,
-      totalViews: item.totalViews,
-      totalPurchases: item.totalPurchases,
-      knnScore: item.knnScore,
-      reason: buildRecommendationReason(item),
-    }));
 
-  return scored;
+    .sort((a, b) => {
+      if (b.ltrScore !== a.ltrScore) {
+        return b.ltrScore - a.ltrScore;
+      }
+
+      if (Number(a.nameOverlap || 0) !== Number(b.nameOverlap || 0)) {
+        return Number(b.nameOverlap || 0) - Number(a.nameOverlap || 0);
+      }
+
+      return Number(a.priceDelta || 0) - Number(b.priceDelta || 0);
+    });
+
+  const maxNameOverlap = rankedCandidates.reduce(
+    (maxValue, item) => Math.max(maxValue, Number(item.nameOverlap || 0)),
+    0
+  );
+
+  const shouldPrioritizeNameMatch =
+    informativeQueryTokens.length > 0 && (maxNameOverlap >= 2 || (hasNumericToken && maxNameOverlap >= 1));
+
+  const nameFilteredCandidates = shouldPrioritizeNameMatch
+    ? rankedCandidates.filter((item) => Number(item.nameOverlap || 0) >= Math.min(2, maxNameOverlap))
+    : rankedCandidates;
+
+  // Nếu truy vấn thiên về ngân sách/ngữ cảnh chung khiến semantic thấp,
+  // vẫn trả về top candidate hợp lệ từ DB thay vì báo không tìm thấy.
+  const pickedCandidates = nameFilteredCandidates.filter((item) => item.ltrScore > 0.06);
+  const finalCandidates = (pickedCandidates.length > 0 ? pickedCandidates : nameFilteredCandidates)
+    .slice(0, 5)
+    .map((item) => {
+      const sellingPrice = getEffectivePrice(item);
+      const originalPrice = Number(item.price || 0);
+      const hasDiscount = originalPrice > 0 && sellingPrice > 0 && sellingPrice < originalPrice;
+
+      return {
+        _id: item._id,
+        name: item.name,
+        category: item.category,
+        price: sellingPrice,
+        originalPrice: hasDiscount ? originalPrice : sellingPrice,
+        finalPrice: Number(item.finalPrice || 0),
+        discountPercent: Number(item.discountPercent || 0),
+        image: item.image,
+        averageRating: item.averageRating,
+        totalRatings: item.totalRatings,
+        totalViews: item.totalViews,
+        totalPurchases: item.totalPurchases,
+        knnScore: item.knnScore,
+        reason: buildRecommendationReason(item),
+      };
+    });
+
+  return finalCandidates;
 }
 
 function buildRuleReply(intent, recommendedProducts) {
@@ -657,26 +952,61 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
     2
   );
 
+  const isGemini = apiUrl.includes("generativelanguage.googleapis.com");
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
 
-    const response = await fetch(`${apiUrl.replace(/\/$/, "")}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        temperature: 0.4,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
+    const response = await (async () => {
+      if (isGemini) {
+        const endpoint = apiUrl.includes(":generateContent")
+          ? apiUrl
+          : `${apiUrl.replace(/\/$/, "")}/v1beta/models/${model}:generateContent`;
+        const delimiter = endpoint.includes("?") ? "&" : "?";
+        const requestUrl = `${endpoint}${delimiter}key=${encodeURIComponent(apiKey)}`;
+
+        return fetch(requestUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            systemInstruction: {
+              role: "system",
+              parts: [{ text: systemPrompt }],
+            },
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: userPrompt }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.4,
+            },
+          }),
+        });
+      }
+
+      return fetch(`${apiUrl.replace(/\/$/, "")}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model,
+          temperature: 0.4,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+        }),
+      });
+    })();
 
     clearTimeout(timeout);
 
@@ -685,7 +1015,15 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
     }
 
     const data = await response.json();
-    const content = data?.choices?.[0]?.message?.content;
+
+    const content = isGemini
+      ? (data?.candidates || [])
+          .flatMap((candidate) => candidate?.content?.parts || [])
+          .map((part) => String(part?.text || "").trim())
+          .filter(Boolean)
+          .join("\n")
+      : data?.choices?.[0]?.message?.content;
+
     return String(content || "").trim() || null;
   } catch (error) {
     return null;
@@ -716,12 +1054,16 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
           userId,
         });
 
-  const llmReply = await maybeGenerateLlmReply({
-    message: plainMessage,
-    intent,
-    recommendedProducts,
-    history: session.history,
-  });
+  const shouldUseLlm = recommendedProducts.length > 0;
+
+  const llmReply = shouldUseLlm
+    ? await maybeGenerateLlmReply({
+        message: plainMessage,
+        intent,
+        recommendedProducts,
+        history: session.history,
+      })
+    : null;
 
   const reply = llmReply || buildRuleReply(intent, recommendedProducts);
   const quickReplies = buildQuickReplies(intent);

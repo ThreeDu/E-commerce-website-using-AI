@@ -35,6 +35,10 @@ function createMessage(role, text, extra = {}) {
   };
 }
 
+function formatVnd(value) {
+  return `${Number(value || 0).toLocaleString("vi-VN")} đ`;
+}
+
 function getOrCreateSessionId() {
   const existed = localStorage.getItem(SESSION_STORAGE_KEY);
   if (existed) {
@@ -315,7 +319,10 @@ function ChatbotWidget() {
                           />
                           <div>
                             <h4>{product.name}</h4>
-                            <p className="price">{Number(product.price || 0).toLocaleString("vi-VN")} đ</p>
+                            <p className="price">{formatVnd(product.price)}</p>
+                            {Number(product.originalPrice || 0) > Number(product.price || 0) ? (
+                              <p className="old-price">{formatVnd(product.originalPrice)}</p>
+                            ) : null}
                             <p className="reason">{product.reason}</p>
                           </div>
                         </Link>

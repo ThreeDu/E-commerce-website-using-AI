@@ -139,6 +139,13 @@
   color: #0f314f;
 }
 
+.chatbot-product-main .old-price {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #6b7280;
+  text-decoration: line-through;
+}
+
 .chatbot-product-main .reason {
   margin-top: 3px;
   font-size: 11px;
