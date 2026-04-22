@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { useNotification } from "./NotificationContext";
+import { trackEvent } from "../services/analyticsService";
 
 const CartContext = createContext();
 
@@ -62,6 +63,18 @@ export function CartProvider({ children }) {
     setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
 
     if (removedItem) {
+      trackEvent({
+        eventName: "remove_from_cart",
+        token: auth?.token,
+        metadata: {
+          productId: String(removedItem.id || productId),
+          productName: String(removedItem.name || ""),
+          category: String(removedItem.category || ""),
+          quantity: Number(removedItem.quantity || 1),
+          price: Number(removedItem.finalPrice || removedItem.price || 0),
+        },
+      });
+
       success(`Đã xóa ${removedItem.name} khỏi giỏ hàng.`, {
         title: "Giỏ hàng",
         duration: 3000,

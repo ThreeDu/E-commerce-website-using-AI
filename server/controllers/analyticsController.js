@@ -5,12 +5,15 @@ const { getTokenFromHeader } = require("../routes/helpers/authHelpers");
 const ALLOWED_EVENTS = new Set([
   "product_view",
   "add_to_cart",
+  "remove_from_cart",
   "wishlist_add",
   "wishlist_remove",
+  "order_cancel",
   "checkout_success",
 ]);
 
 const FUNNEL_EVENTS = ["product_view", "add_to_cart", "wishlist_add", "checkout_success"];
+const ANALYTICS_TIMEZONE = "Asia/Ho_Chi_Minh";
 
 function parseOptionalUserId(req) {
   const token = getTokenFromHeader(req);
@@ -71,14 +74,24 @@ function toPercent(value, total) {
   return Number(((value / total) * 100).toFixed(2));
 }
 
+function getStartOfDayInTimezone(days) {
+  const now = new Date();
+  const timezoneNow = new Date(now.toLocaleString("en-US", { timeZone: ANALYTICS_TIMEZONE }));
+  const timezoneOffsetMs = now.getTime() - timezoneNow.getTime();
+
+  const timezoneStart = new Date(timezoneNow);
+  timezoneStart.setHours(0, 0, 0, 0);
+  timezoneStart.setDate(timezoneStart.getDate() - (days - 1));
+
+  return new Date(timezoneStart.getTime() + timezoneOffsetMs);
+}
+
 const getAdminFunnelOverview = async (req, res) => {
   try {
     const rawDays = Number(req.query?.days || 30);
     const days = Number.isFinite(rawDays) && rawDays > 0 ? Math.min(rawDays, 180) : 30;
 
-    const fromDate = new Date();
-    fromDate.setHours(0, 0, 0, 0);
-    fromDate.setDate(fromDate.getDate() - (days - 1));
+    const fromDate = getStartOfDayInTimezone(days);
 
     const eventStats = await AnalyticsEvent.aggregate([
       {
@@ -155,6 +168,7 @@ const getAdminFunnelOverview = async (req, res) => {
               $dateToString: {
                 format: "%Y-%m-%d",
                 date: "$occurredAt",
+                timezone: ANALYTICS_TIMEZONE,
               },
             },
             eventName: "$eventName",
