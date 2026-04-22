@@ -16,6 +16,71 @@ function normalizePath(value) {
     .join(" > ");
 }
 
+function normalizePlainText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/đ/g, "d")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function slugify(value) {
+  return normalizePlainText(value).replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+}
+
+function toSku(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toUpperCase();
+}
+
+function deriveStructuredFromName({ name, category }) {
+  const normalizedName = normalizePlainText(name);
+  const brandCandidates = ["samsung", "iphone", "xiaomi", "oppo", "vivo", "realme", "macbook", "ipad"];
+  const brand = brandCandidates.find((item) => normalizedName.includes(item)) || "";
+
+  let series = "";
+  if (brand === "samsung") {
+    if (/\bgalaxy\s*z\b/.test(normalizedName) || /\bz\s*(flip|fold)\d+/i.test(normalizedName)) {
+      series = "z";
+    } else if (/\bgalaxy\s*s\d+/i.test(normalizedName) || /\bs\d+\b/.test(normalizedName)) {
+      series = "s";
+    } else if (/\bgalaxy\s*a\d+/i.test(normalizedName) || /\ba\d+\b/.test(normalizedName)) {
+      series = "a";
+    }
+  }
+
+  const modelMatch =
+    normalizedName.match(/\bz\s*(fold|flip)\s*\d+\b/i) ||
+    normalizedName.match(/\bs\d+\s*(ultra|plus)?\b/i) ||
+    normalizedName.match(/\ba\d+\b/i) ||
+    normalizedName.match(/\biphone\s*\d+\b/i) ||
+    normalizedName.match(/\bmacbook\s*(air|pro)?\s*m?\d*\b/i);
+  const model = modelMatch ? modelMatch[0].replace(/\s+/g, " ").trim() : normalizedName;
+
+  const variantMatch = normalizedName.match(/\b\d+\s*(gb|tb)\b.*$/i);
+  const variant = variantMatch ? variantMatch[0].replace(/\s+/g, "") : "";
+
+  const slug = slugify(`${name || ""}-${category || ""}`);
+  const sku = toSku(`${brand}-${series}-${model}-${variant}`);
+
+  return {
+    brand,
+    series,
+    model,
+    variant,
+    slug,
+    sku,
+  };
+}
+
 function findCellValue(row, aliases) {
   const source = row && typeof row === "object" ? row : {};
   const aliasSet = new Set(
@@ -96,6 +161,12 @@ function toImportPayload(row, categoryPathMap) {
   const discountPercent = Number(
     findCellValue(row, ["discountpercent", "discount", "giamgia", "phan tram giam"])
   );
+  const skuRaw = toNormalizedString(findCellValue(row, ["sku", "ma sku", "product sku"]));
+  const slugRaw = toNormalizedString(findCellValue(row, ["slug", "duong dan", "product slug"]));
+  const brandRaw = toNormalizedString(findCellValue(row, ["brand", "thuong hieu"]));
+  const seriesRaw = toNormalizedString(findCellValue(row, ["series", "dong", "phan khuc"]));
+  const modelRaw = toNormalizedString(findCellValue(row, ["model", "model_name", "ten model"]));
+  const variantRaw = toNormalizedString(findCellValue(row, ["variant", "phien ban", "cau hinh"]));
 
   const errors = [];
 
@@ -132,12 +203,19 @@ function toImportPayload(row, categoryPathMap) {
 
   const finalCategory = matchedCategory || categoryPath;
   const computedFinalPrice = Number.isFinite(price) ? Math.round(price * (1 - normalizedDiscount / 100)) : 0;
+  const inferred = deriveStructuredFromName({ name, category: finalCategory });
 
   const payload = {
     name,
     description,
     image: normalizedImage,
     category: finalCategory,
+    brand: normalizePlainText(brandRaw) || inferred.brand,
+    series: normalizePlainText(seriesRaw) || inferred.series,
+    model: normalizePlainText(modelRaw) || inferred.model,
+    variant: normalizePlainText(variantRaw) || inferred.variant,
+    sku: toSku(skuRaw) || inferred.sku,
+    slug: slugify(slugRaw) || inferred.slug,
     price,
     stock,
     discountPercent: normalizedDiscount,
@@ -215,7 +293,22 @@ const getProductById = async (req, res) => {
 
 const createProduct = async (req, res) => {
   try {
-    const { name, image, imageUrl, price, discountPercent, category, stock, description } = req.body;
+    const {
+      name,
+      image,
+      imageUrl,
+      price,
+      discountPercent,
+      category,
+      stock,
+      description,
+      brand,
+      series,
+      model,
+      variant,
+      sku,
+      slug,
+    } = req.body;
     const normalizedImage = String(image || imageUrl || "").trim();
 
     if (!name || !normalizedImage || price === undefined || price === null) {
@@ -240,6 +333,7 @@ const createProduct = async (req, res) => {
     }
 
     const computedFinalPrice = Math.round(numericPrice * (1 - numericDiscount / 100));
+    const inferred = deriveStructuredFromName({ name, category: category || "Chua phan loai" });
 
     const newProduct = await Product.create({
       name,
@@ -250,6 +344,12 @@ const createProduct = async (req, res) => {
       category: category || "Chưa phân loại",
       stock: numericStock,
       description: description || "",
+      brand: normalizePlainText(brand) || inferred.brand,
+      series: normalizePlainText(series) || inferred.series,
+      model: normalizePlainText(model) || inferred.model,
+      variant: normalizePlainText(variant) || inferred.variant,
+      sku: toSku(sku) || inferred.sku,
+      slug: slugify(slug) || inferred.slug,
     });
 
     logAdminAction({
@@ -276,7 +376,22 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, image, imageUrl, price, discountPercent, category, stock, description } = req.body;
+    const {
+      name,
+      image,
+      imageUrl,
+      price,
+      discountPercent,
+      category,
+      stock,
+      description,
+      brand,
+      series,
+      model,
+      variant,
+      sku,
+      slug,
+    } = req.body;
     const normalizedImage = String(image || imageUrl || "").trim();
 
     if (!name || !normalizedImage || price === undefined || price === null) {
@@ -301,6 +416,7 @@ const updateProduct = async (req, res) => {
     }
 
     const computedFinalPrice = Math.round(numericPrice * (1 - numericDiscount / 100));
+    const inferred = deriveStructuredFromName({ name, category: category || "Chua phan loai" });
 
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
@@ -313,6 +429,12 @@ const updateProduct = async (req, res) => {
         category: category || "Chưa phân loại",
         stock: numericStock,
         description: description || "",
+        brand: normalizePlainText(brand) || inferred.brand,
+        series: normalizePlainText(series) || inferred.series,
+        model: normalizePlainText(model) || inferred.model,
+        variant: normalizePlainText(variant) || inferred.variant,
+        sku: toSku(sku) || inferred.sku,
+        slug: slugify(slug) || inferred.slug,
       },
       { new: true, runValidators: true }
     );
@@ -459,10 +581,12 @@ const commitProductImport = async (req, res) => {
 
     const operations = preview.validRows.map((item) => ({
       updateOne: {
-        filter: {
-          name: item.payload.name,
-          category: item.payload.category,
-        },
+        filter: item.payload.sku
+          ? { sku: item.payload.sku }
+          : {
+              name: item.payload.name,
+              category: item.payload.category,
+            },
         update: {
           $set: item.payload,
         },

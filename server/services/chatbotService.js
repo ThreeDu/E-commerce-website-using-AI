@@ -39,7 +39,30 @@ const DEFAULT_PRICE_TERMS = [
 ];
 
 const KNOWN_BRAND_HINTS = ["iphone", "samsung", "xiaomi", "oppo", "vivo", "realme", "macbook", "ipad"];
-const MODEL_HINT_TERMS = ["ultra", "pro", "max", "plus", "mini", "gb", "tb", "seri", "series"];
+const MODEL_HINT_TERMS = [
+  "ultra",
+  "pro",
+  "max",
+  "plus",
+  "mini",
+  "gb",
+  "tb",
+  "seri",
+  "series",
+  "fold",
+  "flip",
+  "note",
+];
+const GENERIC_QUERY_TOKENS = new Set([
+  ...KNOWN_BRAND_HINTS,
+  "galaxy",
+  "phone",
+  "smartphone",
+  "dien",
+  "thoai",
+  "series",
+  "seri",
+]);
 
 function cleanupOldSessions() {
   const now = Date.now();
@@ -120,6 +143,149 @@ function getEffectivePrice(product) {
   }
 
   return originalPrice > 0 ? originalPrice : 0;
+}
+
+function toNumberOrNull(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function normalizeHintValue(value) {
+  const normalized = normalizeText(value);
+  return normalized || "";
+}
+
+function extractJsonObjectFromText(text) {
+  const raw = String(text || "").trim();
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start === -1 || end === -1 || end <= start) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(raw.slice(start, end + 1));
+    } catch (nestedError) {
+      return null;
+    }
+  }
+}
+
+async function maybeParseQueryWithLlm(message) {
+  const llmEnabled = String(process.env.CHATBOT_LLM_ENABLED || "").toLowerCase() === "true";
+  const parserEnabled =
+    String(process.env.CHATBOT_LLM_QUERY_PARSER_ENABLED || "true").toLowerCase() === "true";
+  const apiUrl = String(process.env.CHATBOT_LLM_API_URL || "").trim();
+  const apiKey = String(process.env.CHATBOT_LLM_API_KEY || "").trim();
+  const model = String(process.env.CHATBOT_LLM_MODEL || "gpt-4.1-mini").trim();
+
+  if (!llmEnabled || !parserEnabled || !apiUrl || !apiKey) {
+    return null;
+  }
+
+  const isGemini = apiUrl.includes("generativelanguage.googleapis.com");
+  const prompt = [
+    "Extract shopping intent as strict JSON only.",
+    "Return one JSON object with keys:",
+    "intent, brand, series, model, product_line, storage, ram, price_min, price_max, confidence.",
+    "Use null for unknown values.",
+    "Do not include markdown or explanation.",
+    `User message: ${String(message || "")}`,
+  ].join("\n");
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const response = await (async () => {
+      if (isGemini) {
+        const endpoint = apiUrl.includes(":generateContent")
+          ? apiUrl
+          : `${apiUrl.replace(/\/$/, "")}/v1beta/models/${model}:generateContent`;
+        const delimiter = endpoint.includes("?") ? "&" : "?";
+        const requestUrl = `${endpoint}${delimiter}key=${encodeURIComponent(apiKey)}`;
+
+        return fetch(requestUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: prompt }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0,
+            },
+          }),
+        });
+      }
+
+      return fetch(`${apiUrl.replace(/\/$/, "")}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model,
+          temperature: 0,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+    })();
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    const content = isGemini
+      ? (data?.candidates || [])
+          .flatMap((candidate) => candidate?.content?.parts || [])
+          .map((part) => String(part?.text || "").trim())
+          .filter(Boolean)
+          .join("\n")
+      : data?.choices?.[0]?.message?.content;
+
+    const parsed = extractJsonObjectFromText(content);
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+
+    return {
+      intent: String(parsed.intent || "").trim() || null,
+      brand: normalizeHintValue(parsed.brand),
+      series: normalizeHintValue(parsed.series),
+      model: normalizeHintValue(parsed.model),
+      productLine: normalizeHintValue(parsed.product_line),
+      storage: normalizeHintValue(parsed.storage),
+      ram: normalizeHintValue(parsed.ram),
+      priceMin: toNumberOrNull(parsed.price_min),
+      priceMax: toNumberOrNull(parsed.price_max),
+      confidence: toNumberOrNull(parsed.confidence),
+    };
+  } catch (error) {
+    return null;
+  }
 }
 
 function parseBudgetFromText(message) {
@@ -264,16 +430,43 @@ function buildCategoryConstraint(message) {
 function classifyQueryType({ normalizedMessage, informativeQueryTokens, hasNumericToken, priceConstraint }) {
   const hasBrandHint = includesAny(normalizedMessage, KNOWN_BRAND_HINTS);
   const hasModelHint = includesAny(normalizedMessage, MODEL_HINT_TERMS);
+  const hasAlphaNumericModelToken = informativeQueryTokens.some(
+    (token) => /[a-z]+\d+|\d+[a-z]+/.test(token)
+  );
 
   if (priceConstraint && informativeQueryTokens.length <= 1) {
     return "budget_search";
   }
 
-  if (informativeQueryTokens.length >= 2 && (hasNumericToken || (hasBrandHint && hasModelHint))) {
+  if (
+    informativeQueryTokens.length >= 2 &&
+    (hasNumericToken || hasAlphaNumericModelToken || (hasBrandHint && hasModelHint))
+  ) {
     return "exact_product_search";
   }
 
   return "broad_search";
+}
+
+function isStorageToken(token) {
+  return /^\d+(gb|tb)$/.test(String(token || ""));
+}
+
+function isModelAnchorToken(token) {
+  const value = String(token || "").toLowerCase();
+  if (!value || isStorageToken(value)) {
+    return false;
+  }
+
+  if (includesAny(value, ["flip", "fold", "ultra", "plus", "pro", "mini", "note"])) {
+    return true;
+  }
+
+  if (/^(s|a|m|x)\d+/.test(value)) {
+    return true;
+  }
+
+  return /[a-z]+\d+/.test(value);
 }
 
 function includesAny(text, keywords) {
@@ -751,7 +944,18 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
   );
   const hasNumericToken = queryTokens.some((token) => /^\d+$/.test(token));
   const behaviorProfile = buildBehaviorProfile(context.userBehavior);
-  const priceConstraint = parsePriceConstraint(message);
+  const llmQueryHints = options.llmQueryHints && typeof options.llmQueryHints === "object" ? options.llmQueryHints : null;
+  const parsedPriceConstraint = parsePriceConstraint(message);
+  const llmPriceConstraint =
+    llmQueryHints?.priceMin != null || llmQueryHints?.priceMax != null
+      ? {
+          minPrice: llmQueryHints?.priceMin != null ? Number(llmQueryHints.priceMin) : null,
+          maxPrice: llmQueryHints?.priceMax != null ? Number(llmQueryHints.priceMax) : null,
+          source: "llm",
+          strictUpperBound: false,
+        }
+      : null;
+  const priceConstraint = parsedPriceConstraint || llmPriceConstraint;
   const budget = priceConstraint?.maxPrice || parseBudgetFromText(message);
   const categoryConstraint = buildCategoryConstraint(message);
 
@@ -761,7 +965,7 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
 
   const rawProducts = await Product.find(dbFilter)
     .select(
-      "_id name price finalPrice discountPercent description category image averageRating totalRatings totalViews stock"
+      "_id name brand series model variant sku slug price finalPrice discountPercent description category image averageRating totalRatings totalViews stock"
     )
     .limit(260)
     .lean();
@@ -790,6 +994,9 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
   const shouldUseStrictNameFilter =
     queryType === "exact_product_search" && informativeQueryTokens.length > 0 && (hasNumericToken || hasKnownBrandHint);
 
+  const modelSpecificTokens = informativeQueryTokens.filter((token) => !GENERIC_QUERY_TOKENS.has(token));
+  const anchorModelTokens = modelSpecificTokens.filter((token) => isModelAnchorToken(token));
+
   if (shouldUseStrictNameFilter) {
     const hardNameMatches = products.filter((item) => {
       const normalizedName = normalizeText(item.name);
@@ -797,14 +1004,65 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
         (count, token) => count + (normalizedName.includes(token) ? 1 : 0),
         0
       );
+      const modelTokenHits = modelSpecificTokens.reduce(
+        (count, token) => count + (normalizedName.includes(token) ? 1 : 0),
+        0
+      );
+      const anchorTokenHits = anchorModelTokens.reduce(
+        (count, token) => count + (normalizedName.includes(token) ? 1 : 0),
+        0
+      );
       const numericMatched =
         numericTokens.length === 0 || numericTokens.some((token) => normalizedName.includes(token));
+
+      if (modelSpecificTokens.length > 0 && modelTokenHits === 0) {
+        return false;
+      }
+
+      if (anchorModelTokens.length > 0 && anchorTokenHits === 0) {
+        return false;
+      }
 
       return tokenOverlap >= 1 && numericMatched;
     });
 
     if (hardNameMatches.length > 0) {
       products = hardNameMatches;
+    }
+  }
+
+  if (llmQueryHints) {
+    const brandHint = normalizeHintValue(llmQueryHints.brand);
+    const seriesHint = normalizeHintValue(llmQueryHints.series || llmQueryHints.productLine);
+    const modelHint = normalizeHintValue(llmQueryHints.model);
+
+    const constrainedByHints = products.filter((item) => {
+      const normalizedName = normalizeText(item.name);
+      const normalizedBrand = normalizeText(item.brand);
+      const normalizedSeries = normalizeText(item.series);
+      const normalizedModel = normalizeText(item.model);
+      const normalizedVariant = normalizeText(item.variant);
+
+      if (brandHint && !(normalizedBrand.includes(brandHint) || normalizedName.includes(brandHint))) {
+        return false;
+      }
+
+      if (seriesHint && !(normalizedSeries.includes(seriesHint) || normalizedName.includes(seriesHint))) {
+        return false;
+      }
+
+      if (
+        modelHint &&
+        !(normalizedModel.includes(modelHint) || normalizedVariant.includes(modelHint) || normalizedName.includes(modelHint))
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (constrainedByHints.length > 0) {
+      products = constrainedByHints;
     }
   }
 
@@ -1143,6 +1401,7 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
       : await findRecommendedProducts(plainMessage, context, {
           sessionId: session.id,
           userId,
+          llmQueryHints: await maybeParseQueryWithLlm(plainMessage),
         });
 
   const shouldUseLlm = recommendedProducts.length > 0;

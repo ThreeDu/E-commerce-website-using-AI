@@ -29,6 +29,7 @@
     "start": "concurrently \"npm run server\" \"npm run client\"",
     "client": "react-scripts start",
     "server": "nodemon server/index.js",
+    "backfill:product-keys": "node server/scripts/backfillProductStructuredFields.js",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
