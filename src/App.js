@@ -3,6 +3,7 @@ import "./css/admin/forms.css";
 import "./css/admin/theme.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import ChatbotWidget from "./components/ChatbotWidget";
 import StatusNotificationCenter from "./components/StatusNotificationCenter";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -237,6 +238,7 @@ function App() {
             />
             <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              <ChatbotWidget />
               <Footer />
             </div>
           </BrowserRouter>

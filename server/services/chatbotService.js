@@ -38,6 +38,9 @@ const DEFAULT_PRICE_TERMS = [
   "trieu",
 ];
 
+const KNOWN_BRAND_HINTS = ["iphone", "samsung", "xiaomi", "oppo", "vivo", "realme", "macbook", "ipad"];
+const MODEL_HINT_TERMS = ["ultra", "pro", "max", "plus", "mini", "gb", "tb", "seri", "series"];
+
 function cleanupOldSessions() {
   const now = Date.now();
   for (const [sessionId, session] of sessionStore.entries()) {
@@ -76,6 +79,7 @@ function safeObjectId(id) {
 function normalizeText(value) {
   return String(value || "")
     .toLowerCase()
+    .replace(/đ/g, "d")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9\s]/g, " ")
@@ -255,6 +259,21 @@ function buildCategoryConstraint(message) {
   }
 
   return "";
+}
+
+function classifyQueryType({ normalizedMessage, informativeQueryTokens, hasNumericToken, priceConstraint }) {
+  const hasBrandHint = includesAny(normalizedMessage, KNOWN_BRAND_HINTS);
+  const hasModelHint = includesAny(normalizedMessage, MODEL_HINT_TERMS);
+
+  if (priceConstraint && informativeQueryTokens.length <= 1) {
+    return "budget_search";
+  }
+
+  if (informativeQueryTokens.length >= 2 && (hasNumericToken || (hasBrandHint && hasModelHint))) {
+    return "exact_product_search";
+  }
+
+  return "broad_search";
 }
 
 function includesAny(text, keywords) {
@@ -676,6 +695,12 @@ async function getPurchaseMapByProductIds(productIds = []) {
 function buildRecommendationReason(item) {
   const reasons = [];
 
+  if (item.exactMatch) {
+    reasons.push("khop chinh xac ten san pham");
+  } else if (item.fullModelMatch) {
+    reasons.push("khop model gan dung");
+  }
+
   if (item.matched.length > 0) {
     reasons.push(`khop nhu cau: ${item.matched.join(", ")}`);
   }
@@ -753,19 +778,17 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
 
   const normalizedMessage = normalizeText(message);
   const numericTokens = queryTokens.filter((token) => /^\d+$/.test(token));
-  const hasKnownBrandHint = includesAny(normalizedMessage, [
-    "iphone",
-    "samsung",
-    "xiaomi",
-    "oppo",
-    "vivo",
-    "realme",
-    "macbook",
-    "ipad",
-  ]);
+  const hasKnownBrandHint = includesAny(normalizedMessage, KNOWN_BRAND_HINTS);
+
+  const queryType = classifyQueryType({
+    normalizedMessage,
+    informativeQueryTokens,
+    hasNumericToken,
+    priceConstraint,
+  });
 
   const shouldUseStrictNameFilter =
-    informativeQueryTokens.length > 0 && (hasNumericToken || hasKnownBrandHint);
+    queryType === "exact_product_search" && informativeQueryTokens.length > 0 && (hasNumericToken || hasKnownBrandHint);
 
   if (shouldUseStrictNameFilter) {
     const hardNameMatches = products.filter((item) => {
@@ -831,11 +854,20 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
 
   const rankedCandidates = products
     .map((product) => {
+      const normalizedName = normalizeText(product.name);
       const nameTokens = new Set(tokenize(product.name));
       const nameOverlap = informativeQueryTokens.reduce(
         (count, token) => count + (nameTokens.has(token) ? 1 : 0),
         0
       );
+      const exactMatch = normalizedName === normalizedMessage;
+      const fullModelMatch =
+        normalizedMessage.length >= 8 &&
+        (normalizedName.includes(normalizedMessage) || normalizedMessage.includes(normalizedName));
+      const allNumericMatched =
+        numericTokens.length === 0 || numericTokens.every((token) => normalizedName.includes(token));
+      const queryCoverage =
+        informativeQueryTokens.length > 0 ? nameOverlap / informativeQueryTokens.length : 0;
       const totalPurchases = purchaseMap.get(String(product._id)) || 0;
       const knnScore = Number(knnScores.get(String(product._id)) || 0);
       const ltr = rankWithLtr({
@@ -847,12 +879,31 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
         totalPurchases,
       });
 
+      let hardMatchOverride = 0;
+      if (queryType === "exact_product_search") {
+        if (exactMatch) {
+          hardMatchOverride = 1000;
+        } else if (fullModelMatch && allNumericMatched) {
+          hardMatchOverride = 800;
+        } else if (queryCoverage >= 0.7 && allNumericMatched) {
+          hardMatchOverride = 500;
+        } else if (queryCoverage >= 0.45 && allNumericMatched) {
+          hardMatchOverride = 200;
+        }
+      }
+
       return {
         ...product,
         totalPurchases,
         knnScore,
-        ltrScore: ltr.ltrScore,
+        ltrScore:
+          ltr.ltrScore +
+          (shouldUseStrictNameFilter ? queryCoverage * 0.35 + Math.min(0.12, nameOverlap * 0.02) : 0) +
+          hardMatchOverride,
         nameOverlap,
+        queryCoverage,
+        exactMatch,
+        fullModelMatch,
         priceDelta: Math.abs(getEffectivePrice(product) - Number(budget || 0)),
         matched: ltr.matched,
       };
@@ -878,14 +929,32 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
   const shouldPrioritizeNameMatch =
     informativeQueryTokens.length > 0 && (maxNameOverlap >= 2 || (hasNumericToken && maxNameOverlap >= 1));
 
+  const overlapThreshold =
+    informativeQueryTokens.length >= 4
+      ? Math.max(2, maxNameOverlap - 1)
+      : Math.min(2, maxNameOverlap);
+
   const nameFilteredCandidates = shouldPrioritizeNameMatch
-    ? rankedCandidates.filter((item) => Number(item.nameOverlap || 0) >= Math.min(2, maxNameOverlap))
+    ? rankedCandidates.filter((item) => Number(item.nameOverlap || 0) >= overlapThreshold)
     : rankedCandidates;
+
+  const dedupedCandidates = [];
+  const seenCandidateKeys = new Set();
+
+  nameFilteredCandidates.forEach((item) => {
+    const candidateKey = `${normalizeText(item.name)}|${getEffectivePrice(item)}`;
+    if (seenCandidateKeys.has(candidateKey)) {
+      return;
+    }
+
+    seenCandidateKeys.add(candidateKey);
+    dedupedCandidates.push(item);
+  });
 
   // Nếu truy vấn thiên về ngân sách/ngữ cảnh chung khiến semantic thấp,
   // vẫn trả về top candidate hợp lệ từ DB thay vì báo không tìm thấy.
-  const pickedCandidates = nameFilteredCandidates.filter((item) => item.ltrScore > 0.06);
-  const finalCandidates = (pickedCandidates.length > 0 ? pickedCandidates : nameFilteredCandidates)
+  const pickedCandidates = dedupedCandidates.filter((item) => item.ltrScore > 0.06);
+  const finalCandidates = (pickedCandidates.length > 0 ? pickedCandidates : dedupedCandidates)
     .slice(0, 5)
     .map((item) => {
       const sellingPrice = getEffectivePrice(item);
