@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
+import { trackEvent } from "../services/analyticsService";
 import "../css/profile.css";
 
 function IconOrders() {
@@ -155,6 +156,8 @@ function UserDashboard() {
     }
 
     try {
+      const removedItem = wishlist.find((item) => String(item?._id) === String(productId));
+
       const response = await fetch(`/api/auth/wishlist/${productId}`, {
         method: "DELETE",
         headers: {
@@ -169,6 +172,15 @@ function UserDashboard() {
       }
 
       setWishlist(Array.isArray(data?.wishlist) ? data.wishlist : []);
+      trackEvent({
+        eventName: "wishlist_remove",
+        token: auth?.token,
+        metadata: {
+          productId: String(productId),
+          productName: String(removedItem?.name || ""),
+          category: String(removedItem?.category || ""),
+        },
+      });
       success("Đã xóa sản phẩm khỏi danh sách yêu thích.", { title: "Yêu thích" });
     } catch (error) {
       error("Lỗi kết nối đến máy chủ.", { title: "Yêu thích" });

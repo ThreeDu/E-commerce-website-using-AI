@@ -16,6 +16,7 @@ const CHART_POWER_SCALE = 0.72;
 const CHECKOUT_VISUAL_LIFT = 6;
 const CHART_STROKE_WIDTH = 1.4;
 const CHART_POINT_RADIUS = 1.2;
+const AUTO_REFRESH_MS = 20000;
 
 function formatPercent(value) {
   return `${Number(value || 0).toFixed(2)}%`;
@@ -50,6 +51,18 @@ function AdminAnalyticsPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!auth?.token) {
+      return undefined;
+    }
+
+    const intervalId = setInterval(() => {
+      loadData();
+    }, AUTO_REFRESH_MS);
+
+    return () => clearInterval(intervalId);
+  }, [auth?.token, loadData]);
 
   const summary = useMemo(() => payload?.summary || {}, [payload]);
   const series = useMemo(() => (Array.isArray(payload?.series) ? payload.series : []), [payload]);

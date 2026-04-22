@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
+import { trackEvent } from "../services/analyticsService";
 
 function getStatusInfo(order) {
   const status = String(order?.status || "").trim() || (order?.isDelivered ? "delivered" : "pending");
@@ -128,6 +129,18 @@ function OrderDetailPage() {
       setOrder(data.order);
       setShowCancelModal(false);
       setCancelReason("");
+      trackEvent({
+        eventName: "order_cancel",
+        token: auth?.token,
+        metadata: {
+          orderId: String(data?.order?._id || id),
+          reason: trimmedReason,
+          totalPrice: Number(data?.order?.totalPrice || 0),
+          itemCount: Array.isArray(data?.order?.orderItems)
+            ? data.order.orderItems.reduce((sum, item) => sum + Number(item?.quantity || 0), 0)
+            : 0,
+        },
+      });
       success("Đơn hàng đã được hủy thành công.", { title: "Hủy đơn hàng" });
     } catch (submitError) {
       notifyError("Không thể kết nối tới máy chủ.", { title: "Hủy đơn hàng" });
