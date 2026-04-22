@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
+import { trackEvent } from "../services/analyticsService";
 import "../css/shop-experience.css";
 
 function getProductImageSrc(product) {
@@ -80,6 +81,17 @@ function ProductDetailPage() {
     }
 
     addToCart({ ...product, id: product._id });
+    trackEvent({
+      eventName: "add_to_cart",
+      token: auth?.token,
+      metadata: {
+        productId: String(product._id),
+        productName: String(product.name || ""),
+        category: String(product.category || ""),
+        quantity: 1,
+        price: Number(product.finalPrice || product.price || 0),
+      },
+    });
   };
 
   
@@ -94,6 +106,16 @@ function ProductDetailPage() {
         if (response.ok) {
           const data = await response.json();
           setProduct(data);
+          trackEvent({
+            eventName: "product_view",
+            token: auth?.token,
+            metadata: {
+              productId: String(data?._id || id),
+              productName: String(data?.name || ""),
+              category: String(data?.category || ""),
+              price: Number(data?.finalPrice || data?.price || 0),
+            },
+          });
         }
       } catch (error) {
         console.error("Lỗi khi tải chi tiết sản phẩm:", error);
@@ -102,7 +124,7 @@ function ProductDetailPage() {
       }
     };
     fetchProduct();
-  }, [id]);
+  }, [auth?.token, id]);
 
   useEffect(() => {
     const trackView = async () => {
@@ -318,6 +340,16 @@ function ProductDetailPage() {
           : `Đã xóa ${productName} khỏi danh sách yêu thích.`,
         { title: "Yêu thích" }
       );
+
+      trackEvent({
+        eventName: existed ? "wishlist_add" : "wishlist_remove",
+        token: auth?.token,
+        metadata: {
+          productId: String(product._id),
+          productName: String(productName),
+          category: String(product.category || ""),
+        },
+      });
     } catch (error) {
       console.error("Lỗi cập nhật wishlist:", error);
       notifyError("Không thể kết nối đến máy chủ.", { title: "Yêu thích" });

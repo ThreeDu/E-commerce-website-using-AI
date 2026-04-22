@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
+import { trackEvent } from "../services/analyticsService";
 import "../css/shop-experience.css";
 
 function getProductImageSrc(product) {
@@ -378,6 +379,17 @@ function ProductsPage() {
     }
 
     addToCart({ ...product, id: product._id });
+    trackEvent({
+      eventName: "add_to_cart",
+      token: auth?.token,
+      metadata: {
+        productId: String(product._id),
+        productName: String(product.name || ""),
+        category: String(product.category || ""),
+        quantity: 1,
+        price: Number(product.finalPrice || product.price || 0),
+      },
+    });
   };
 
   const handleToggleWishlist = async (productId) => {
@@ -426,6 +438,15 @@ function ProductsPage() {
           : `Đã xóa ${productName} khỏi danh sách yêu thích.`,
         { title: "Yêu thích" }
       );
+
+      trackEvent({
+        eventName: isNowWishlisted ? "wishlist_add" : "wishlist_remove",
+        token: auth?.token,
+        metadata: {
+          productId: String(productId),
+          productName: String(productName),
+        },
+      });
     } catch (error) {
       console.error("Lỗi cập nhật wishlist:", error);
       notifyError("Không thể kết nối đến máy chủ.", { title: "Yêu thích" });

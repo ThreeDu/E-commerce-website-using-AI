@@ -31,6 +31,7 @@ import AdminEditDiscountPage from "./pages/admin/discount/AdminEditDiscountPage"
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 import AdminSystemLogsPage from "./pages/admin/AdminSystemLogsPage";
 import AdminNotificationsPage from "./pages/admin/AdminNotificationsPage";
+import AdminAnalyticsPage from "./pages/admin/AdminAnalyticsPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
 import UserDashboard from "./pages/UserDashboard";
@@ -207,6 +208,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminNotificationsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/analytics"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminAnalyticsPage />
                 </ProtectedRoute>
               }
             />

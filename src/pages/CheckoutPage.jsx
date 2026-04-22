@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
+import { trackEvent } from "../services/analyticsService";
 
 function CheckoutPage() {
   const { cart, clearCart } = useCart();
@@ -166,6 +167,20 @@ function CheckoutPage() {
       });
 
       if (response.ok) {
+        trackEvent({
+          eventName: "checkout_success",
+          token: auth?.token,
+          metadata: {
+            totalPrice: Number(finalTotal || 0),
+            originalSubtotal: Number(totalPrice || 0),
+            discountAmount: Number(discountAmount || 0),
+            itemCount: cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+            productCount: cart.length,
+            paymentMethod: String(formData.paymentMethod || ""),
+            discountCode: String(couponInfo?.coupon?.code || ""),
+          },
+        });
+
         success(`Cảm ơn ${formData.fullName} đã mua sắm tại AI Shop.`, {
           title: "Đặt hàng thành công",
         });

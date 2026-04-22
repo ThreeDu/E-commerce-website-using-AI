@@ -5,6 +5,7 @@ import {
   faBell,
   faBoxOpen,
   faCartShopping,
+  faChartLine,
   faFileLines,
   faGaugeHigh,
   faTags,
@@ -129,6 +130,10 @@ function Header() {
             <NavLink to="/admin/notifications" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}> 
               <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faBell} /></span>
               <span className="admin-sidebar-link-title">Trung tâm thông báo</span>
+            </NavLink>
+            <NavLink to="/admin/analytics" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
+              <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faChartLine} /></span>
+              <span className="admin-sidebar-link-title">Analytics Funnel</span>
             </NavLink>
             <NavLink to="/admin/categories" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
               <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faTableCellsLarge} /></span>

@@ -37,7 +37,9 @@ const listOrders = async (req, res) => {
 
 const getOrderById = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).populate("user", "_id name email");
+    const order = await Order.findById(req.params.id)
+      .populate("user", "_id name email")
+      .populate("orderItems.product", "_id name image imageUrl");
     if (!order) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng." });
     }
