@@ -399,7 +399,7 @@ function AdminDashboard() {
             </p>
           </div>
           <div className="dashboard-header-actions">
-            <span className="dashboard-badge">Live Data</span>
+            <span className="dashboard-badge">Dữ liệu trực tuyến</span>
             <button
               type="button"
               className="dashboard-refresh-btn"

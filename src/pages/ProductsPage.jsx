@@ -462,16 +462,6 @@ function ProductsPage() {
           <aside className="shopx-panel shopx-panel--sticky">
             <h3 className="shopx-filter-title">Bộ lọc</h3>
             <div className="shopx-field">
-              <input
-                className="shopx-input"
-                type="text"
-                placeholder="Tìm kiếm sản phẩm..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="shopx-field">
               <h4 style={{ margin: 0 }}>Sắp xếp</h4>
               <select className="shopx-select" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
                 <option value="best-selling">Bán chạy nhất</option>

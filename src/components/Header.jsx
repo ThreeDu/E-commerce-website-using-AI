@@ -48,6 +48,24 @@ function IconLogout() {
   );
 }
 
+function getProductImageSrc(product) {
+  const rawValue = String(product?.image || product?.imageUrl || "").trim();
+  if (!rawValue) {
+    return "/placeholder.svg";
+  }
+
+  if (
+    rawValue.startsWith("http://") ||
+    rawValue.startsWith("https://") ||
+    rawValue.startsWith("data:image/") ||
+    rawValue.startsWith("/")
+  ) {
+    return rawValue;
+  }
+
+  return `/${rawValue.replace(/^\/+/, "")}`;
+}
+
 function Header() {
   const { auth, logout } = useAuth();
   const { cart } = useCart();
@@ -58,7 +76,11 @@ function Header() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [productIndex, setProductIndex] = useState([]);
+  const [productSuggestions, setProductSuggestions] = useState([]);
+  const [isSuggestOpen, setIsSuggestOpen] = useState(false);
   const accountMenuRef = useRef(null);
+  const searchWrapRef = useRef(null);
 
   // Tính tổng số lượng sản phẩm có trong giỏ hàng
   const totalItems = cart ? cart.reduce((sum, item) => sum + item.quantity, 0) : 0;
@@ -78,6 +100,7 @@ function Header() {
   useEffect(() => {
     setIsSidebarOpen(false);
     setIsAccountMenuOpen(false);
+    setIsSuggestOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -96,6 +119,59 @@ function Header() {
       document.removeEventListener("mousedown", handleOutsideClick);
     };
   }, []);
+
+  useEffect(() => {
+    const handleOutsideSearch = (event) => {
+      if (!searchWrapRef.current) {
+        return;
+      }
+
+      if (!searchWrapRef.current.contains(event.target)) {
+        setIsSuggestOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideSearch);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideSearch);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isAdminArea) {
+      return;
+    }
+
+    const loadProductIndex = async () => {
+      try {
+        const response = await fetch("/api/products");
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+        setProductIndex(Array.isArray(data) ? data : []);
+      } catch (error) {
+        // Silent fail to avoid blocking header.
+      }
+    };
+
+    loadProductIndex();
+  }, [isAdminArea]);
+
+  useEffect(() => {
+    const keyword = String(searchKeyword || "").trim().toLowerCase();
+    if (!keyword) {
+      setProductSuggestions([]);
+      return;
+    }
+
+    const matches = productIndex.filter((product) =>
+      String(product?.name || "").toLowerCase().includes(keyword)
+    );
+
+    setProductSuggestions(matches.slice(0, 6));
+  }, [productIndex, searchKeyword]);
 
   if (isAdminArea) {
     return (
@@ -133,7 +209,7 @@ function Header() {
             </NavLink>
             <NavLink to="/admin/analytics" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
               <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faChartLine} /></span>
-              <span className="admin-sidebar-link-title">Analytics Funnel</span>
+              <span className="admin-sidebar-link-title">Phễu phân tích</span>
             </NavLink>
             <NavLink to="/admin/categories" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
               <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faTableCellsLarge} /></span>
@@ -188,43 +264,89 @@ function Header() {
       return;
     }
 
+    setIsSuggestOpen(false);
     navigate(`/products?keyword=${encodeURIComponent(keyword)}`);
+  };
+
+  const handleSuggestionClick = (productId) => {
+    setIsSuggestOpen(false);
+    setSearchKeyword("");
+    navigate(`/products/${productId}`);
   };
 
   return (
     <header className="site-header">
       <div className="container nav-wrap">
-        <Link to="/" className="brand-link" aria-label="AI Shop home">
-          <h1 className="brand">AI Shop</h1>
+        <Link to="/" className="brand-link" aria-label="Trang chủ Tech Shop">
+          <h1 className="brand">Tech Shop</h1>
         </Link>
 
-        <nav className="nav-menu" aria-label="Main navigation">
-          <Link to="/">Home</Link>
-          <Link to="/products">Shop</Link>
-          <Link to="/about">About</Link>
-          <Link to="/contract">Contract</Link>
+        <nav className="nav-menu" aria-label="Điều hướng chính">
+          <Link to="/">Trang chủ</Link>
+          <Link to="/products">Sản phẩm</Link>
+          <Link to="/about">Giới thiệu</Link>
+          <Link to="/contract">Liên hệ</Link>
         </nav>
 
-        <form className="nav-search" onSubmit={handleSearchSubmit}>
-          <input
-            type="search"
-            value={searchKeyword}
-            onChange={(event) => setSearchKeyword(event.target.value)}
-            placeholder="Search products"
-            aria-label="Search products"
-          />
-          <button type="submit">Search</button>
-        </form>
+        <div className="nav-search-wrap" ref={searchWrapRef}>
+          <form className="nav-search" onSubmit={handleSearchSubmit}>
+            <input
+              type="search"
+              value={searchKeyword}
+              onChange={(event) => {
+                setSearchKeyword(event.target.value);
+                setIsSuggestOpen(true);
+              }}
+              onFocus={() => setIsSuggestOpen(true)}
+              placeholder="Tìm kiếm sản phẩm"
+              aria-label="Tìm kiếm sản phẩm"
+            />
+            <button type="submit">Tìm</button>
+          </form>
+
+          {isSuggestOpen && searchKeyword.trim() ? (
+            <div className="nav-search-suggestions" role="listbox">
+              {productSuggestions.length === 0 ? (
+                <div className="nav-search-empty">Không tìm thấy sản phẩm phù hợp.</div>
+              ) : (
+                productSuggestions.map((product) => (
+                  <button
+                    key={product._id}
+                    type="button"
+                    className="nav-search-item"
+                    onClick={() => handleSuggestionClick(product._id)}
+                  >
+                    <span className="nav-search-item-main">
+                      <img
+                        src={getProductImageSrc(product)}
+                        alt={product.name}
+                        className="nav-search-item-image"
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = "/placeholder.svg";
+                        }}
+                      />
+                      <span className="nav-search-item-name">{product.name}</span>
+                    </span>
+                    <span className="nav-search-item-price">
+                      {Number(product.finalPrice || product.price || 0).toLocaleString("vi-VN")} đ
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          ) : null}
+        </div>
 
         <div className="nav-actions">
-          <Link to="/cart" className="icon-action" aria-label="Cart">
+          <Link to="/cart" className="icon-action" aria-label="Giỏ hàng">
             <IconCart />
-            <span>Cart</span>
+            <span>Giỏ hàng</span>
             {totalItems > 0 ? <span className="cart-count">{totalItems}</span> : null}
           </Link>
 
           {!auth ? (
-            <Link to="/login" className="auth-cta">Login</Link>
+            <Link to="/login" className="auth-cta">Đăng nhập</Link>
           ) : (
             <div className="account-dropdown" ref={accountMenuRef}>
               <button
@@ -239,23 +361,23 @@ function Header() {
                   <span className="layer layer-middle" />
                   <span className="layer layer-front">{String(auth?.user?.name || "T").slice(0, 1).toUpperCase()}</span>
                 </span>
-                <span className="account-label">Account</span>
+                <span className="account-label">Tài khoản</span>
                 <span className="caret">▾</span>
               </button>
 
               <div className={`account-dropdown-menu ${isAccountMenuOpen ? "open" : ""}`} role="menu">
                 <Link to="/profile" className="account-menu-item" role="menuitem">
                   <span className="icon-wrap"><IconProfile /></span>
-                  <span>My Profile</span>
+                  <span>Hồ sơ của tôi</span>
                 </Link>
                 <Link to="/order-history" className="account-menu-item" role="menuitem">
                   <span className="icon-wrap"><IconOrder /></span>
-                  <span>My Orders</span>
+                  <span>Đơn hàng của tôi</span>
                 </Link>
                 <div className="account-menu-divider" aria-hidden="true" />
                 <button type="button" className="account-menu-item logout-item" role="menuitem" onClick={logout}>
                   <span className="icon-wrap"><IconLogout /></span>
-                  <span>Logout</span>
+                  <span>Đăng xuất</span>
                 </button>
               </div>
             </div>

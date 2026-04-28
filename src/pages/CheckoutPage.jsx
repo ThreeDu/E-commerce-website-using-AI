@@ -181,7 +181,7 @@ function CheckoutPage() {
           },
         });
 
-        success(`Cảm ơn ${formData.fullName} đã mua sắm tại AI Shop.`, {
+        success(`Cảm ơn ${formData.fullName} đã mua sắm tại Tech Shop.`, {
           title: "Đặt hàng thành công",
         });
         clearCart(); // Làm sạch giỏ hàng

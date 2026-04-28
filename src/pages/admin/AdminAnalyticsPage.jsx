@@ -135,7 +135,7 @@ function AdminAnalyticsPage() {
       <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading}>
         <div className="dashboard-header-row">
           <div>
-            <h2>Analytics Funnel</h2>
+            <h2>Phễu phân tích</h2>
             <p className="dashboard-subtitle">
               Theo dõi hành trình chuyển đổi từ xem sản phẩm đến thanh toán thành công.
             </p>
@@ -169,22 +169,22 @@ function AdminAnalyticsPage() {
           <article className="analytics-metric-card accent">
             <span>Thêm giỏ hàng</span>
             <strong>{Number(summary.addToCart || 0).toLocaleString("vi-VN")}</strong>
-            <small>Tỷ lệ View → Cart: {formatPercent(summary.viewToCartRate)}</small>
+            <small>Tỷ lệ Xem → Giỏ: {formatPercent(summary.viewToCartRate)}</small>
           </article>
           <article className="analytics-metric-card success">
             <span>Thanh toán thành công</span>
             <strong>{Number(summary.checkoutSuccess || 0).toLocaleString("vi-VN")}</strong>
-            <small>Tỷ lệ View → Checkout: {formatPercent(summary.viewToCheckoutRate)}</small>
+            <small>Tỷ lệ Xem → Thanh toán: {formatPercent(summary.viewToCheckoutRate)}</small>
           </article>
         </div>
 
         <div className="analytics-kpi-strip">
           <div>
-            <span>Cart → Checkout</span>
+            <span>Giỏ → Thanh toán</span>
             <strong>{formatPercent(summary.cartToCheckoutRate)}</strong>
           </div>
           <div>
-            <span>Wishlist Adds</span>
+            <span>Lượt thêm yêu thích</span>
             <strong>{Number(summary.wishlistAdds || 0).toLocaleString("vi-VN")}</strong>
           </div>
           <div>
@@ -259,8 +259,8 @@ function AdminAnalyticsPage() {
                   <th>Lượt xem</th>
                   <th>Thêm giỏ</th>
                   <th>Yêu thích</th>
-                  <th>Checkout thành công</th>
-                  <th>View → Checkout</th>
+                  <th>Thanh toán thành công</th>
+                  <th>Xem → Thanh toán</th>
                 </tr>
               </thead>
               <tbody>

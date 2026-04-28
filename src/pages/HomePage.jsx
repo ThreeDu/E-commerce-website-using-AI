@@ -90,7 +90,31 @@ function HomePage() {
         const response = await fetch("/api/products");
         if (response.ok) {
           const data = await response.json();
-          setFeaturedProducts(data.slice(0, 4)); // Lấy 4 sản phẩm đầu tiên
+          const rankedProducts = [...data].sort((left, right) => {
+            const leftPurchases = Number(left?.totalPurchases || 0);
+            const rightPurchases = Number(right?.totalPurchases || 0);
+            if (rightPurchases !== leftPurchases) {
+              return rightPurchases - leftPurchases;
+            }
+
+            const leftViews = Number(left?.totalViews || 0);
+            const rightViews = Number(right?.totalViews || 0);
+            if (rightViews !== leftViews) {
+              return rightViews - leftViews;
+            }
+
+            const leftRating = Number(left?.averageRating || 0);
+            const rightRating = Number(right?.averageRating || 0);
+            if (rightRating !== leftRating) {
+              return rightRating - leftRating;
+            }
+
+            const leftRatings = Number(left?.totalRatings || 0);
+            const rightRatings = Number(right?.totalRatings || 0);
+            return rightRatings - leftRatings;
+          });
+
+          setFeaturedProducts(rankedProducts.slice(0, 4));
         }
 
         const catResponse = await fetch("/api/categories");
@@ -131,7 +155,7 @@ function HomePage() {
           <p className="neo-eyebrow">Thương mại ưu tiên công nghệ</p>
           <h2>Trải nghiệm nổi bật.</h2>
           <p>
-            AI Shop mang tinh thần Neo-Brutalism: đường nét rõ ràng, độ tương phản cao và trải nghiệm mua sắm gọn, nhanh, chính xác.
+            Tech Shop mang tinh thần Neo-Brutalism: đường nét rõ ràng, độ tương phản cao và trải nghiệm mua sắm gọn, nhanh, chính xác.
           </p>
           <div className="neo-hero-actions">
             <Link to="/products" className="neo-btn neo-btn-primary">Mua ngay</Link>
