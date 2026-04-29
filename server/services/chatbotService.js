@@ -291,6 +291,10 @@ async function maybeParseQueryWithLlm(message) {
 function parseBudgetFromText(message) {
   const rawText = String(message || "");
   const text = normalizeText(message);
+  // If the user is asking for the price (e.g., "gia bao nhieu"), treat as a price question, not a budget
+  if (isAskingForPrice(text)) {
+    return null;
+  }
   if (!text) {
     return null;
   }
@@ -372,6 +376,22 @@ function parseBudgetFromText(message) {
   }
 
   return numeric;
+}
+
+function isAskingForPrice(text) {
+  if (!text) return false;
+  const t = String(text || "").toLowerCase();
+  return includesAny(t, [
+    "gia bao nhieu",
+    "gia la bao",
+    "bao nhieu tien",
+    "how much",
+    "how much is",
+    "cost bao nhieu",
+    "price",
+    "gia the nao",
+    "bao nhieu",
+  ]);
 }
 
 function parsePriceConstraint(message) {
@@ -967,7 +987,8 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
     .select(
       "_id name brand series model variant sku slug price finalPrice discountPercent description category image averageRating totalRatings totalViews stock"
     )
-    .limit(260)
+    .sort({ averageRating: -1, stock: -1 })
+    .limit(400)
     .lean();
 
   let products = categoryConstraint
@@ -1061,8 +1082,19 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
       return true;
     });
 
-    if (constrainedByHints.length > 0) {
+    const llmConfidence = Number(llmQueryHints?.confidence) || 0;
+
+    if (constrainedByHints.length > 0 && llmConfidence >= 0.75) {
+      // High-confidence LLM hints: apply full constraint (brand/series/model)
       products = constrainedByHints;
+    } else if (constrainedByHints.length > 0 && llmConfidence >= 0.5) {
+      // Medium confidence: only apply brand constraint (safer fallback)
+      const brandOnlyFiltered = products.filter((item) => {
+        if (!brandHint) return true;
+        const nb = normalizeText(item.brand || "");
+        return nb.includes(brandHint) || normalizeText(item.name || "").includes(brandHint);
+      });
+      if (brandOnlyFiltered.length > 0) products = brandOnlyFiltered;
     }
   }
 
