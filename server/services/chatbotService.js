@@ -385,10 +385,6 @@ function isAskingForPrice(text) {
     "gia bao nhieu",
     "gia la bao",
     "bao nhieu tien",
-    "how much",
-    "how much is",
-    "cost bao nhieu",
-    "price",
     "gia the nao",
     "bao nhieu",
   ]);
