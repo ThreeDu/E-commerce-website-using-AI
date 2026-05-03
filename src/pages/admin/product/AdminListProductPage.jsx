@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import * as XLSX from "xlsx";
 import { useAuth } from "../../../context/AuthContext";
 import { useNotification } from "../../../context/NotificationContext";
 import { getAdminCategories } from "../../../services/admin/categoryService";
@@ -8,6 +9,16 @@ import { getErrorMessage } from "../../../utils/adminErrorUtils";
 import "../../../css/admin/products.css";
 
 const ITEMS_PER_PAGE = 8;
+const IMPORT_TEMPLATE_COLUMNS = [
+  "name",
+  "category_path",
+  "price",
+  "stock",
+  "discount_percent",
+  "description",
+  "image_url",
+];
+const IMPORT_TEMPLATE_FILE_NAME = "product_import_export.xlsx";
 
 function getProductImageSrc(product) {
   const rawValue = String(product?.image || product?.imageUrl || "").trim();
@@ -490,6 +501,33 @@ function AdminListProductPage() {
     return `${Math.round((value / totalProducts) * 100)}%`;
   };
 
+  const handleExportTemplate = () => {
+    const exportRows = filteredProducts.length > 0 ? filteredProducts : products;
+    if (exportRows.length === 0) {
+      warning("Không có sản phẩm để xuất.", { title: "Sản phẩm" });
+      return;
+    }
+
+    const worksheetData = [
+      IMPORT_TEMPLATE_COLUMNS,
+      ...exportRows.map((product) => [
+        product.name || "",
+        product.category || "",
+        Number(product.price ?? 0),
+        Number(product.stock ?? 0),
+        Number(product.discountPercent ?? 0),
+        product.description || "",
+        product.image || product.imageUrl || "",
+      ]),
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "ProductsTemplate");
+    XLSX.writeFile(workbook, IMPORT_TEMPLATE_FILE_NAME);
+    success("Đã xuất file theo template import.", { title: "Sản phẩm" });
+  };
+
   return (
     <main className="container page-content admin-products-page">
       <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading}>
@@ -500,8 +538,11 @@ function AdminListProductPage() {
           </div>
           <div className="bulk-action-buttons">
             <Link to="/admin/products/import" className="secondary-btn">
-              Import Excel
+              Nhập danh sách sản phẩm
             </Link>
+            <button type="button" className="secondary-btn" onClick={handleExportTemplate}>
+              Xuất danh sách sản phẩm
+            </button>
             <Link to="/admin/products/add" className="primary-link-btn">
               + Thêm sản phẩm
             </Link>
