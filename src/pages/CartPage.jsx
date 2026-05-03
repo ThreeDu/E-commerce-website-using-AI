@@ -1,41 +1,11 @@
 import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
-
-function getProductImageSrc(item) {
-  const rawValue = String(item?.image || item?.imageUrl || "").trim();
-  if (!rawValue) {
-    return "/placeholder.svg";
-  }
-
-  if (
-    rawValue.startsWith("http://") ||
-    rawValue.startsWith("https://") ||
-    rawValue.startsWith("data:image/") ||
-    rawValue.startsWith("/")
-  ) {
-    return rawValue;
-  }
-
-  return `/${rawValue.replace(/^\/+/, "")}`;
-}
+import { getProductImageSrc } from "../utils/productUtils";
+import { parsePrice, formatPrice } from "../utils/priceUtils";
+import "../css/cart.css";
 
 function CartPage() {
   const { cart, removeFromCart, updateQuantity } = useCart();
-
-  // Hàm chuyển đổi giá sang số để tính toán (xử lý cả chuỗi cũ và số mới từ Backend)
-  const parsePrice = (price) => {
-    if (typeof price === "number") return price;
-    if (typeof price === "string") {
-      // Xóa tất cả các ký tự không phải là số
-      return parseInt(price.replace(/\D/g, ""), 10) || 0;
-    }
-    return 0;
-  };
-
-  // Hàm định dạng số tiền VND để hiển thị lại
-  const formatPrice = (priceNum) => {
-    return priceNum.toLocaleString("vi-VN") + " đ";
-  };
 
   // Tính tổng tiền của toàn bộ giỏ hàng
   const totalPrice = cart.reduce((total, item) => {
@@ -43,70 +13,55 @@ function CartPage() {
   }, 0);
 
   return (
-    <main className="container page-content" style={{ padding: "0 20px" }}>
-      <h2 style={{ marginBottom: "24px", fontSize: "28px" }}>Giỏ hàng của bạn</h2>
+    <main className="container page-content cart-page">
+      <h2 className="cart-page__title">Giỏ hàng của bạn</h2>
 
       {cart.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 20px", backgroundColor: "#f8f9fa", borderRadius: "8px" }}>
-          <div style={{ fontSize: "48px", marginBottom: "16px" }}>🛒</div>
-          <p style={{ fontSize: "18px", marginBottom: "24px", color: "#6c757d" }}>Giỏ hàng đang trống.</p>
-          <Link
-            to="/products"
-            style={{ padding: "12px 24px", backgroundColor: "#007bff", color: "white", textDecoration: "none", borderRadius: "4px", fontWeight: "bold" }}
-          >
+        <div className="cart-empty">
+          <div className="cart-empty__icon">🛒</div>
+          <p className="cart-empty__text">Giỏ hàng đang trống.</p>
+          <Link to="/products" className="cart-empty__cta">
             Tiếp tục mua sắm
           </Link>
         </div>
       ) : (
-        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+        <div className="cart-layout">
           {/* Cột danh sách sản phẩm */}
-          <div style={{ flex: "1 1 60%", minWidth: "300px" }}>
+          <div className="cart-items-col">
             {cart.map((item) => (
-              <div
-                key={item.id}
-                style={{ display: "flex", alignItems: "center", padding: "16px", border: "1px solid #dee2e6", borderRadius: "8px", marginBottom: "16px", backgroundColor: "#fff" }}
-              >
+              <div key={item.id} className="cart-item">
                 <img
                   src={getProductImageSrc(item)}
                   alt={item.name}
-                  style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "4px", marginRight: "16px", backgroundColor: "#e9ecef" }}
+                  className="cart-item__image"
                   onError={(event) => {
                     event.currentTarget.onerror = null;
                     event.currentTarget.src = "/placeholder.svg";
                   }}
                 />
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>{item.name}</h4>
-                  <p style={{ margin: 0, color: "#dc3545", fontWeight: "bold" }}>{formatPrice(parsePrice(item.price))}</p>
+                <div className="cart-item__info">
+                  <h4 className="cart-item__name">{item.name}</h4>
+                  <p className="cart-item__price">{formatPrice(parsePrice(item.price))}</p>
                 </div>
                 
                 {/* Nút cộng trừ số lượng */}
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginRight: "24px" }}>
-                  <button 
-                    onClick={() => updateQuantity(item.id, -1)} 
-                    style={{ width: "32px", height: "32px", borderRadius: "4px", border: "1px solid #ced4da", backgroundColor: "#f8f9fa", cursor: "pointer", fontWeight: "bold" }}
-                  >
+                <div className="cart-qty">
+                  <button className="cart-qty__btn" onClick={() => updateQuantity(item.id, -1)}>
                     -
                   </button>
-                  <span style={{ fontSize: "16px", fontWeight: "500", width: "20px", textAlign: "center" }}>{item.quantity}</span>
-                  <button 
-                    onClick={() => updateQuantity(item.id, 1)} 
-                    style={{ width: "32px", height: "32px", borderRadius: "4px", border: "1px solid #ced4da", backgroundColor: "#f8f9fa", cursor: "pointer", fontWeight: "bold" }}
-                  >
+                  <span className="cart-qty__value">{item.quantity}</span>
+                  <button className="cart-qty__btn" onClick={() => updateQuantity(item.id, 1)}>
                     +
                   </button>
                 </div>
                 
                 {/* Tổng tiền của 1 sản phẩm */}
-                <div style={{ width: "120px", textAlign: "right", marginRight: "24px", fontWeight: "bold" }}>
+                <div className="cart-item__total">
                   {formatPrice(parsePrice(item.price) * item.quantity)}
                 </div>
 
                 {/* Nút Xóa */}
-                <button
-                  onClick={() => removeFromCart(item.id)}
-                  style={{ padding: "8px 12px", backgroundColor: "#ffeeba", color: "#dc3545", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}
-                >
+                <button className="cart-item__remove" onClick={() => removeFromCart(item.id)}>
                   Xóa
                 </button>
               </div>
@@ -114,19 +69,19 @@ function CartPage() {
           </div>
 
           {/* Cột tóm tắt đơn hàng (Tính tổng) */}
-          <div style={{ flex: "1 1 30%", minWidth: "280px", backgroundColor: "#f8f9fa", padding: "24px", borderRadius: "8px", height: "fit-content", border: "1px solid #dee2e6" }}>
-            <h3 style={{ marginBottom: "24px", fontSize: "20px", borderBottom: "1px solid #dee2e6", paddingBottom: "12px" }}>
+          <div className="cart-summary">
+            <h3 className="cart-summary__title">
               Tóm tắt đơn hàng
             </h3>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px", fontSize: "16px", color: "#495057" }}>
+            <div className="cart-summary__row">
               <span>Số lượng:</span>
               <span>{cart.reduce((sum, item) => sum + item.quantity, 0)} sản phẩm</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "24px", fontSize: "20px" }}>
-              <span style={{ fontWeight: "bold" }}>Tổng tiền:</span>
-              <span style={{ fontWeight: "bold", color: "#dc3545" }}>{formatPrice(totalPrice)}</span>
+            <div className="cart-summary__row--total">
+              <span>Tổng tiền:</span>
+              <span className="cart-summary__total-price">{formatPrice(totalPrice)}</span>
             </div>
-            <Link to="/checkout" style={{ display: "block", textAlign: "center", width: "100%", boxSizing: "border-box", padding: "14px", backgroundColor: "#28a745", color: "white", textDecoration: "none", borderRadius: "4px", fontSize: "16px", fontWeight: "bold", cursor: "pointer" }}>
+            <Link to="/checkout" className="cart-summary__checkout">
               Tiến hành thanh toán
             </Link>
           </div>

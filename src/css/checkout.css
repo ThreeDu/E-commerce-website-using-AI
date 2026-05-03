@@ -1,0 +1,245 @@
+/* ── Checkout Page ── */
+
+.checkout-page {
+  padding: 0 20px;
+}
+
+.checkout-page__title {
+  margin-bottom: 24px;
+  font-size: 28px;
+}
+
+/* Empty cart fallback */
+.checkout-empty {
+  text-align: center;
+  padding: 100px 20px;
+}
+
+.checkout-empty__title {
+  margin-bottom: 16px;
+}
+
+.checkout-empty__link {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+/* Layout */
+.checkout-layout {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+/* Form column */
+.checkout-form-col {
+  flex: 1 1 60%;
+  min-width: 300px;
+  background-color: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.checkout-form-col__title {
+  margin-bottom: 20px;
+  font-size: 20px;
+}
+
+/* Form error */
+.checkout-form-error {
+  margin-bottom: 16px;
+  padding: 10px;
+  border-radius: 6px;
+  background-color: #fff1f2;
+  color: #9f1239;
+  border: 1px solid #fecdd3;
+}
+
+/* Form fields */
+.checkout-field {
+  margin-bottom: 16px;
+}
+
+.checkout-field--lg {
+  margin-bottom: 24px;
+}
+
+.checkout-field__label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.checkout-field__input,
+.checkout-field__textarea,
+.checkout-field__select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #ced4da;
+  box-sizing: border-box;
+}
+
+.checkout-field__textarea {
+  resize: vertical;
+}
+
+/* Summary column */
+.checkout-summary {
+  flex: 1 1 30%;
+  min-width: 280px;
+  background-color: #f8f9fa;
+  padding: 24px;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  height: fit-content;
+}
+
+.checkout-summary__title {
+  margin-bottom: 20px;
+  font-size: 20px;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 12px;
+}
+
+/* Order items list */
+.checkout-summary__items {
+  margin-bottom: 20px;
+}
+
+.checkout-summary__item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.checkout-summary__item-qty {
+  color: #6c757d;
+}
+
+.checkout-summary__item-price {
+  font-weight: bold;
+}
+
+/* Coupon section */
+.checkout-coupon {
+  margin-bottom: 16px;
+}
+
+.checkout-coupon__label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.checkout-coupon__row {
+  display: flex;
+  gap: 8px;
+}
+
+.checkout-coupon__input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #ced4da;
+}
+
+.checkout-coupon__btn {
+  padding: 10px 14px;
+  border-radius: 4px;
+  border: none;
+  background-color: #212529;
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.checkout-coupon__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.checkout-coupon__btn:hover:not(:disabled) {
+  background-color: #343a40;
+}
+
+.checkout-coupon__applied {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #166534;
+}
+
+.checkout-coupon__remove {
+  border: none;
+  background: transparent;
+  color: #b91c1c;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.checkout-coupon__error {
+  margin-top: 8px;
+  margin-bottom: 0;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+/* Summary rows */
+.checkout-summary__row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  font-size: 16px;
+  border-top: 1px solid #dee2e6;
+  padding-top: 12px;
+}
+
+.checkout-summary__row--discount {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+
+.checkout-summary__discount-value {
+  font-weight: bold;
+  color: #16a34a;
+}
+
+.checkout-summary__row--total {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  font-size: 20px;
+}
+
+.checkout-summary__row--total span {
+  font-weight: bold;
+}
+
+.checkout-summary__total-price {
+  color: #dc3545;
+}
+
+/* Submit */
+.checkout-submit {
+  width: 100%;
+  padding: 14px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.checkout-submit:hover {
+  background-color: #0069d9;
+}

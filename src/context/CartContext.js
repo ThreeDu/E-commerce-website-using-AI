@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { useNotification } from "./NotificationContext";
 import { trackEvent } from "../services/analyticsService";
@@ -17,6 +17,14 @@ export function CartProvider({ children }) {
   const userId = auth?.user?.id || null;
   const storageKey = useMemo(() => getCartStorageKey(userId), [userId]);
 
+  // Use refs for values needed inside callbacks to avoid stale closures
+  // while keeping the callbacks themselves stable (no dependency on auth/success).
+  const authRef = useRef(auth);
+  authRef.current = auth;
+
+  const successRef = useRef(success);
+  successRef.current = success;
+
   const [cart, setCart] = useState(() => {
     try {
       const saved = localStorage.getItem(getCartStorageKey(null));
@@ -25,6 +33,8 @@ export function CartProvider({ children }) {
       return [];
     }
   });
+
+  // Reload cart when user changes (login / logout)
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey);
@@ -34,11 +44,14 @@ export function CartProvider({ children }) {
     }
   }, [storageKey]);
 
+  // Persist cart to localStorage
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(cart));
   }, [storageKey, cart]);
 
-  const addToCart = (product) => {
+  // ── Stable callbacks (never re-created) ──
+
+  const addToCart = useCallback((product) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {
@@ -50,51 +63,61 @@ export function CartProvider({ children }) {
       // Thêm mới nếu chưa có
       return [...prevCart, { ...product, quantity: 1 }];
     });
-    
-    success(`Đã thêm ${product.name} vào giỏ hàng!`, {
+
+    successRef.current(`Đã thêm ${product.name} vào giỏ hàng!`, {
       title: "Giỏ hàng",
       duration: 3000,
     });
-  };
+  }, []);
 
-  // Xóa sản phẩm khỏi giỏ hàng
-  const removeFromCart = (productId) => {
-    const removedItem = cart.find((item) => item.id === productId);
-    setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
+  const removeFromCart = useCallback((productId) => {
+    setCart((prevCart) => {
+      const removedItem = prevCart.find((item) => item.id === productId);
 
-    if (removedItem) {
-      trackEvent({
-        eventName: "remove_from_cart",
-        token: auth?.token,
-        metadata: {
-          productId: String(removedItem.id || productId),
-          productName: String(removedItem.name || ""),
-          category: String(removedItem.category || ""),
-          quantity: Number(removedItem.quantity || 1),
-          price: Number(removedItem.finalPrice || removedItem.price || 0),
-        },
-      });
+      if (removedItem) {
+        trackEvent({
+          eventName: "remove_from_cart",
+          token: authRef.current?.token,
+          metadata: {
+            productId: String(removedItem.id || productId),
+            productName: String(removedItem.name || ""),
+            category: String(removedItem.category || ""),
+            quantity: Number(removedItem.quantity || 1),
+            price: Number(removedItem.finalPrice || removedItem.price || 0),
+          },
+        });
 
-      success(`Đã xóa ${removedItem.name} khỏi giỏ hàng.`, {
-        title: "Giỏ hàng",
-        duration: 3000,
-      });
-    }
-  };
+        successRef.current(`Đã xóa ${removedItem.name} khỏi giỏ hàng.`, {
+          title: "Giỏ hàng",
+          duration: 3000,
+        });
+      }
+
+      return prevCart.filter((item) => item.id !== productId);
+    });
+  }, []);
 
   // Cập nhật số lượng sản phẩm (cộng/trừ)
-  const updateQuantity = (productId, amount) => {
-    setCart((prevCart) => 
-      prevCart.map((item) => item.id === productId ? { ...item, quantity: Math.max(1, item.quantity + amount) } : item)
+  const updateQuantity = useCallback((productId, amount) => {
+    setCart((prevCart) =>
+      prevCart.map((item) =>
+        item.id === productId ? { ...item, quantity: Math.max(1, item.quantity + amount) } : item
+      )
     );
-  };
+  }, []);
 
   // Xóa toàn bộ giỏ hàng (dùng khi đặt hàng thành công)
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setCart([]);
-  };
+  }, []);
 
-  return <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart }}>{children}</CartContext.Provider>;
+  // ── Memoize context value to prevent unnecessary re-renders ──
+  const value = useMemo(
+    () => ({ cart, addToCart, removeFromCart, updateQuantity, clearCart }),
+    [cart, addToCart, removeFromCart, updateQuantity, clearCart]
+  );
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export const useCart = () => useContext(CartContext);
