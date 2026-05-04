@@ -381,12 +381,16 @@ function parseBudgetFromText(message) {
 function isAskingForPrice(text) {
   if (!text) return false;
   const t = String(text || "").toLowerCase();
+  // Chỉ nhận diện là "hỏi giá" khi có cụm rõ ràng kèm "gia" hoặc "bao nhieu tien"
+  // Tránh: "bao nhieu san pham duoi 5 trieu" bị nhầm thành hỏi giá
   return includesAny(t, [
     "gia bao nhieu",
     "gia la bao",
     "bao nhieu tien",
     "gia the nao",
-    "bao nhieu",
+    "co gia bao",
+    "how much",
+    "cost bao nhieu",
   ]);
 }
 
@@ -574,12 +578,17 @@ async function refreshKnnCache() {
     return;
   }
 
+  // Fix: Lấy event theo thời gian (7 ngày gần đây) thay vì số lượng cố định
+  // Tránh user cũ bị đẩy ra ngoài window khi traffic cao
+  const sevenDaysAgo = new Date(Date.now() - 1000 * 60 * 60 * 24 * 7);
+
   const events = await ChatbotEvent.find({
     product: { $ne: null },
     eventType: { $in: ["view", "click", "cart", "impression"] },
+    createdAt: { $gte: sevenDaysAgo },
   })
     .sort({ createdAt: -1 })
-    .limit(MAX_EVENT_WINDOW)
+    .limit(10000) // tăng limit để không bỏ sót user cũ trong 7 ngày
     .select("sessionId user eventType product")
     .lean();
 
@@ -761,6 +770,7 @@ function buildSemanticSignal(product, queryTokens) {
   const matched = [];
 
   queryTokens.forEach((token) => {
+    // Exact match - điểm cao nhất
     if (nameSet.has(token)) {
       semanticRaw += 4;
       matched.push(token);
@@ -776,6 +786,29 @@ function buildSemanticSignal(product, queryTokens) {
     if (descSet.has(token)) {
       semanticRaw += 1.2;
       matched.push(token);
+      return;
+    }
+
+    // Fix: Prefix matching cho brand/model viết tắt (sam→samsung, iph→iphone)
+    if (token.length >= 3) {
+      const prefixMatchInName = nameTokens.find(
+        (nt) =>
+          (token.length >= 3 && nt.startsWith(token) && nt.length <= token.length + 4) ||
+          (nt.length >= 3 && token.startsWith(nt) && token.length <= nt.length + 4)
+      );
+      if (prefixMatchInName) {
+        semanticRaw += 2.5;
+        matched.push(token);
+        return;
+      }
+
+      const prefixMatchInCategory = categoryTokens.find(
+        (ct) => token.length >= 3 && ct.startsWith(token)
+      );
+      if (prefixMatchInCategory) {
+        semanticRaw += 1.8;
+        matched.push(token);
+      }
     }
   });
 
@@ -935,28 +968,20 @@ function buildRecommendationReason(item) {
 
 async function findRecommendedProducts(message, context = {}, options = {}) {
   const queryTokens = tokenize(message);
+  // Fix: Mở rộng stopword list để threshold lọc không bị sai
+  const QUERY_STOPWORDS = new Set([
+    "co", "khong", "ngan", "sach", "duoi", "tren", "toi", "da", "min", "max",
+    "gia", "mua", "san", "pham", "goi", "cho", "voi", "cai", "cac",
+    "mot", "hai", "nhung", "nay", "kia", "ban", "minh", "anh", "chi",
+    "dang", "duoc", "het", "con", "lam", "xem", "hoi", "biet",
+    "muon", "can", "tim", "kiem", "nhat", "tot", "moi", "hang",
+    "chinh", "noi", "nhap", "chinh hang",
+  ]);
   const informativeQueryTokens = queryTokens.filter(
     (token) =>
       !/^\d+$/.test(token) &&
       token.length >= 3 &&
-      ![
-        "co",
-        "khong",
-        "ngan",
-        "sach",
-        "duoi",
-        "tren",
-        "toi",
-        "da",
-        "min",
-        "max",
-        "gia",
-        "mua",
-        "san",
-        "pham",
-        "goi",
-        "y",
-      ].includes(token)
+      !QUERY_STOPWORDS.has(token)
   );
   const hasNumericToken = queryTokens.some((token) => /^\d+$/.test(token));
   const behaviorProfile = buildBehaviorProfile(context.userBehavior);
@@ -1410,6 +1435,26 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
 async function processChatMessage({ message, sessionId, context = {}, userId = null }) {
   const session = getOrCreateSession(sessionId);
   const plainMessage = String(message || "").trim();
+
+  // Fix: Làm phong phú message từ context lịch sử hội thoại
+  // Nếu user hỏi ngắn như "cái đó" hoặc "còn màu khác không", dùng history để hiểu
+  let enrichedMessage = plainMessage;
+  if (session.history.length >= 2 && plainMessage.split(" ").length <= 5) {
+    const pronouns = ["no", "cai do", "may do", "san pham do", "cai nay", "loai do", "con", "it"];
+    const normalizedMsg = normalizeText(plainMessage);
+    const hasVagueRef = pronouns.some((p) => normalizedMsg.includes(p)) ||
+      normalizedMsg.length < 15;
+
+    if (hasVagueRef) {
+      // Lấy câu trả lời gần nhất của assistant để lấy tên sản phẩm đã nhắc
+      const lastAssistant = [...session.history].reverse().find((h) => h.role === "assistant");
+      const lastUser = [...session.history].reverse().find((h) => h.role === "user");
+      if (lastUser && lastAssistant) {
+        enrichedMessage = `${plainMessage} [context: ${lastUser.content.slice(0, 80)}]`;
+      }
+    }
+  }
+
   const intent = detectIntent(plainMessage);
 
   await trackChatbotEvent({
@@ -1426,7 +1471,7 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
   const recommendedProducts =
     intent === "policy"
       ? []
-      : await findRecommendedProducts(plainMessage, context, {
+      : await findRecommendedProducts(enrichedMessage, context, {
           sessionId: session.id,
           userId,
           llmQueryHints: await maybeParseQueryWithLlm(plainMessage),
@@ -1434,7 +1479,7 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
 
   const shouldUseLlm = recommendedProducts.length > 0;
 
-  const llmReply = shouldUseLlm
+  const rawLlmReply = shouldUseLlm
     ? await maybeGenerateLlmReply({
         message: plainMessage,
         intent,
@@ -1442,6 +1487,24 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
         history: session.history,
       })
     : null;
+
+  // Fix: Response validator - kiểm tra LLM có nhắc sản phẩm ngoài danh sách không
+  let llmReply = rawLlmReply;
+  if (rawLlmReply && recommendedProducts.length > 0) {
+    const allowedNames = new Set(
+      recommendedProducts.map((p) => normalizeText(p.name))
+    );
+    const replyNormalized = normalizeText(rawLlmReply);
+    // Nếu reply có vẻ nói về sản phẩm nhưng không khớp bất kỳ sản phẩm nào → fallback
+    const hasProductMention = recommendedProducts.some((p) => {
+      const tokens = tokenize(p.name).filter((t) => t.length >= 4);
+      return tokens.some((t) => replyNormalized.includes(t));
+    });
+    if (!hasProductMention && rawLlmReply.length > 80) {
+      // LLM trả lời không liên quan đến sản phẩm trong danh sách
+      llmReply = null;
+    }
+  }
 
   const reply = llmReply || buildRuleReply(intent, recommendedProducts);
   const quickReplies = buildQuickReplies(intent);
