@@ -60,7 +60,7 @@ def extract_features_for_all_users():
     plus ``_id``, ``name``, ``email`` for identification.
     """
     db = _get_db()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     window_start = now - timedelta(days=RECENCY_WINDOW_DAYS)
     prev_window_start = now - timedelta(days=TREND_COMPARE_DAYS)
 
