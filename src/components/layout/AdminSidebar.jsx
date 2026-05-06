@@ -8,6 +8,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBell,
   faBoxOpen,
+  faBrain,
   faCartShopping,
   faChartLine,
   faFileLines,
@@ -54,6 +55,10 @@ function AdminSidebar({ isSidebarOpen, onToggleSidebar, onLogout }) {
           <NavLink to="/admin/analytics" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
             <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faChartLine} /></span>
             <span className="admin-sidebar-link-title">Phễu phân tích</span>
+          </NavLink>
+          <NavLink to="/admin/intelligence" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
+            <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faBrain} /></span>
+            <span className="admin-sidebar-link-title">Customer Intelligence</span>
           </NavLink>
           <NavLink to="/admin/categories" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
             <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faTableCellsLarge} /></span>

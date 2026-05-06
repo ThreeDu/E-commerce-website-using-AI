@@ -1,0 +1,8 @@
+flask==3.1.*
+flask-cors==5.*
+pymongo==4.12.*
+scikit-learn==1.6.*
+pandas==2.2.*
+numpy==2.*
+joblib==1.4.*
+python-dotenv==1.1.*
