@@ -18,7 +18,7 @@ const adminDiscountRoutes = require("./admin/discountRoutes");
 const adminSystemLogRoutes = require("./admin/systemLogRoutes");
 const adminOrderRoutes = require("./admin/orderRoutes");
 const adminNotificationRoutes = require("./admin/notificationRoutes");
-const adminAnalyticsRoutes = require("./admin/analyticsRoutes");
+
 const adminIntelligenceRoutes = require("./admin/intelligenceRoutes");
 
 const router = express.Router();
@@ -40,7 +40,7 @@ router.use("/admin/discounts", adminDiscountRoutes);
 router.use("/admin/orders", adminOrderRoutes);
 router.use("/admin/system-logs", adminSystemLogRoutes);
 router.use("/admin/notifications", adminNotificationRoutes);
-router.use("/admin/analytics", adminAnalyticsRoutes);
+
 router.use("/admin/intelligence", adminIntelligenceRoutes);
 
 module.exports = router;

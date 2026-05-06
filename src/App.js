@@ -44,7 +44,7 @@ const AdminEditDiscountPage = lazy(() => import("./pages/admin/discount/AdminEdi
 const AdminOrdersPage = lazy(() => import("./pages/admin/AdminOrdersPage"));
 const AdminSystemLogsPage = lazy(() => import("./pages/admin/AdminSystemLogsPage"));
 const AdminNotificationsPage = lazy(() => import("./pages/admin/AdminNotificationsPage"));
-const AdminAnalyticsPage = lazy(() => import("./pages/admin/AdminAnalyticsPage"));
+
 const AdminCustomerIntelligencePage = lazy(() => import("./pages/admin/AdminCustomerIntelligencePage"));
 
 function GuestRoute({ children }) {
@@ -229,14 +229,7 @@ function App() {
                         </ProtectedRoute>
                       }
                     />
-                    <Route
-                      path="/admin/analytics"
-                      element={
-                        <ProtectedRoute requiredRole="admin">
-                          <AdminAnalyticsPage />
-                        </ProtectedRoute>
-                      }
-                    />
+
                     <Route
                       path="/admin/intelligence"
                       element={

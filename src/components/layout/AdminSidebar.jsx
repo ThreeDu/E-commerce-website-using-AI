@@ -52,10 +52,7 @@ function AdminSidebar({ isSidebarOpen, onToggleSidebar, onLogout }) {
             <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faBell} /></span>
             <span className="admin-sidebar-link-title">Trung tâm thông báo</span>
           </NavLink>
-          <NavLink to="/admin/analytics" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
-            <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faChartLine} /></span>
-            <span className="admin-sidebar-link-title">Phễu phân tích</span>
-          </NavLink>
+
           <NavLink to="/admin/intelligence" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
             <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faBrain} /></span>
             <span className="admin-sidebar-link-title">Customer Intelligence</span>
