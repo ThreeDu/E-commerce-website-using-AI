@@ -1,5 +1,5 @@
 {
-  "trained_at": "2026-05-06T08:56:08.187600+00:00",
+  "trained_at": "2026-05-06T14:25:00.886893+00:00",
   "customer_count": 32,
   "churn_metrics": {
     "f1_mean": 1.0,
