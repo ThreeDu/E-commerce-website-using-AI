@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useStatusMessageBridge } from "../../hooks/useStatusMessageBridge";
 import { getAdminSystemLogs } from "../../services/admin/systemLogService";
 import { getErrorMessage } from "../../utils/adminErrorUtils";
 import "../../css/admin/discounts.css";
@@ -30,6 +31,8 @@ function AdminSystemLogsPage() {
   const [actionFilter, setActionFilter] = useState(searchParams.get("action") || "all");
   const [resourceFilter, setResourceFilter] = useState(searchParams.get("resource") || "all");
   const [page, setPage] = useState(Math.max(1, Number(searchParams.get("page") || 1) || 1));
+
+  useStatusMessageBridge(message, { title: "Log hệ thống" });
 
   useEffect(() => {
     const nextParams = new URLSearchParams();

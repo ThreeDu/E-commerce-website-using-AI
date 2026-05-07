@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useNotification } from "../context/NotificationContext";
+import { trackEvent } from "../services/analyticsService";
 import "../css/profile.css";
 
 function IconOrders() {
@@ -40,6 +42,7 @@ function normalizeImageSrc(value) {
 function UserDashboard() {
   const navigate = useNavigate();
   const { auth, login } = useAuth();
+  const { success, error, warning } = useNotification();
   const editFormRef = useRef(null);
   
   const [formData, setFormData] = useState({
@@ -47,7 +50,6 @@ function UserDashboard() {
     phone: auth?.user?.phone || "",
     address: auth?.user?.address || "",
   });
-  const [message, setMessage] = useState("");
   const [orders, setOrders] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [isWishlistLoading, setIsWishlistLoading] = useState(false);
@@ -57,7 +59,6 @@ function UserDashboard() {
     newPassword: "",
     confirmPassword: "",
   });
-  const [passwordMessage, setPasswordMessage] = useState("");
 
   useEffect(() => {
     const loadMyOrders = async () => {
@@ -155,6 +156,8 @@ function UserDashboard() {
     }
 
     try {
+      const removedItem = wishlist.find((item) => String(item?._id) === String(productId));
+
       const response = await fetch(`/api/auth/wishlist/${productId}`, {
         method: "DELETE",
         headers: {
@@ -164,14 +167,23 @@ function UserDashboard() {
 
       const data = await response.json();
       if (!response.ok) {
-        setMessage(data?.message || "Không thể xóa sản phẩm khỏi yêu thích.");
+        error(data?.message || "Không thể xóa sản phẩm khỏi yêu thích.", { title: "Yêu thích" });
         return;
       }
 
       setWishlist(Array.isArray(data?.wishlist) ? data.wishlist : []);
-      setMessage("Đã xóa sản phẩm khỏi danh sách yêu thích.");
+      trackEvent({
+        eventName: "wishlist_remove",
+        token: auth?.token,
+        metadata: {
+          productId: String(productId),
+          productName: String(removedItem?.name || ""),
+          category: String(removedItem?.category || ""),
+        },
+      });
+      success("Đã xóa sản phẩm khỏi danh sách yêu thích.", { title: "Yêu thích" });
     } catch (error) {
-      setMessage("Lỗi kết nối đến máy chủ.");
+      error("Lỗi kết nối đến máy chủ.", { title: "Yêu thích" });
     }
   };
 
@@ -187,15 +199,14 @@ function UserDashboard() {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    setPasswordMessage("");
 
     if (passwordForm.newPassword.length < 6) {
-      setPasswordMessage("Mật khẩu mới phải có ít nhất 6 ký tự.");
+      warning("Mật khẩu mới phải có ít nhất 6 ký tự.", { title: "Đổi mật khẩu" });
       return;
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setPasswordMessage("Xác nhận mật khẩu mới không khớp.");
+      warning("Xác nhận mật khẩu mới không khớp.", { title: "Đổi mật khẩu" });
       return;
     }
 
@@ -214,18 +225,17 @@ function UserDashboard() {
 
       const data = await response.json();
       if (!response.ok) {
-        setPasswordMessage(data.message || "Không thể đổi mật khẩu.");
+        error(data.message || "Không thể đổi mật khẩu.", { title: "Đổi mật khẩu" });
         return;
       }
 
-      setPasswordMessage("Đổi mật khẩu thành công.");
+      success("Đổi mật khẩu thành công.", { title: "Tài khoản" });
       setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
       setTimeout(() => {
         setIsPasswordModalOpen(false);
-        setPasswordMessage("");
       }, 900);
     } catch (error) {
-      setPasswordMessage("Lỗi kết nối đến máy chủ.");
+      error("Lỗi kết nối đến máy chủ.", { title: "Đổi mật khẩu" });
     }
   };
 
@@ -243,13 +253,13 @@ function UserDashboard() {
       const data = await response.json();
       if (response.ok) {
         login({ token: auth.token, user: data.user });
-        setMessage("Cập nhật thông tin cá nhân thành công!");
+        success("Cập nhật thông tin cá nhân thành công!", { title: "Hồ sơ" });
       } else {
-        setMessage(`Lỗi: ${data.message}`);
+        error(data.message || "Không thể cập nhật thông tin cá nhân.", { title: "Hồ sơ" });
       }
     } catch (error) {
       console.error("Lỗi cập nhật:", error);
-      setMessage("Lỗi kết nối đến máy chủ.");
+      error("Lỗi kết nối đến máy chủ.", { title: "Hồ sơ" });
     }
   };
 
@@ -366,12 +376,6 @@ function UserDashboard() {
             <button type="button" onClick={() => setIsPasswordModalOpen(true)}>Đổi mật khẩu</button>
           </div>
 
-          {message && (
-            <div className={`profile-alert ${message.includes("thành công") ? "success" : "error"}`}>
-              {message}
-            </div>
-          )}
-
           <form className="profile-edit-form" onSubmit={handleSubmit}>
             <label>
               <span>Họ và tên</span>
@@ -394,11 +398,6 @@ function UserDashboard() {
         <div className="profile-modal-backdrop">
           <div className="profile-modal-card">
             <h3>Đổi mật khẩu</h3>
-            {passwordMessage && (
-              <p className={`profile-alert ${passwordMessage.includes("thành công") ? "success" : "error"}`}>
-                {passwordMessage}
-              </p>
-            )}
             <form onSubmit={handleChangePassword}>
               <div className="password-field">
                 <label>Mật khẩu hiện tại</label>

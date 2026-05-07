@@ -2,11 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useNotification } from "../context/NotificationContext";
+import { trackEvent } from "../services/analyticsService";
+import { parsePrice, formatPrice } from "../utils/priceUtils";
+import { verifyCoupon, createOrder } from "../services/orderService";
+import "../css/checkout.css";
 
 function CheckoutPage() {
   const { cart, clearCart } = useCart();
   const navigate = useNavigate();
-  const { auth } = useAuth(); // Lấy thông tin đăng nhập
+  const { auth } = useAuth();
+  const { success, error, warning } = useNotification();
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -33,23 +39,9 @@ function CheckoutPage() {
     }));
   }, [auth?.user]);
 
-  // Hàm xử lý thay đổi input
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-  };
-
-  // Chuyển đổi giá sang số để tính toán 
-  const parsePrice = (price) => {
-    if (typeof price === "number") return price;
-    if (typeof price === "string") {
-      return parseInt(price.replace(/\D/g, ""), 10) || 0;
-    }
-    return 0;
-  };
-
-  const formatPrice = (priceNum) => {
-    return priceNum.toLocaleString("vi-VN") + " đ";
   };
 
   const totalPrice = cart.reduce((total, item) => {
@@ -75,25 +67,13 @@ function CheckoutPage() {
 
     setIsApplyingCoupon(true);
     try {
-      const response = await fetch(`/api/orders/coupon/${encodeURIComponent(normalizedCode)}?subtotal=${totalPrice}`, {
-        headers: {
-          Authorization: `Bearer ${auth.token}`,
-        },
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        setCouponInfo(null);
-        setCouponError(data?.message || "Không thể áp dụng mã giảm giá.");
-        return;
-      }
-
+      const data = await verifyCoupon(normalizedCode, totalPrice, auth.token);
       setCouponInfo(data);
       setCouponCode(data?.coupon?.code || normalizedCode);
       setCouponError("");
-    } catch (error) {
+    } catch (err) {
       setCouponInfo(null);
-      setCouponError("Không thể kết nối để áp dụng mã giảm giá.");
+      setCouponError(err?.message || "Không thể áp dụng mã giảm giá.");
     } finally {
       setIsApplyingCoupon(false);
     }
@@ -110,7 +90,7 @@ function CheckoutPage() {
     setFormError("");
 
     if (!auth?.token) {
-      alert("Vui lòng đăng nhập để đặt hàng.");
+      warning("Vui lòng đăng nhập để đặt hàng.", { title: "Chưa đăng nhập" });
       navigate("/login");
       return;
     }
@@ -135,13 +115,12 @@ function CheckoutPage() {
       return;
     }
     
-    // Chuẩn bị dữ liệu để gửi xuống Backend
     const orderData = {
       orderItems: cart.map(item => ({
         name: item.name,
         quantity: item.quantity,
         price: parsePrice(item.price),
-        product: item.id || item._id // Đảm bảo truyền đúng ID của MongoDB
+        product: item.id || item._id
       })),
       shippingAddress: {
         fullName: trimmedFullName,
@@ -154,72 +133,76 @@ function CheckoutPage() {
     };
 
     try {
-      const response = await fetch("/api/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${auth.token}`,
+      await createOrder(orderData, auth.token);
+
+      trackEvent({
+        eventName: "checkout_success",
+        token: auth?.token,
+        metadata: {
+          totalPrice: Number(finalTotal || 0),
+          originalSubtotal: Number(totalPrice || 0),
+          discountAmount: Number(discountAmount || 0),
+          itemCount: cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+          productCount: cart.length,
+          paymentMethod: String(formData.paymentMethod || ""),
+          discountCode: String(couponInfo?.coupon?.code || ""),
         },
-        body: JSON.stringify(orderData),
       });
 
-      if (response.ok) {
-        alert(`Đặt hàng thành công!\nCảm ơn ${formData.fullName} đã mua sắm tại AI Shop.`);
-        clearCart(); // Làm sạch giỏ hàng
-        navigate("/order-history"); // Chuyển người dùng sang trang đơn hàng của tôi
-      } else {
-        const errorData = await response.json();
-        alert(`Lỗi đặt hàng: ${errorData.message}`);
-      }
-    } catch (error) {
-      console.error("Lỗi khi gọi API đặt hàng:", error);
-      alert("Có lỗi xảy ra khi kết nối đến máy chủ.");
+      success(`Cảm ơn ${formData.fullName} đã mua sắm tại Tech Shop.`, {
+        title: "Đặt hàng thành công",
+      });
+      clearCart();
+      navigate("/order-history");
+    } catch (err) {
+      console.error("Lỗi khi gọi API đặt hàng:", err);
+      error(err?.message || "Không thể tạo đơn hàng mới.", {
+        title: "Đặt hàng thất bại",
+      });
     }
   };
 
   // Chặn người dùng vào trang thanh toán nếu giỏ hàng trống
   if (cart.length === 0) {
     return (
-      <main className="container page-content" style={{ textAlign: "center", padding: "100px 20px" }}>
-        <h2 style={{ marginBottom: "16px" }}>Giỏ hàng của bạn đang trống!</h2>
-        <Link to="/products" style={{ color: "#007bff", textDecoration: "none", fontWeight: "bold" }}>Quay lại trang Sản phẩm</Link>
+      <main className="container page-content checkout-empty">
+        <h2 className="checkout-empty__title">Giỏ hàng của bạn đang trống!</h2>
+        <Link to="/products" className="checkout-empty__link">Quay lại trang Sản phẩm</Link>
       </main>
     );
   }
 
   return (
-    <main className="container page-content" style={{ padding: "0 20px" }}>
-      <h2 style={{ marginBottom: "24px", fontSize: "28px" }}>Thanh toán & Đặt hàng</h2>
+    <main className="container page-content checkout-page">
+      <h2 className="checkout-page__title">Thanh toán &amp; Đặt hàng</h2>
 
-      <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+      <div className="checkout-layout">
         {/* Cột Form điền thông tin */}
-        <div style={{ flex: "1 1 60%", minWidth: "300px", backgroundColor: "#fff", padding: "24px", borderRadius: "8px", border: "1px solid #dee2e6" }}>
-          <h3 style={{ marginBottom: "20px", fontSize: "20px" }}>Thông tin giao hàng</h3>
+        <div className="checkout-form-col">
+          <h3 className="checkout-form-col__title">Thông tin giao hàng</h3>
           {formError && (
-            <p style={{ marginBottom: "16px", padding: "10px", borderRadius: "6px", backgroundColor: "#fff1f2", color: "#9f1239", border: "1px solid #fecdd3" }}>
-              {formError}
-            </p>
+            <p className="checkout-form-error">{formError}</p>
           )}
           <form onSubmit={handlePlaceOrder} id="checkout-form">
-            <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Họ và tên</label>
-              <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required 
-                style={{ width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid #ced4da", boxSizing: "border-box" }} placeholder="Nhập họ và tên..." />
+            <div className="checkout-field">
+              <label className="checkout-field__label">Họ và tên</label>
+              <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required
+                className="checkout-field__input" placeholder="Nhập họ và tên..." />
             </div>
-            <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Số điện thoại</label>
-              <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required 
-                style={{ width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid #ced4da", boxSizing: "border-box" }} placeholder="Nhập số điện thoại..." />
+            <div className="checkout-field">
+              <label className="checkout-field__label">Số điện thoại</label>
+              <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required
+                className="checkout-field__input" placeholder="Nhập số điện thoại..." />
             </div>
-            <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Địa chỉ chi tiết</label>
-              <textarea name="address" value={formData.address} onChange={handleChange} required rows="3" 
-                style={{ width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid #ced4da", boxSizing: "border-box", resize: "vertical" }} placeholder="Nhập số nhà, tên đường, phường/xã, quận/huyện..."></textarea>
+            <div className="checkout-field">
+              <label className="checkout-field__label">Địa chỉ chi tiết</label>
+              <textarea name="address" value={formData.address} onChange={handleChange} required rows="3"
+                className="checkout-field__textarea" placeholder="Nhập số nhà, tên đường, phường/xã, quận/huyện..."></textarea>
             </div>
-            <div style={{ marginBottom: "24px" }}>
-              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Phương thức thanh toán</label>
-              <select name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} 
-                style={{ width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid #ced4da", boxSizing: "border-box" }}>
+            <div className="checkout-field--lg">
+              <label className="checkout-field__label">Phương thức thanh toán</label>
+              <select name="paymentMethod" value={formData.paymentMethod} onChange={handleChange}
+                className="checkout-field__select">
                 <option value="cod">Thanh toán khi nhận hàng (COD)</option>
                 <option value="transfer">Chuyển khoản ngân hàng</option>
               </select>
@@ -228,58 +211,58 @@ function CheckoutPage() {
         </div>
 
         {/* Cột Tóm tắt đơn hàng */}
-        <div style={{ flex: "1 1 30%", minWidth: "280px", backgroundColor: "#f8f9fa", padding: "24px", borderRadius: "8px", border: "1px solid #dee2e6", height: "fit-content" }}>
-          <h3 style={{ marginBottom: "20px", fontSize: "20px", borderBottom: "1px solid #dee2e6", paddingBottom: "12px" }}>Đơn hàng của bạn</h3>
-          <div style={{ marginBottom: "20px" }}>
+        <div className="checkout-summary">
+          <h3 className="checkout-summary__title">Đơn hàng của bạn</h3>
+          <div className="checkout-summary__items">
             {cart.map(item => (
-              <div key={item.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", fontSize: "14px" }}>
-                <span>{item.name} <strong style={{ color: "#6c757d" }}>x{item.quantity}</strong></span>
-                <span style={{ fontWeight: "bold" }}>{formatPrice(parsePrice(item.price) * item.quantity)}</span>
+              <div key={item.id} className="checkout-summary__item">
+                <span>{item.name} <strong className="checkout-summary__item-qty">x{item.quantity}</strong></span>
+                <span className="checkout-summary__item-price">{formatPrice(parsePrice(item.price) * item.quantity)}</span>
               </div>
             ))}
           </div>
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Mã giảm giá</label>
-            <div style={{ display: "flex", gap: "8px" }}>
+          <div className="checkout-coupon">
+            <label className="checkout-coupon__label">Mã giảm giá</label>
+            <div className="checkout-coupon__row">
               <input
                 type="text"
                 value={couponCode}
                 onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
                 placeholder="Nhập mã..."
-                style={{ flex: 1, padding: "10px", borderRadius: "4px", border: "1px solid #ced4da" }}
+                className="checkout-coupon__input"
               />
               <button
                 type="button"
                 onClick={handleApplyCoupon}
                 disabled={isApplyingCoupon}
-                style={{ padding: "10px 14px", borderRadius: "4px", border: "none", backgroundColor: "#212529", color: "#fff", fontWeight: "bold", cursor: isApplyingCoupon ? "not-allowed" : "pointer" }}
+                className="checkout-coupon__btn"
               >
                 {isApplyingCoupon ? "Đang áp dụng..." : "Áp dụng"}
               </button>
             </div>
             {couponInfo?.coupon?.code && (
-              <div style={{ marginTop: "8px", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "13px", color: "#166534" }}>
+              <div className="checkout-coupon__applied">
                 <span>Đã áp dụng mã: <strong>{couponInfo.coupon.code}</strong></span>
-                <button type="button" onClick={handleRemoveCoupon} style={{ border: "none", background: "transparent", color: "#b91c1c", cursor: "pointer", fontWeight: "bold" }}>Xóa mã</button>
+                <button type="button" onClick={handleRemoveCoupon} className="checkout-coupon__remove">Xóa mã</button>
               </div>
             )}
-            {couponError && <p style={{ marginTop: "8px", marginBottom: 0, color: "#b91c1c", fontSize: "13px" }}>{couponError}</p>}
+            {couponError && <p className="checkout-coupon__error">{couponError}</p>}
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px", fontSize: "16px", borderTop: "1px solid #dee2e6", paddingTop: "12px" }}>
+          <div className="checkout-summary__row">
             <span>Phí vận chuyển:</span><span style={{ fontWeight: "bold" }}>Miễn phí</span>
           </div>
           {discountAmount > 0 && (
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", fontSize: "16px" }}>
+            <div className="checkout-summary__row--discount">
               <span>Giảm giá:</span>
-              <span style={{ fontWeight: "bold", color: "#16a34a" }}>- {formatPrice(discountAmount)}</span>
+              <span className="checkout-summary__discount-value">- {formatPrice(discountAmount)}</span>
             </div>
           )}
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "24px", fontSize: "20px" }}>
-            <span style={{ fontWeight: "bold" }}>Tổng cộng:</span>
-            <span style={{ fontWeight: "bold", color: "#dc3545" }}>{formatPrice(finalTotal)}</span>
+          <div className="checkout-summary__row--total">
+            <span>Tổng cộng:</span>
+            <span className="checkout-summary__total-price">{formatPrice(finalTotal)}</span>
           </div>
           
-          <button type="submit" form="checkout-form" style={{ width: "100%", padding: "14px", backgroundColor: "#007bff", color: "white", border: "none", borderRadius: "4px", fontSize: "16px", fontWeight: "bold", cursor: "pointer" }}>
+          <button type="submit" form="checkout-form" className="checkout-submit">
             Hoàn tất đặt hàng
           </button>
         </div>

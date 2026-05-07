@@ -1,12 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import * as XLSX from "xlsx";
 import { useAuth } from "../../../context/AuthContext";
+import { useNotification } from "../../../context/NotificationContext";
 import { getAdminCategories } from "../../../services/admin/categoryService";
 import { deleteAdminProduct, getAdminProducts } from "../../../services/admin/productService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
 import "../../../css/admin/products.css";
 
 const ITEMS_PER_PAGE = 8;
+const IMPORT_TEMPLATE_COLUMNS = [
+  "name",
+  "category_path",
+  "price",
+  "stock",
+  "discount_percent",
+  "description",
+  "image_url",
+];
+const IMPORT_TEMPLATE_FILE_NAME = "product_import_export.xlsx";
 
 function getProductImageSrc(product) {
   const rawValue = String(product?.image || product?.imageUrl || "").trim();
@@ -36,9 +48,12 @@ function normalizeCategoryValue(value) {
 
 function AdminListProductPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { auth } = useAuth();
+  const { success, warning, error: notifyError } = useNotification();
   const hasInitializedFilters = useRef(false);
+  const consumedSuccessStateRef = useRef(new Set());
 
   const initialPage = useMemo(() => {
     const parsed = Number(searchParams.get("page") || 1);
@@ -54,7 +69,6 @@ function AdminListProductPage() {
   const [deleting, setDeleting] = useState(false);
   const [productPendingDelete, setProductPendingDelete] = useState(null);
   const [selectedProductIds, setSelectedProductIds] = useState([]);
-  const [message, setMessage] = useState(location.state?.successMessage || "");
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
   const [categoryLevel1, setCategoryLevel1] = useState(searchParams.get("cat1") || "all");
   const [categoryLevel2, setCategoryLevel2] = useState(searchParams.get("cat2") || "all");
@@ -62,6 +76,22 @@ function AdminListProductPage() {
   const [priceSort, setPriceSort] = useState(searchParams.get("priceSort") || "default");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all");
   const [currentPage, setCurrentPage] = useState(initialPage);
+
+  useEffect(() => {
+    const successMessage = location.state?.successMessage;
+    if (!successMessage) {
+      return;
+    }
+
+    const stateKey = `${location.key || "no-key"}::${successMessage}`;
+    if (consumedSuccessStateRef.current.has(stateKey)) {
+      return;
+    }
+
+    consumedSuccessStateRef.current.add(stateKey);
+    success(successMessage, { title: "Sản phẩm" });
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.key, location.pathname, location.state, navigate, success]);
 
   const loadProducts = useCallback(async () => {
     if (!auth?.token) {
@@ -73,11 +103,11 @@ function AdminListProductPage() {
       const data = await getAdminProducts(auth.token);
       setProducts(data.products || []);
     } catch (error) {
-      setMessage(getErrorMessage(error, "Không thể tải danh sách sản phẩm."));
+      notifyError(getErrorMessage(error, "Không thể tải danh sách sản phẩm."), { title: "Sản phẩm" });
     } finally {
       setLoading(false);
     }
-  }, [auth?.token]);
+  }, [auth?.token, notifyError]);
 
   useEffect(() => {
     loadProducts();
@@ -92,9 +122,9 @@ function AdminListProductPage() {
       const data = await getAdminCategories(auth.token);
       setAllCategories(data.categories || []);
     } catch (error) {
-      setMessage((prev) => prev || getErrorMessage(error, "Không thể tải danh mục."));
+      notifyError(getErrorMessage(error, "Không thể tải danh mục."), { title: "Sản phẩm" });
     }
-  }, [auth?.token]);
+  }, [auth?.token, notifyError]);
 
   useEffect(() => {
     loadCategories();
@@ -436,20 +466,22 @@ function AdminListProductPage() {
         }
 
         if (failedCount > 0) {
-          setMessage(`Đã xóa ${succeededIds.length} sản phẩm, ${failedCount} sản phẩm thất bại.`);
+          warning(`Đã xóa ${succeededIds.length} sản phẩm, ${failedCount} sản phẩm thất bại.`, {
+            title: "Sản phẩm",
+          });
         } else {
-          setMessage(`Đã xóa ${succeededIds.length} sản phẩm thành công.`);
+          success(`Đã xóa ${succeededIds.length} sản phẩm thành công.`, { title: "Sản phẩm" });
         }
       } else {
         await deleteAdminProduct(auth.token, productPendingDelete._id);
         setProducts((prev) => prev.filter((product) => product._id !== productPendingDelete._id));
         setSelectedProductIds((prev) => prev.filter((id) => id !== productPendingDelete._id));
-        setMessage("Xóa sản phẩm thành công.");
+        success("Xóa sản phẩm thành công.", { title: "Sản phẩm" });
       }
 
       setProductPendingDelete(null);
     } catch (error) {
-      setMessage(getErrorMessage(error, "Không thể xóa sản phẩm."));
+      notifyError(getErrorMessage(error, "Không thể xóa sản phẩm."), { title: "Sản phẩm" });
     } finally {
       setDeleting(false);
     }
@@ -469,6 +501,33 @@ function AdminListProductPage() {
     return `${Math.round((value / totalProducts) * 100)}%`;
   };
 
+  const handleExportTemplate = () => {
+    const exportRows = filteredProducts.length > 0 ? filteredProducts : products;
+    if (exportRows.length === 0) {
+      warning("Không có sản phẩm để xuất.", { title: "Sản phẩm" });
+      return;
+    }
+
+    const worksheetData = [
+      IMPORT_TEMPLATE_COLUMNS,
+      ...exportRows.map((product) => [
+        product.name || "",
+        product.category || "",
+        Number(product.price ?? 0),
+        Number(product.stock ?? 0),
+        Number(product.discountPercent ?? 0),
+        product.description || "",
+        product.image || product.imageUrl || "",
+      ]),
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "ProductsTemplate");
+    XLSX.writeFile(workbook, IMPORT_TEMPLATE_FILE_NAME);
+    success("Đã xuất file theo template import.", { title: "Sản phẩm" });
+  };
+
   return (
     <main className="container page-content admin-products-page">
       <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading}>
@@ -477,16 +536,18 @@ function AdminListProductPage() {
             <h2>Quản lý sản phẩm</h2>
             <p className="dashboard-subtitle">Theo dõi kho hàng và giá bán trong một bảng điều khiển tập trung.</p>
           </div>
-          <Link to="/admin/products/add" className="primary-link-btn">
-            + Thêm sản phẩm
-          </Link>
+          <div className="bulk-action-buttons">
+            <Link to="/admin/products/import" className="secondary-btn">
+              Nhập danh sách sản phẩm
+            </Link>
+            <button type="button" className="secondary-btn" onClick={handleExportTemplate}>
+              Xuất danh sách sản phẩm
+            </button>
+            <Link to="/admin/products/add" className="primary-link-btn">
+              + Thêm sản phẩm
+            </Link>
+          </div>
         </div>
-
-        {message && (
-          <p className="form-message" role="status" aria-live="polite">
-            {message}
-          </p>
-        )}
 
         <div className="dashboard-metric-grid">
           <article className="metric-card">

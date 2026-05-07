@@ -99,3 +99,39 @@ export async function deleteAdminProduct(token, productId) {
 
   return data;
 }
+
+export async function previewAdminProductImport(token, rows) {
+  const response = await fetch("/api/auth/admin/products/import/preview", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ rows }),
+  });
+
+  const data = await parseResponseSafely(response);
+  if (!response.ok) {
+    throw new Error(data.message || "Không thể phân tích file import sản phẩm");
+  }
+
+  return data;
+}
+
+export async function commitAdminProductImport(token, rows, mode = "create") {
+  const response = await fetch("/api/auth/admin/products/import/commit", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ rows, mode }),
+  });
+
+  const data = await parseResponseSafely(response);
+  if (!response.ok) {
+    throw new Error(data.message || "Không thể import sản phẩm");
+  }
+
+  return data;
+}

@@ -6,10 +6,10 @@ function AboutPage() {
     <main className="container page-content">
       <section className="static-page-wrap">
         <header className="static-page-hero">
-          <p className="static-kicker">Về AI Shop</p>
+          <p className="static-kicker">Về Tech Shop</p>
           <h1>Nơi công nghệ và trải nghiệm mua sắm gặp nhau.</h1>
           <p>
-            AI Shop xây dựng nền tảng thương mại điện tử tập trung vào tốc độ, giao diện rõ ràng và trải nghiệm đặt hàng liền mạch.
+            Tech Shop xây dựng nền tảng thương mại điện tử tập trung vào tốc độ, giao diện rõ ràng và trải nghiệm đặt hàng liền mạch.
             Mỗi thành phần đều được thiết kế để giúp bạn tìm sản phẩm nhanh hơn, quyết định dễ hơn và thanh toán thuận tiện hơn.
           </p>
           <div className="static-actions">

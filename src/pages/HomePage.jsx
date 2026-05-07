@@ -2,52 +2,11 @@ import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { getProductImageSrc, getProductPricing, isOutOfStock } from "../utils/productUtils";
+import { fetchProducts } from "../services/productService";
+import { fetchCategories } from "../services/categoryService";
 import "../css/home-neo.css";
 import "../css/shop-experience.css";
-
-function getProductImageSrc(product) {
-  const rawValue = String(product?.image || product?.imageUrl || "").trim();
-  if (!rawValue) {
-    return "/placeholder.svg";
-  }
-
-  if (
-    rawValue.startsWith("http://") ||
-    rawValue.startsWith("https://") ||
-    rawValue.startsWith("data:image/") ||
-    rawValue.startsWith("/")
-  ) {
-    return rawValue;
-  }
-
-  return `/${rawValue.replace(/^\/+/, "")}`;
-}
-
-function getProductPricing(product) {
-  const basePrice = Math.max(0, Number(product?.price || 0));
-  const rawDiscountPercent = Math.max(0, Math.min(100, Number(product?.discountPercent || 0)));
-  const finalPriceFromApi = Math.max(0, Number(product?.finalPrice || 0));
-
-  const fallbackFinalPrice = Math.round(basePrice * (1 - rawDiscountPercent / 100));
-  const finalPrice =
-    finalPriceFromApi > 0 && finalPriceFromApi < basePrice ? finalPriceFromApi : fallbackFinalPrice;
-
-  const hasDiscount = basePrice > 0 && finalPrice < basePrice;
-  const discountPercent = hasDiscount
-    ? Math.max(1, Math.round(((basePrice - finalPrice) / basePrice) * 100))
-    : 0;
-
-  return {
-    basePrice,
-    finalPrice: hasDiscount ? finalPrice : basePrice,
-    hasDiscount,
-    discountPercent,
-  };
-}
-
-function isOutOfStock(product) {
-  return Number(product?.stock || 0) <= 0;
-}
 
 function HomePage() {
   const { addToCart } = useCart();
@@ -87,17 +46,35 @@ function HomePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("/api/products");
-        if (response.ok) {
-          const data = await response.json();
-          setFeaturedProducts(data.slice(0, 4)); // Lấy 4 sản phẩm đầu tiên
-        }
+        const data = await fetchProducts();
+        const rankedProducts = [...data].sort((left, right) => {
+            const leftPurchases = Number(left?.totalPurchases || 0);
+            const rightPurchases = Number(right?.totalPurchases || 0);
+            if (rightPurchases !== leftPurchases) {
+              return rightPurchases - leftPurchases;
+            }
 
-        const catResponse = await fetch("/api/categories");
-        if (catResponse.ok) {
-          const catData = await catResponse.json();
-          setCategories(catData);
-        }
+            const leftViews = Number(left?.totalViews || 0);
+            const rightViews = Number(right?.totalViews || 0);
+            if (rightViews !== leftViews) {
+              return rightViews - leftViews;
+            }
+
+            const leftRating = Number(left?.averageRating || 0);
+            const rightRating = Number(right?.averageRating || 0);
+            if (rightRating !== leftRating) {
+              return rightRating - leftRating;
+            }
+
+            const leftRatings = Number(left?.totalRatings || 0);
+            const rightRatings = Number(right?.totalRatings || 0);
+            return rightRatings - leftRatings;
+          });
+
+          setFeaturedProducts(rankedProducts.slice(0, 4));
+
+        const catData = await fetchCategories();
+        setCategories(catData);
       } catch (error) {
         console.error("Lỗi tải dữ liệu trang chủ:", error);
       }
@@ -131,7 +108,7 @@ function HomePage() {
           <p className="neo-eyebrow">Thương mại ưu tiên công nghệ</p>
           <h2>Trải nghiệm nổi bật.</h2>
           <p>
-            AI Shop mang tinh thần Neo-Brutalism: đường nét rõ ràng, độ tương phản cao và trải nghiệm mua sắm gọn, nhanh, chính xác.
+            Tech Shop mang tinh thần Neo-Brutalism: đường nét rõ ràng, độ tương phản cao và trải nghiệm mua sắm gọn, nhanh, chính xác.
           </p>
           <div className="neo-hero-actions">
             <Link to="/products" className="neo-btn neo-btn-primary">Mua ngay</Link>
@@ -153,7 +130,7 @@ function HomePage() {
               onClick={() => handleCategoryClick(category)}
               className={`neo-bento-card neo-cat-${index % 5}`}
             >
-              <span>Danh mục</span>
+              <span>Dòng sản phẩm</span>
               <strong>{category.name}</strong>
             </button>
           ))}

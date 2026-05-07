@@ -352,6 +352,20 @@
   gap: 8px;
 }
 
+.product-import-template {
+  margin-bottom: 16px;
+}
+
+.import-metric-grid {
+  margin-top: 16px;
+  margin-bottom: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+.product-import-errors {
+  margin-top: 14px;
+}
+
 .bulk-action-buttons .secondary-btn,
 .bulk-action-buttons .danger-btn {
   border: 1px solid #d0d9e4;

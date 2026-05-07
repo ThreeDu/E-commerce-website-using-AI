@@ -2,51 +2,13 @@ import { useState, useEffect, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useNotification } from "../context/NotificationContext";
+import { trackEvent } from "../services/analyticsService";
+import { getProductImageSrc, getProductPricing, isOutOfStock } from "../utils/productUtils";
+import { fetchProducts } from "../services/productService";
+import { fetchCategories } from "../services/categoryService";
+import { fetchWishlist, addToWishlist, removeFromWishlist } from "../services/wishlistService";
 import "../css/shop-experience.css";
-
-function getProductImageSrc(product) {
-  const rawValue = String(product?.image || product?.imageUrl || "").trim();
-  if (!rawValue) {
-    return "/placeholder.svg";
-  }
-
-  if (
-    rawValue.startsWith("http://") ||
-    rawValue.startsWith("https://") ||
-    rawValue.startsWith("data:image/") ||
-    rawValue.startsWith("/")
-  ) {
-    return rawValue;
-  }
-
-  return `/${rawValue.replace(/^\/+/, "")}`;
-}
-
-function getProductPricing(product) {
-  const basePrice = Math.max(0, Number(product?.price || 0));
-  const rawDiscountPercent = Math.max(0, Math.min(100, Number(product?.discountPercent || 0)));
-  const finalPriceFromApi = Math.max(0, Number(product?.finalPrice || 0));
-
-  const fallbackFinalPrice = Math.round(basePrice * (1 - rawDiscountPercent / 100));
-  const finalPrice =
-    finalPriceFromApi > 0 && finalPriceFromApi < basePrice ? finalPriceFromApi : fallbackFinalPrice;
-
-  const hasDiscount = basePrice > 0 && finalPrice < basePrice;
-  const discountPercent = hasDiscount
-    ? Math.max(1, Math.round(((basePrice - finalPrice) / basePrice) * 100))
-    : 0;
-
-  return {
-    basePrice,
-    finalPrice: hasDiscount ? finalPrice : basePrice,
-    hasDiscount,
-    discountPercent,
-  };
-}
-
-function isOutOfStock(product) {
-  return Number(product?.stock || 0) <= 0;
-}
 
 function normalizeCategoryId(value) {
   return String(value || "").trim();
@@ -55,6 +17,7 @@ function normalizeCategoryId(value) {
 function ProductsPage() {
   const { addToCart } = useCart();
   const { auth } = useAuth();
+  const { success, error: notifyError, warning } = useNotification();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -71,26 +34,20 @@ function ProductsPage() {
   const [categories, setCategories] = useState([{ _id: "all", name: "Tất cả", path: "Tất cả" }]);
   const [loading, setLoading] = useState(true);
 
+  const productNameById = useMemo(
+    () => new Map(allProducts.map((item) => [String(item._id), String(item.name || "sản phẩm")])),
+    [allProducts]
+  );
+
   useEffect(() => {
-    const fetchWishlist = async () => {
+    const loadWishlist = async () => {
       if (!auth?.token) {
         setWishlistIds([]);
         return;
       }
 
       try {
-        const response = await fetch("/api/auth/wishlist", {
-          headers: {
-            Authorization: `Bearer ${auth.token}`,
-          },
-        });
-
-        if (!response.ok) {
-          setWishlistIds([]);
-          return;
-        }
-
-        const data = await response.json();
+        const data = await fetchWishlist(auth.token);
         const ids = Array.isArray(data?.wishlist)
           ? data.wishlist.map((item) => String(item._id))
           : [];
@@ -100,66 +57,59 @@ function ProductsPage() {
       }
     };
 
-    fetchWishlist();
+    loadWishlist();
   }, [auth?.token]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         // 1. Gọi API lấy danh sách sản phẩm
-        const productsRes = await fetch("/api/products");
-        if (productsRes.ok) {
-          const data = await productsRes.json();
-          setAllProducts(data);
-          
-          // Tự động tìm giá lớn nhất trong database để làm mốc cho thanh kéo
-          if (data.length > 0) {
-            const highestPrice = Math.max(...data.map(item => item.price));
-            setMaxPossiblePrice(highestPrice);
-            setMaxPrice(highestPrice); // Mặc định thanh kéo sẽ nằm ở mức cao nhất
-          }
+        const data = await fetchProducts();
+        setAllProducts(data);
+        
+        // Tự động tìm giá lớn nhất trong database để làm mốc cho thanh kéo
+        if (data.length > 0) {
+          const highestPrice = Math.max(...data.map(item => item.price));
+          setMaxPossiblePrice(highestPrice);
+          setMaxPrice(highestPrice); // Mặc định thanh kéo sẽ nằm ở mức cao nhất
         }
 
-        // 2. Gọi API lấy danh sách danh mục (API mới tạo)
-        const categoriesRes = await fetch("/api/categories");
-        if (categoriesRes.ok) {
-          const catData = await categoriesRes.json();
-          const categoryMap = new Map();
-          catData.forEach((cat) => {
-            categoryMap.set(String(cat._id), cat);
-          });
+        // 2. Gọi API lấy danh sách danh mục
+        const catData = await fetchCategories();
+        const categoryMap = new Map();
+        catData.forEach((cat) => {
+          categoryMap.set(String(cat._id), cat);
+        });
 
-          const buildPath = (category) => {
-            const path = [category.name];
-            let cursor = category;
-            const visited = new Set();
+        const buildPath = (category) => {
+          const path = [category.name];
+          let cursor = category;
+          const visited = new Set();
 
-            while (cursor?.parentId) {
-              const parentId = String(cursor.parentId);
-              if (visited.has(parentId)) {
-                break;
-              }
-              visited.add(parentId);
+          while (cursor?.parentId) {
+            const parentId = String(cursor.parentId);
+            if (visited.has(parentId)) {
+              break;
+            }
+            visited.add(parentId);
 
-              const parent = categoryMap.get(parentId);
-              if (!parent) {
-                break;
-              }
-
-              path.unshift(parent.name);
-              cursor = parent;
+            const parent = categoryMap.get(parentId);
+            if (!parent) {
+              break;
             }
 
-            return path.join(" > ");
-          };
+            path.unshift(parent.name);
+            cursor = parent;
+          }
 
-          const normalizedCategories = catData
-            .map((cat) => ({ ...cat, path: buildPath(cat) }))
-            .sort((a, b) => a.path.localeCompare(b.path, "vi", { sensitivity: "base" }));
+          return path.join(" > ");
+        };
 
-          setCategories([{ _id: "all", name: "Tất cả", path: "Tất cả" }, ...normalizedCategories]);
-        }
+        const normalizedCategories = catData
+          .map((cat) => ({ ...cat, path: buildPath(cat) }))
+          .sort((a, b) => a.path.localeCompare(b.path, "vi", { sensitivity: "base" }));
 
+        setCategories([{ _id: "all", name: "Tất cả", path: "Tất cả" }, ...normalizedCategories]);
       } catch (error) {
         console.error("Lỗi tải dữ liệu:", error);
       } finally {
@@ -371,10 +321,22 @@ function ProductsPage() {
     }
 
     addToCart({ ...product, id: product._id });
+    trackEvent({
+      eventName: "add_to_cart",
+      token: auth?.token,
+      metadata: {
+        productId: String(product._id),
+        productName: String(product.name || ""),
+        category: String(product.category || ""),
+        quantity: 1,
+        price: Number(product.finalPrice || product.price || 0),
+      },
+    });
   };
 
   const handleToggleWishlist = async (productId) => {
     if (!auth?.token) {
+      warning("Vui lòng đăng nhập để sử dụng danh sách yêu thích.", { title: "Yêu thích" });
       navigate("/login", { state: { from: "/products" } });
       return;
     }
@@ -384,32 +346,38 @@ function ProductsPage() {
     }
 
     const isWishlisted = wishlistIds.includes(productId);
+    const productName = productNameById.get(String(productId)) || "sản phẩm";
     setPendingWishlistIds((prev) => [...prev, productId]);
 
     try {
-      const response = await fetch(
-        isWishlisted ? `/api/auth/wishlist/${productId}` : "/api/auth/wishlist",
-        {
-          method: isWishlisted ? "DELETE" : "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${auth.token}`,
-          },
-          body: isWishlisted ? undefined : JSON.stringify({ productId }),
-        }
-      );
-
-      const data = await response.json();
-      if (!response.ok) {
-        return;
-      }
+      const data = isWishlisted
+        ? await removeFromWishlist(productId, auth.token)
+        : await addToWishlist(productId, auth.token);
 
       const ids = Array.isArray(data?.wishlist)
         ? data.wishlist.map((item) => String(item._id))
         : [];
       setWishlistIds(ids);
+
+      const isNowWishlisted = ids.includes(String(productId));
+      success(
+        isNowWishlisted
+          ? `Đã thêm ${productName} vào danh sách yêu thích.`
+          : `Đã xóa ${productName} khỏi danh sách yêu thích.`,
+        { title: "Yêu thích" }
+      );
+
+      trackEvent({
+        eventName: isNowWishlisted ? "wishlist_add" : "wishlist_remove",
+        token: auth?.token,
+        metadata: {
+          productId: String(productId),
+          productName: String(productName),
+        },
+      });
     } catch (error) {
       console.error("Lỗi cập nhật wishlist:", error);
+      notifyError(error?.message || "Không thể kết nối đến máy chủ.", { title: "Yêu thích" });
     } finally {
       setPendingWishlistIds((prev) => prev.filter((id) => id !== productId));
     }
@@ -421,16 +389,6 @@ function ProductsPage() {
         <div className="shopx-shell">
           <aside className="shopx-panel shopx-panel--sticky">
             <h3 className="shopx-filter-title">Bộ lọc</h3>
-            <div className="shopx-field">
-              <input
-                className="shopx-input"
-                type="text"
-                placeholder="Tìm kiếm sản phẩm..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
             <div className="shopx-field">
               <h4 style={{ margin: 0 }}>Sắp xếp</h4>
               <select className="shopx-select" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>

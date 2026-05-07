@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useStatusMessageBridge } from "../../hooks/useStatusMessageBridge";
 import {
   deleteAdminUser,
   getAdminUsers,
@@ -22,6 +23,8 @@ function AdminUsersPage() {
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
   const [sortBy, setSortBy] = useState(searchParams.get("sort") || "newest");
   const [editForm, setEditForm] = useState({ name: "", email: "" });
+
+  useStatusMessageBridge(message, { title: "Người dùng" });
 
   const formatDateTime = useCallback((value) => {
     if (!value) {
@@ -284,12 +287,6 @@ function AdminUsersPage() {
             <strong>{totalCustomers}</strong>
           </article>
         </div>
-
-        {message && (
-          <p className="form-message" role="status" aria-live="polite">
-            {message}
-          </p>
-        )}
 
         <div className="users-filter-bar">
           <div className="users-filter-control users-search-control">

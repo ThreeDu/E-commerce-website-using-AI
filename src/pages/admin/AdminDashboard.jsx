@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useStatusMessageBridge } from "../../hooks/useStatusMessageBridge";
 import { getAdminNotifications } from "../../services/admin/notificationService";
 import { getAdminRevenueOverview } from "../../services/admin/orderService";
 import { getErrorMessage } from "../../utils/adminErrorUtils";
@@ -95,6 +96,8 @@ function AdminDashboard() {
   const [periodType, setPeriodType] = useState("month");
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+
+  useStatusMessageBridge(errorMessage, { title: "Dashboard", type: "error" });
 
   const loadDashboard = useCallback(
     async ({ silent = false } = {}) => {
@@ -396,7 +399,7 @@ function AdminDashboard() {
             </p>
           </div>
           <div className="dashboard-header-actions">
-            <span className="dashboard-badge">Live Data</span>
+            <span className="dashboard-badge">Dữ liệu trực tuyến</span>
             <button
               type="button"
               className="dashboard-refresh-btn"
