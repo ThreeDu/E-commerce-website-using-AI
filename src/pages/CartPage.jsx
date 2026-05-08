@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTrashCan } from "@fortawesome/free-solid-svg-icons";
 import { useCart } from "../context/CartContext";
 import { useNotification } from "../context/NotificationContext";
 import { getProductImageSrc } from "../utils/productUtils";
@@ -208,8 +210,13 @@ function CartPage() {
                   </div>
 
                   {/* Nút Xóa */}
-                  <button className="cart-item__remove" onClick={() => removeFromCart(item.id)}>
-                    Xóa
+                  <button
+                    type="button"
+                    className="cart-item__remove"
+                    aria-label={`Xóa ${item.name} khỏi giỏ hàng`}
+                    onClick={() => removeFromCart(item.id)}
+                  >
+                    <FontAwesomeIcon icon={faTrashCan} />
                   </button>
                 </div>
               );

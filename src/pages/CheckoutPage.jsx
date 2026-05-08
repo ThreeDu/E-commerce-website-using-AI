@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
 import { trackEvent } from "../services/analyticsService";
 import { parsePrice, formatPrice } from "../utils/priceUtils";
+import { getProductImageSrc } from "../utils/productUtils";
 import { verifyCoupon, createOrder } from "../services/orderService";
 import "../css/checkout.css";
 
@@ -196,15 +197,17 @@ function CheckoutPage() {
             <p className="checkout-form-error">{formError}</p>
           )}
           <form onSubmit={handlePlaceOrder} id="checkout-form">
-            <div className="checkout-field">
-              <label className="checkout-field__label">Họ và tên</label>
-              <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required
-                className="checkout-field__input" placeholder="Nhập họ và tên..." />
-            </div>
-            <div className="checkout-field">
-              <label className="checkout-field__label">Số điện thoại</label>
-              <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required
-                className="checkout-field__input" placeholder="Nhập số điện thoại..." />
+            <div className="checkout-field-row">
+              <div className="checkout-field">
+                <label className="checkout-field__label">Họ và tên</label>
+                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required
+                  className="checkout-field__input" placeholder="Nhập họ và tên..." />
+              </div>
+              <div className="checkout-field">
+                <label className="checkout-field__label">Số điện thoại</label>
+                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required
+                  className="checkout-field__input" placeholder="Nhập số điện thoại..." />
+              </div>
             </div>
             <div className="checkout-field">
               <label className="checkout-field__label">Địa chỉ chi tiết</label>
@@ -228,7 +231,19 @@ function CheckoutPage() {
           <div className="checkout-summary__items">
             {selectedItems.map((item) => (
               <div key={item.id} className="checkout-summary__item">
-                <span>{item.name} <strong className="checkout-summary__item-qty">x{item.quantity}</strong></span>
+                <img
+                  src={getProductImageSrc(item)}
+                  alt={item.name}
+                  className="checkout-summary__item-thumb"
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = "/placeholder.svg";
+                  }}
+                />
+                <div className="checkout-summary__item-body">
+                  <span className="checkout-summary__item-name">{item.name}</span>
+                  <span className="checkout-summary__item-qty">x{item.quantity}</span>
+                </div>
                 <span className="checkout-summary__item-price">
                   {formatPrice(parsePrice(item.finalPrice || item.price) * item.quantity)}
                 </span>
