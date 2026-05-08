@@ -25,6 +25,8 @@ export function CartProvider({ children }) {
   const successRef = useRef(success);
   successRef.current = success;
 
+  const cartRef = useRef([]);
+
   const [cart, setCart] = useState(() => {
     try {
       const saved = localStorage.getItem(getCartStorageKey(null));
@@ -47,6 +49,7 @@ export function CartProvider({ children }) {
   // Persist cart to localStorage
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(cart));
+    cartRef.current = cart;
   }, [storageKey, cart]);
 
   // ── Stable callbacks (never re-created) ──
@@ -71,30 +74,28 @@ export function CartProvider({ children }) {
   }, []);
 
   const removeFromCart = useCallback((productId) => {
-    setCart((prevCart) => {
-      const removedItem = prevCart.find((item) => item.id === productId);
+    const removedItem = cartRef.current.find((item) => item.id === productId);
 
-      if (removedItem) {
-        trackEvent({
-          eventName: "remove_from_cart",
-          token: authRef.current?.token,
-          metadata: {
-            productId: String(removedItem.id || productId),
-            productName: String(removedItem.name || ""),
-            category: String(removedItem.category || ""),
-            quantity: Number(removedItem.quantity || 1),
-            price: Number(removedItem.finalPrice || removedItem.price || 0),
-          },
-        });
+    setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
 
-        successRef.current(`Đã xóa ${removedItem.name} khỏi giỏ hàng.`, {
-          title: "Giỏ hàng",
-          duration: 3000,
-        });
-      }
+    if (removedItem) {
+      trackEvent({
+        eventName: "remove_from_cart",
+        token: authRef.current?.token,
+        metadata: {
+          productId: String(removedItem.id || productId),
+          productName: String(removedItem.name || ""),
+          category: String(removedItem.category || ""),
+          quantity: Number(removedItem.quantity || 1),
+          price: Number(removedItem.finalPrice || removedItem.price || 0),
+        },
+      });
 
-      return prevCart.filter((item) => item.id !== productId);
-    });
+      successRef.current(`Đã xóa ${removedItem.name} khỏi giỏ hàng.`, {
+        title: "Giỏ hàng",
+        duration: 3000,
+      });
+    }
   }, []);
 
   // Cập nhật số lượng sản phẩm (cộng/trừ)

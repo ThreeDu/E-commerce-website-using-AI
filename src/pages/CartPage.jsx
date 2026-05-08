@@ -60,7 +60,7 @@ function CartPage() {
     };
 
     fetchFreshPrices();
-  }, [cart.length]);
+  }, [cart]);
 
   // Calculate prices using fresh data or fallback to cart item data
   const getEffectivePrice = (item) => {
@@ -93,10 +93,6 @@ function CartPage() {
 
   // Calculate totals for selected items
   const selectedItemsTotal = selectedItems.reduce((total, item) => {
-    return total + getEffectivePrice(item) * item.quantity;
-  }, 0);
-
-  const allItemsTotal = cart.reduce((total, item) => {
     return total + getEffectivePrice(item) * item.quantity;
   }, 0);
 

@@ -10,7 +10,7 @@ import { verifyCoupon, createOrder } from "../services/orderService";
 import "../css/checkout.css";
 
 function CheckoutPage() {
-  const { cart, clearCart, removeSelectedItems } = useCart();
+  const { cart, removeSelectedItems } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
   const { auth } = useAuth();
