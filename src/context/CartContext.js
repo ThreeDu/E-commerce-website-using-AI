@@ -60,8 +60,8 @@ export function CartProvider({ children }) {
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      // Thêm mới nếu chưa có
-      return [...prevCart, { ...product, quantity: 1 }];
+      // Thêm mới nếu chưa có (với trạng thái selected = true)
+      return [...prevCart, { ...product, quantity: 1, selected: true }];
     });
 
     successRef.current(`Đã thêm ${product.name} vào giỏ hàng!`, {
@@ -111,10 +111,54 @@ export function CartProvider({ children }) {
     setCart([]);
   }, []);
 
+  // Toggle selection trạng thái của một sản phẩm
+  const toggleItemSelection = useCallback((productId) => {
+    setCart((prevCart) =>
+      prevCart.map((item) =>
+        item.id === productId ? { ...item, selected: !item.selected } : item
+      )
+    );
+  }, []);
+
+  // Chọn tất cả sản phẩm
+  const selectAllItems = useCallback(() => {
+    setCart((prevCart) => prevCart.map((item) => ({ ...item, selected: true })));
+  }, []);
+
+  // Bỏ chọn tất cả sản phẩm
+  const deselectAllItems = useCallback(() => {
+    setCart((prevCart) => prevCart.map((item) => ({ ...item, selected: false })));
+  }, []);
+
+  // Xóa các sản phẩm được chọn từ giỏ hàng
+  const removeSelectedItems = useCallback(() => {
+    setCart((prevCart) => prevCart.filter((item) => !item.selected));
+  }, []);
+
   // ── Memoize context value to prevent unnecessary re-renders ──
   const value = useMemo(
-    () => ({ cart, addToCart, removeFromCart, updateQuantity, clearCart }),
-    [cart, addToCart, removeFromCart, updateQuantity, clearCart]
+    () => ({
+      cart,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+      toggleItemSelection,
+      selectAllItems,
+      deselectAllItems,
+      removeSelectedItems,
+    }),
+    [
+      cart,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+      toggleItemSelection,
+      selectAllItems,
+      deselectAllItems,
+      removeSelectedItems,
+    ]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

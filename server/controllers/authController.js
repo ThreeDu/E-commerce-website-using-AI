@@ -59,6 +59,7 @@ const register = async (req, res) => {
         role: newUser.role,
         phone: newUser.phone,
         address: newUser.address,
+        avatar: newUser.avatar,
       },
     });
   } catch (error) {
@@ -98,6 +99,7 @@ const login = async (req, res) => {
         role: user.role,
         phone: user.phone,
         address: user.address,
+        avatar: user.avatar,
       },
     });
   } catch (error) {
@@ -131,14 +133,22 @@ const verifyToken = async (req, res) => {
     const secret = process.env.JWT_SECRET || "dev_secret_change_me";
     const decoded = jwt.verify(token, secret);
 
-    const user = await User.findById(decoded.userId).select("_id name email role phone address");
+    const user = await User.findById(decoded.userId).select("_id name email role phone address avatar");
     if (!user) {
       return res.status(401).json({ message: "Tài khoản không tồn tại." });
     }
 
     return res.json({
       message: "Token hợp lệ.",
-      user,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone || "",
+        address: user.address || "",
+        avatar: user.avatar || "",
+      },
     });
   } catch (error) {
     return res.status(401).json({ message: "Token không hợp lệ hoặc đã hết hạn." });
@@ -160,6 +170,7 @@ const getProfile = async (req, res) => {
       role: user.role,
       phone: user.phone || "",
       address: user.address || "",
+      avatar: user.avatar || "",
     },
   });
 };
@@ -191,6 +202,7 @@ const updateProfile = async (req, res) => {
         role: user.role,
         phone: user.phone,
         address: user.address,
+        avatar: user.avatar,
       },
     });
   } catch (error) {
@@ -314,6 +326,41 @@ const removeWishlist = async (req, res) => {
   }
 };
 
+const uploadAvatar = async (req, res) => {
+  const user = await verifyUserRequest(req, res);
+  if (!user) {
+    return;
+  }
+
+  try {
+    const { avatar } = req.body;
+
+    if (!avatar || typeof avatar !== "string") {
+      return res.status(400).json({ message: "Avatar không hợp lệ." });
+    }
+
+    // Limit avatar size (base64 encoded image, ~2MB max)
+    if (avatar.length > 5242880) {
+      return res.status(400).json({ message: "Ảnh quá lớn (tối đa 2MB)." });
+    }
+
+    user.avatar = avatar;
+    await user.save();
+
+    return res.json({
+      message: "Cập nhật avatar thành công.",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -322,6 +369,7 @@ module.exports = {
   getProfile,
   updateProfile,
   changePassword,
+  uploadAvatar,
   getWishlist,
   addWishlist,
   removeWishlist,

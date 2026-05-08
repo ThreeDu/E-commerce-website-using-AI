@@ -6,6 +6,25 @@
  */
 import { getProductImageSrc, getProductPricing, isOutOfStock } from "../../utils/productUtils";
 
+function buildSummaryBullets(description) {
+  const raw = String(description || "").replace(/\r/g, "\n").trim();
+  if (!raw) return [];
+
+  const lines = raw
+    .split("\n")
+    .map((line) => line.replace(/^[-*•]\s*/, "").trim())
+    .filter(Boolean);
+
+  const candidates = lines.length > 1
+    ? lines
+    : raw
+        .split(/(?<=[.!?])\s+/)
+        .map((sentence) => sentence.replace(/^[-*•]\s*/, "").trim())
+        .filter(Boolean);
+
+  return candidates.slice(0, 4);
+}
+
 function ProductInfo({
   product,
   isWishlisted,
@@ -15,6 +34,7 @@ function ProductInfo({
 }) {
   const pricing = getProductPricing(product);
   const outOfStock = isOutOfStock(product);
+  const summaryBullets = buildSummaryBullets(product.description);
 
   return (
     <section className="shopx-panel shopx-detail">
@@ -31,13 +51,13 @@ function ProductInfo({
           }}
         />
       </div>
-      <div>
+      <div className="shopx-detail-content">
         <h1 className="shopx-detail-name">{product.name}</h1>
-        <p className="shopx-subtitle" style={{ marginTop: "12px" }}>
+        <p className="shopx-detail-kicker">
           Danh mục: <strong>{product.category}</strong>
         </p>
 
-        <div className="shopx-meta-row" style={{ marginTop: "12px" }}>
+        <div className="shopx-meta-row">
           <span className="shopx-chip shopx-chip--rating">
             {Number(product.averageRating || 0).toFixed(1)} sao ({Number(product.totalRatings || 0)} đánh giá)
           </span>
@@ -49,6 +69,22 @@ function ProductInfo({
         {pricing.hasDiscount ? (
           <p className="shopx-old-price">{pricing.basePrice.toLocaleString("vi-VN")} đ</p>
         ) : null}
+
+        <div className="shopx-detail-summary">
+          <div className="shopx-detail-summary__head">
+            <span>Tóm tắt nổi bật</span>
+            <span>{summaryBullets.length} điểm</span>
+          </div>
+          <ul className="shopx-detail-summary__list">
+            {summaryBullets.length > 0 ? (
+              summaryBullets.map((bullet, index) => (
+                <li key={`${bullet}-${index}`}>{bullet}</li>
+              ))
+            ) : (
+              <li>Thông tin chi tiết về sản phẩm sẽ hiển thị ở phần mô tả bên dưới.</li>
+            )}
+          </ul>
+        </div>
 
         <div className="shopx-detail-actions">
           <button
@@ -68,8 +104,6 @@ function ProductInfo({
             {outOfStock ? "Hết hàng" : "Thêm vào giỏ hàng"}
           </button>
         </div>
-
-        <p className="shopx-detail-desc">{product.description}</p>
       </div>
     </section>
   );

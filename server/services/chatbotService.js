@@ -938,29 +938,29 @@ function buildRecommendationReason(item) {
   const reasons = [];
 
   if (item.exactMatch) {
-    reasons.push("khop chinh xac ten san pham");
+    reasons.push("Đúng chính xác sản phẩm bạn đang tìm");
   } else if (item.fullModelMatch) {
-    reasons.push("khop model gan dung");
+    reasons.push("Khớp đúng mẫu sản phẩm bạn quan tâm");
   }
 
   if (item.matched.length > 0) {
-    reasons.push(`khop nhu cau: ${item.matched.join(", ")}`);
+    reasons.push("Phù hợp với nhu cầu tìm kiếm của bạn");
   }
 
   if (Number(item.knnScore || 0) > 0.2) {
-    reasons.push("tuong dong hanh vi KNN");
+    reasons.push("Được gợi ý thêm từ các sản phẩm tương tự");
   }
 
   if (Number(item.totalPurchases || 0) > 0) {
-    reasons.push(`${item.totalPurchases} luot mua`);
+    reasons.push(`${item.totalPurchases} lượt mua`);
   }
 
   if (Number(item.averageRating || 0) >= 4) {
-    reasons.push(`danh gia ${Number(item.averageRating).toFixed(1)} sao`);
+    reasons.push(`Đánh giá ${Number(item.averageRating).toFixed(1)} sao`);
   }
 
   if (reasons.length === 0) {
-    reasons.push("phu hop voi nhu cau co ban");
+    reasons.push("Phù hợp với nhu cầu cơ bản của bạn");
   }
 
   return reasons.join(" | ");
