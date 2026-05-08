@@ -45,6 +45,16 @@ const discountSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    usageLimitPerUser: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    allowedUsers: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "User",
+      default: [],
+    },
     isActive: {
       type: Boolean,
       default: true,

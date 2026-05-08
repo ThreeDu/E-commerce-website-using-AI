@@ -32,3 +32,7 @@ export async function cancelMyOrder(id, reason, token) {
     token,
   });
 }
+
+export async function fetchMyVouchers(token) {
+  return apiClient("/api/orders/my-vouchers", { token });
+}

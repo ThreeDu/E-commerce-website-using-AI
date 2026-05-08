@@ -6,6 +6,7 @@ const {
   listMyOrders,
   getMyOrderById,
   cancelMyOrder,
+  listMyVouchers,
 } = require("../controllers/orderController");
 
 router.get("/coupon/:code", verifyCoupon);
@@ -23,5 +24,10 @@ router.get("/my-orders", listMyOrders);
 router.get("/my-orders/:id", getMyOrderById);
 
 router.put("/my-orders/:id/cancel", cancelMyOrder);
+
+// @route   GET /api/orders/my-vouchers
+// @desc    Lấy danh sách mã giảm giá khả dụng của user
+// @access  Private
+router.get("/my-vouchers", listMyVouchers);
 
 module.exports = router;

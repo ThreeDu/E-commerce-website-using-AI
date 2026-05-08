@@ -3,9 +3,21 @@ const { logAdminAction } = require("../../utils/adminAuditLogger");
 
 const listUsers = async (req, res) => {
   try {
-    const users = await User.find()
+    const search = req.query.search ? String(req.query.search).trim() : "";
+    let query = {};
+    if (search) {
+      query = {
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } }
+        ]
+      };
+    }
+
+    const users = await User.find(query)
       .select("_id name email role createdAt")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .limit(search ? 20 : 100);
 
     return res.json({
       message: "Lấy danh sách người dùng thành công.",

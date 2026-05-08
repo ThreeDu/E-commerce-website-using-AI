@@ -37,7 +37,7 @@ function calculateDiscountAmount(discount, subtotalPrice) {
   return Math.min(amount, subtotalPrice);
 }
 
-function validateDiscount(discount, subtotalPrice) {
+async function validateDiscount(discount, subtotalPrice, authUser) {
   if (!discount) {
     return "Mã giảm giá không tồn tại.";
   }
@@ -59,7 +59,31 @@ function validateDiscount(discount, subtotalPrice) {
     Number(discount.usageLimit || 0) > 0 &&
     Number(discount.usedCount || 0) >= Number(discount.usageLimit || 0)
   ) {
-    return "Mã giảm giá đã hết lượt sử dụng.";
+    return "Mã giảm giá đã hết lượt sử dụng (đạt giới hạn tổng).";
+  }
+
+  // Kiểm tra người dùng chỉ định
+  if (discount.allowedUsers && discount.allowedUsers.length > 0) {
+    const isAllowed = discount.allowedUsers.some(
+      (userId) => String(userId) === String(authUser._id)
+    );
+    if (!isAllowed) {
+      return "Mã giảm giá này không dành cho tài khoản của bạn.";
+    }
+  }
+
+  // Kiểm tra giới hạn số lần dùng trên mỗi user
+  if (Number(discount.usageLimitPerUser || 0) > 0) {
+    // Đếm số đơn hàng đã đặt dùng mã này (không tính đơn đã bị hủy)
+    const usageCount = await Order.countDocuments({
+      user: authUser._id,
+      discount: discount._id,
+      status: { $ne: "cancelled" },
+    });
+
+    if (usageCount >= Number(discount.usageLimitPerUser)) {
+      return "Bạn đã hết lượt sử dụng mã giảm giá này.";
+    }
   }
 
   if (subtotalPrice < Number(discount.minOrderValue || 0)) {
@@ -84,7 +108,7 @@ const verifyCoupon = async (req, res) => {
     }
 
     const discount = await Discount.findOne({ code });
-    const invalidReason = validateDiscount(discount, subtotalPrice);
+    const invalidReason = await validateDiscount(discount, subtotalPrice, authUser);
     if (invalidReason) {
       return res.status(400).json({ message: invalidReason });
     }
@@ -194,7 +218,7 @@ const createOrder = async (req, res) => {
     if (String(discountCode || "").trim()) {
       const normalizedCode = String(discountCode).trim().toUpperCase();
       const discount = await Discount.findOne({ code: normalizedCode });
-      const invalidReason = validateDiscount(discount, subtotalPrice);
+      const invalidReason = await validateDiscount(discount, subtotalPrice, authUser);
 
       if (invalidReason) {
         return res.status(400).json({ message: invalidReason });
@@ -320,10 +344,78 @@ const cancelMyOrder = async (req, res) => {
   }
 };
 
+const listMyVouchers = async (req, res) => {
+  try {
+    const authUser = await verifyUserRequest(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    const now = new Date();
+    
+    // 1. Fetch all active discounts that apply to current user
+    const discounts = await Discount.find({
+      isActive: true,
+      $or: [
+        { startDate: { $lte: now }, endDate: { $gte: now } },
+        { startDate: null, endDate: null },
+        { startDate: { $lte: now }, endDate: null },
+        { startDate: null, endDate: { $gte: now } },
+      ],
+      $or: [
+        { allowedUsers: { $size: 0 } }, // Vouchers for everyone
+        { allowedUsers: authUser._id }  // Vouchers assigned to this user
+      ]
+    }).sort({ createdAt: -1 });
+
+    const availableVouchers = [];
+
+    // 2. Filter out discounts that reached usage limits
+    for (const discount of discounts) {
+      // Check total usage limit
+      if (
+        Number(discount.usageLimit || 0) > 0 &&
+        Number(discount.usedCount || 0) >= Number(discount.usageLimit)
+      ) {
+        continue;
+      }
+
+      // Check per-user usage limit
+      if (Number(discount.usageLimitPerUser || 0) > 0) {
+        const usageCount = await Order.countDocuments({
+          user: authUser._id,
+          discount: discount._id,
+          status: { $ne: "cancelled" },
+        });
+
+        if (usageCount >= Number(discount.usageLimitPerUser)) {
+          continue;
+        }
+      }
+
+      availableVouchers.push({
+        id: discount._id,
+        code: discount.code,
+        type: discount.type,
+        value: discount.value,
+        minOrderValue: discount.minOrderValue,
+        maxDiscountValue: discount.maxDiscountValue,
+        endDate: discount.endDate,
+      });
+    }
+
+    return res.json({ vouchers: availableVouchers });
+  } catch (error) {
+    console.error("Error listing vouchers:", error);
+    return res.status(500).json({ message: "Lỗi máy chủ khi lấy danh sách voucher." });
+  }
+};
+
 module.exports = {
   verifyCoupon,
   createOrder,
   listMyOrders,
+  listMyVouchers,
   getMyOrderById,
   cancelMyOrder,
 };
