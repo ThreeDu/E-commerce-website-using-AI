@@ -5,6 +5,7 @@ import { useNotification } from "../context/NotificationContext";
 import { trackEvent } from "../services/analyticsService";
 import AvatarEditor from "../components/common/AvatarEditor";
 import { formatPrice, parsePrice } from "../utils/priceUtils";
+import { fetchMyVouchers } from "../services/orderService";
 import "../css/profile.css";
 import "../css/avatar-editor.css";
 
@@ -113,6 +114,8 @@ function UserDashboard() {
   const [orders, setOrders] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [isWishlistLoading, setIsWishlistLoading] = useState(false);
+  const [vouchers, setVouchers] = useState([]);
+  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState("profile");
   const [passwordForm, setPasswordForm] = useState({
@@ -182,6 +185,22 @@ function UserDashboard() {
     loadWishlist();
   }, [auth?.token]);
 
+  useEffect(() => {
+    const loadVouchers = async () => {
+      if (!auth?.token) {
+        setVouchers([]);
+        return;
+      }
+      try {
+        const response = await fetchMyVouchers(auth.token);
+        setVouchers(Array.isArray(response?.vouchers) ? response.vouchers : []);
+      } catch (error) {
+        setVouchers([]);
+      }
+    };
+    loadVouchers();
+  }, [auth?.token]);
+
   const metrics = useMemo(() => {
     const orderCount = orders.length;
     const points = orderCount * 50;
@@ -192,6 +211,9 @@ function UserDashboard() {
       vouchers: 5,
     };
   }, [orders, wishlist.length]);
+      vouchers: vouchers.length,
+    };
+  }, [orders, vouchers]);
 
   const recentOrders = orders.slice(0, 3);
   const wishlistPreview = wishlist.slice(0, 3);
@@ -454,6 +476,37 @@ function UserDashboard() {
                 <div className="profile-hero__detail">
                   <span>Email</span>
                   <strong>{auth?.user?.email || "Chưa cập nhật"}</strong>
+          <p>Điểm tích lũy</p>
+          <strong>{metrics.points.toLocaleString("vi-VN")} điểm</strong>
+        </article>
+
+        <article 
+          className="bento-card metric-card tone-green" 
+          style={{ cursor: "pointer" }}
+          onClick={() => setIsVoucherModalOpen(true)}
+        >
+          <div className="metric-icon"><IconVoucher /></div>
+          <p>Ví voucher</p>
+          <strong>{metrics.vouchers} voucher</strong>
+        </article>
+
+        <article className="bento-card content-card recent-orders-card">
+          <div className="card-heading">
+            <h4>Đơn hàng gần đây</h4>
+            <button type="button" onClick={() => navigate("/order-history")}>Xem tất cả</button>
+          </div>
+          <div className="recent-orders-list">
+            {recentOrders.length === 0 ? (
+              <p className="empty-text">Chưa có đơn hàng gần đây.</p>
+            ) : (
+              recentOrders.map((order) => (
+                <div key={order._id} className="recent-order-item">
+                  <div className="recent-order-thumb" />
+                  <div>
+                    <p className="recent-order-id">#{String(order._id).slice(-8)}</p>
+                    <p className="recent-order-date">{new Date(order.createdAt).toLocaleString("vi-VN")}</p>
+                  </div>
+                  <span className="timeline-status">{getStatusLabel(order.status)}</span>
                 </div>
                 <div className="profile-hero__detail">
                   <span>Số điện thoại</span>
@@ -709,6 +762,61 @@ function UserDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {isVoucherModalOpen && (
+        <div className="profile-modal-backdrop">
+          <div className="profile-modal-card" style={{ maxWidth: "500px" }}>
+            <h3>Ví Voucher của bạn</h3>
+            <p className="dashboard-subtitle" style={{ marginBottom: "16px" }}>Danh sách các mã giảm giá bạn có thể sử dụng ngay.</p>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "400px", overflowY: "auto" }}>
+              {vouchers.length === 0 ? (
+                <p className="empty-text">Bạn hiện chưa có mã giảm giá nào.</p>
+              ) : (
+                vouchers.map(v => (
+                  <div key={v.id} style={{ border: "1px dashed #10375c", borderRadius: "8px", padding: "12px", background: "#f8fbff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <h4 style={{ margin: "0 0 4px", color: "#10375c" }}>{v.code}</h4>
+                      <p style={{ margin: "0", fontSize: "13px", color: "#62728a" }}>
+                        Giảm {v.type === "percent" ? `${v.value}%` : `${Number(v.value).toLocaleString("vi-VN")}đ`} 
+                        {Number(v.minOrderValue) > 0 && ` cho đơn từ ${Number(v.minOrderValue).toLocaleString("vi-VN")}đ`}
+                        {Number(v.maxDiscountValue) > 0 && ` (Tối đa ${Number(v.maxDiscountValue).toLocaleString("vi-VN")}đ)`}
+                      </p>
+                      {v.endDate && (
+                        <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#b45309" }}>
+                          HSD: {new Date(v.endDate).toLocaleString("vi-VN")}
+                        </p>
+                      )}
+                    </div>
+                    <button 
+                      type="button" 
+                      className="primary-action" 
+                      style={{ padding: "6px 12px", fontSize: "12px" }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(v.code);
+                        success(`Đã copy mã ${v.code}`);
+                      }}
+                    >
+                      Copy mã
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="modal-actions" style={{ marginTop: "20px" }}>
+              <button
+                type="button"
+                onClick={() => setIsVoucherModalOpen(false)}
+                className="secondary-action"
+                style={{ width: "100%" }}
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}

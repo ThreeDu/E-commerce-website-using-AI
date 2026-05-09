@@ -628,3 +628,37 @@
     padding: 12px;
   }
 }
+
+.excel-btn {
+  background: #16a34a !important;
+  color: white !important;
+  border-color: #15803d !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.excel-btn:hover {
+  background: #15803d !important;
+}
+
+.custom-file-input {
+  padding: 8px !important;
+  background: #f8fbff !important;
+  border: 2px dashed #b5ccf0 !important;
+  cursor: pointer;
+  height: auto !important;
+}
+.custom-file-input::file-selector-button {
+  background: #e8edf3;
+  border: 1px solid #d0d9e4;
+  border-radius: 6px;
+  padding: 6px 12px;
+  color: #0f2233;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 12px;
+  transition: all 0.2s ease;
+}
+.custom-file-input::file-selector-button:hover {
+  background: #dce6f2;
+}
