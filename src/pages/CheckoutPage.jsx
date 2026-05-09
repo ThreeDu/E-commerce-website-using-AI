@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
 import { trackEvent } from "../services/analyticsService";
 import { parsePrice, formatPrice } from "../utils/priceUtils";
-import { verifyCoupon, createOrder } from "../services/orderService";
+import { verifyCoupon, createOrder, fetchMyVouchers } from "../services/orderService";
 import "../css/checkout.css";
 
 function CheckoutPage() {
@@ -25,6 +25,8 @@ function CheckoutPage() {
   const [couponInfo, setCouponInfo] = useState(null);
   const [couponError, setCouponError] = useState("");
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [vouchers, setVouchers] = useState([]);
+  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
 
   useEffect(() => {
     if (!auth?.user) {
@@ -37,7 +39,17 @@ function CheckoutPage() {
       phone: prev.phone || auth.user.phone || "",
       address: prev.address || auth.user.address || "",
     }));
-  }, [auth?.user]);
+
+    const loadVouchers = async () => {
+      try {
+        const response = await fetchMyVouchers(auth.token);
+        setVouchers(Array.isArray(response?.vouchers) ? response.vouchers : []);
+      } catch (error) {
+        setVouchers([]);
+      }
+    };
+    loadVouchers();
+  }, [auth?.user, auth?.token]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,7 +63,7 @@ function CheckoutPage() {
   const discountAmount = couponInfo?.discountAmount || 0;
   const finalTotal = Math.max(0, totalPrice - discountAmount);
 
-  const handleApplyCoupon = async () => {
+  const handleApplyCoupon = async (codeToApply) => {
     setCouponError("");
 
     if (!auth?.token) {
@@ -59,7 +71,9 @@ function CheckoutPage() {
       return;
     }
 
-    const normalizedCode = String(couponCode || "").trim().toUpperCase();
+    const rawCode = typeof codeToApply === "string" ? codeToApply : couponCode;
+    const normalizedCode = String(rawCode || "").trim().toUpperCase();
+    
     if (!normalizedCode) {
       setCouponError("Vui lòng nhập mã giảm giá.");
       return;
@@ -233,6 +247,14 @@ function CheckoutPage() {
               />
               <button
                 type="button"
+                onClick={() => setIsVoucherModalOpen(true)}
+                className="checkout-coupon__btn checkout-coupon__btn--outline"
+                style={{ background: "#f8fbff", color: "#10375c", borderColor: "#b5ccf0" }}
+              >
+                Chọn mã
+              </button>
+              <button
+                type="button"
                 onClick={handleApplyCoupon}
                 disabled={isApplyingCoupon}
                 className="checkout-coupon__btn"
@@ -267,6 +289,85 @@ function CheckoutPage() {
           </button>
         </div>
       </div>
+
+      {isVoucherModalOpen && (
+        <div className="profile-modal-backdrop" style={{ zIndex: 9999 }}>
+          <div className="profile-modal-card" style={{ maxWidth: "500px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ margin: 0 }}>Chọn Mã Giảm Giá</h3>
+              <button 
+                type="button" 
+                onClick={() => setIsVoucherModalOpen(false)}
+                style={{ background: "transparent", border: "none", fontSize: "20px", cursor: "pointer", color: "#62728a" }}
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "400px", overflowY: "auto" }}>
+              {vouchers.length === 0 ? (
+                <p className="empty-text">Bạn hiện chưa có mã giảm giá nào.</p>
+              ) : (
+                vouchers.map(v => {
+                  const minRequired = Number(v.minOrderValue || 0);
+                  const isEligible = totalPrice >= minRequired;
+                  const missingAmount = minRequired - totalPrice;
+
+                  return (
+                    <div key={v.id} style={{ 
+                      border: "1px dashed #10375c", 
+                      borderRadius: "8px", 
+                      padding: "12px", 
+                      background: isEligible ? "#f8fbff" : "#f1f5f9", 
+                      opacity: isEligible ? 1 : 0.7,
+                      display: "flex", 
+                      justifyContent: "space-between", 
+                      alignItems: "center" 
+                    }}>
+                      <div>
+                        <h4 style={{ margin: "0 0 4px", color: isEligible ? "#10375c" : "#62728a" }}>{v.code}</h4>
+                        <p style={{ margin: "0", fontSize: "13px", color: "#62728a" }}>
+                          Giảm {v.type === "percent" ? `${v.value}%` : `${Number(v.value).toLocaleString("vi-VN")}đ`} 
+                          {minRequired > 0 && ` cho đơn từ ${minRequired.toLocaleString("vi-VN")}đ`}
+                          {Number(v.maxDiscountValue) > 0 && ` (Tối đa ${Number(v.maxDiscountValue).toLocaleString("vi-VN")}đ)`}
+                        </p>
+                        {!isEligible && (
+                          <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#b42318", fontWeight: 600 }}>
+                            Mua thêm {missingAmount.toLocaleString("vi-VN")}đ để dùng mã
+                          </p>
+                        )}
+                        {v.endDate && isEligible && (
+                          <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#b45309" }}>
+                            HSD: {new Date(v.endDate).toLocaleString("vi-VN")}
+                          </p>
+                        )}
+                      </div>
+                      <button 
+                        type="button" 
+                        className="primary-action" 
+                        disabled={!isEligible}
+                        style={{ 
+                          padding: "6px 12px", 
+                          fontSize: "12px",
+                          background: isEligible ? "#10375c" : "#cbd5e1",
+                          cursor: isEligible ? "pointer" : "not-allowed"
+                        }}
+                        onClick={() => {
+                          setCouponCode(v.code);
+                          setIsVoucherModalOpen(false);
+                          handleApplyCoupon(v.code);
+                        }}
+                      >
+                        Áp dụng
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
