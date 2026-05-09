@@ -7,6 +7,7 @@ const {
   getProfile,
   updateProfile,
   changePassword,
+  uploadAvatar,
   getWishlist,
   addWishlist,
   removeWishlist,
@@ -28,6 +29,7 @@ router.get("/verify-admin", verifyAdmin);
 router.get("/verify-token", verifyToken);
 router.get("/profile", getProfile);
 router.put("/profile", updateProfile);
+router.put("/profile/avatar", uploadAvatar);
 router.put("/change-password", changePassword);
 router.get("/wishlist", getWishlist);
 router.post("/wishlist", addWishlist);

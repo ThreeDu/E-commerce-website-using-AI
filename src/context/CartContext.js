@@ -25,6 +25,8 @@ export function CartProvider({ children }) {
   const successRef = useRef(success);
   successRef.current = success;
 
+  const cartRef = useRef([]);
+
   const [cart, setCart] = useState(() => {
     try {
       const saved = localStorage.getItem(getCartStorageKey(null));
@@ -47,6 +49,7 @@ export function CartProvider({ children }) {
   // Persist cart to localStorage
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(cart));
+    cartRef.current = cart;
   }, [storageKey, cart]);
 
   // ── Stable callbacks (never re-created) ──
@@ -60,8 +63,8 @@ export function CartProvider({ children }) {
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      // Thêm mới nếu chưa có
-      return [...prevCart, { ...product, quantity: 1 }];
+      // Thêm mới nếu chưa có (với trạng thái selected = true)
+      return [...prevCart, { ...product, quantity: 1, selected: true }];
     });
 
     successRef.current(`Đã thêm ${product.name} vào giỏ hàng!`, {
@@ -71,30 +74,28 @@ export function CartProvider({ children }) {
   }, []);
 
   const removeFromCart = useCallback((productId) => {
-    setCart((prevCart) => {
-      const removedItem = prevCart.find((item) => item.id === productId);
+    const removedItem = cartRef.current.find((item) => item.id === productId);
 
-      if (removedItem) {
-        trackEvent({
-          eventName: "remove_from_cart",
-          token: authRef.current?.token,
-          metadata: {
-            productId: String(removedItem.id || productId),
-            productName: String(removedItem.name || ""),
-            category: String(removedItem.category || ""),
-            quantity: Number(removedItem.quantity || 1),
-            price: Number(removedItem.finalPrice || removedItem.price || 0),
-          },
-        });
+    setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
 
-        successRef.current(`Đã xóa ${removedItem.name} khỏi giỏ hàng.`, {
-          title: "Giỏ hàng",
-          duration: 3000,
-        });
-      }
+    if (removedItem) {
+      trackEvent({
+        eventName: "remove_from_cart",
+        token: authRef.current?.token,
+        metadata: {
+          productId: String(removedItem.id || productId),
+          productName: String(removedItem.name || ""),
+          category: String(removedItem.category || ""),
+          quantity: Number(removedItem.quantity || 1),
+          price: Number(removedItem.finalPrice || removedItem.price || 0),
+        },
+      });
 
-      return prevCart.filter((item) => item.id !== productId);
-    });
+      successRef.current(`Đã xóa ${removedItem.name} khỏi giỏ hàng.`, {
+        title: "Giỏ hàng",
+        duration: 3000,
+      });
+    }
   }, []);
 
   // Cập nhật số lượng sản phẩm (cộng/trừ)
@@ -111,10 +112,54 @@ export function CartProvider({ children }) {
     setCart([]);
   }, []);
 
+  // Toggle selection trạng thái của một sản phẩm
+  const toggleItemSelection = useCallback((productId) => {
+    setCart((prevCart) =>
+      prevCart.map((item) =>
+        item.id === productId ? { ...item, selected: !item.selected } : item
+      )
+    );
+  }, []);
+
+  // Chọn tất cả sản phẩm
+  const selectAllItems = useCallback(() => {
+    setCart((prevCart) => prevCart.map((item) => ({ ...item, selected: true })));
+  }, []);
+
+  // Bỏ chọn tất cả sản phẩm
+  const deselectAllItems = useCallback(() => {
+    setCart((prevCart) => prevCart.map((item) => ({ ...item, selected: false })));
+  }, []);
+
+  // Xóa các sản phẩm được chọn từ giỏ hàng
+  const removeSelectedItems = useCallback(() => {
+    setCart((prevCart) => prevCart.filter((item) => !item.selected));
+  }, []);
+
   // ── Memoize context value to prevent unnecessary re-renders ──
   const value = useMemo(
-    () => ({ cart, addToCart, removeFromCart, updateQuantity, clearCart }),
-    [cart, addToCart, removeFromCart, updateQuantity, clearCart]
+    () => ({
+      cart,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+      toggleItemSelection,
+      selectAllItems,
+      deselectAllItems,
+      removeSelectedItems,
+    }),
+    [
+      cart,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+      toggleItemSelection,
+      selectAllItems,
+      deselectAllItems,
+      removeSelectedItems,
+    ]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

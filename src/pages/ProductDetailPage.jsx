@@ -16,6 +16,7 @@ import { isOutOfStock } from "../utils/productUtils";
 import { fetchProductById, trackProductView, fetchReviewEligibility } from "../services/productService";
 import { fetchWishlist, addToWishlist, removeFromWishlist } from "../services/wishlistService";
 import ProductInfo from "../components/product/ProductInfo";
+import ProductDescriptionSection from "../components/product/ProductDescriptionSection";
 import ReviewForm from "../components/product/ReviewForm";
 import ReviewList from "../components/product/ReviewList";
 import "../css/shop-experience.css";
@@ -225,6 +226,8 @@ function ProductDetailPage() {
           onToggleWishlist={handleToggleWishlist}
           onAddToCart={handleAddToCart}
         />
+
+        <ProductDescriptionSection description={product.description} />
 
         <section className="shopx-panel shopx-review-box">
           <h3 style={{ marginTop: 0 }}>Đánh giá sản phẩm</h3>

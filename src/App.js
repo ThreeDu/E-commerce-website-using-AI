@@ -28,6 +28,7 @@ const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
 const OrderHistoryPage = lazy(() => import("./pages/OrderHistoryPage"));
 const OrderDetailPage = lazy(() => import("./pages/OrderDetailPage"));
 const UserDashboard = lazy(() => import("./pages/UserDashboard"));
+const WishlistPage = lazy(() => import("./pages/WishlistPage"));
 
 // ── Admin pages (lazy — only loaded when admin navigates) ──
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -99,6 +100,14 @@ function App() {
                     />
 
                     {/* ── User protected pages ── */}
+                    <Route
+                      path="/wishlist"
+                      element={
+                        <ProtectedRoute>
+                          <WishlistPage />
+                        </ProtectedRoute>
+                      }
+                    />
                     <Route
                       path="/order-history"
                       element={

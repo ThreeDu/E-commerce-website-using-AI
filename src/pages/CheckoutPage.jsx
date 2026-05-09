@@ -1,18 +1,24 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
 import { trackEvent } from "../services/analyticsService";
 import { parsePrice, formatPrice } from "../utils/priceUtils";
+import { getProductImageSrc } from "../utils/productUtils";
+import { verifyCoupon, createOrder } from "../services/orderService";
 import { verifyCoupon, createOrder, fetchMyVouchers } from "../services/orderService";
 import "../css/checkout.css";
 
 function CheckoutPage() {
-  const { cart, clearCart } = useCart();
+  const { cart, removeSelectedItems } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
   const { auth } = useAuth();
   const { success, error, warning } = useNotification();
+
+  // Get selected items from navigation state
+  const selectedItems = location.state?.selectedItems || cart.filter((item) => item.selected);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -56,8 +62,8 @@ function CheckoutPage() {
     setFormData({ ...formData, [name]: value });
   };
 
-  const totalPrice = cart.reduce((total, item) => {
-    return total + parsePrice(item.price) * item.quantity;
+  const totalPrice = selectedItems.reduce((total, item) => {
+    return total + parsePrice(item.finalPrice || item.price) * item.quantity;
   }, 0);
 
   const discountAmount = couponInfo?.discountAmount || 0;
@@ -109,6 +115,11 @@ function CheckoutPage() {
       return;
     }
 
+    if (selectedItems.length === 0) {
+      setFormError("Vui lòng chọn ít nhất một sản phẩm để thanh toán.");
+      return;
+    }
+
     const trimmedFullName = formData.fullName.trim();
     const trimmedPhone = formData.phone.trim();
     const trimmedAddress = formData.address.trim();
@@ -128,13 +139,13 @@ function CheckoutPage() {
       setFormError("Địa chỉ quá ngắn, vui lòng nhập chi tiết hơn (ít nhất 10 ký tự).");
       return;
     }
-    
+
     const orderData = {
-      orderItems: cart.map(item => ({
+      orderItems: selectedItems.map((item) => ({
         name: item.name,
         quantity: item.quantity,
-        price: parsePrice(item.price),
-        product: item.id || item._id
+        price: parsePrice(item.finalPrice || item.price),
+        product: item.id || item._id,
       })),
       shippingAddress: {
         fullName: trimmedFullName,
@@ -156,8 +167,8 @@ function CheckoutPage() {
           totalPrice: Number(finalTotal || 0),
           originalSubtotal: Number(totalPrice || 0),
           discountAmount: Number(discountAmount || 0),
-          itemCount: cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
-          productCount: cart.length,
+          itemCount: selectedItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+          productCount: selectedItems.length,
           paymentMethod: String(formData.paymentMethod || ""),
           discountCode: String(couponInfo?.coupon?.code || ""),
         },
@@ -166,7 +177,10 @@ function CheckoutPage() {
       success(`Cảm ơn ${formData.fullName} đã mua sắm tại Tech Shop.`, {
         title: "Đặt hàng thành công",
       });
-      clearCart();
+
+      // Remove only selected items from cart
+      removeSelectedItems();
+
       navigate("/order-history");
     } catch (err) {
       console.error("Lỗi khi gọi API đặt hàng:", err);
@@ -176,12 +190,12 @@ function CheckoutPage() {
     }
   };
 
-  // Chặn người dùng vào trang thanh toán nếu giỏ hàng trống
-  if (cart.length === 0) {
+  // Chặn người dùng vào trang thanh toán nếu không có sản phẩm được chọn
+  if (selectedItems.length === 0) {
     return (
       <main className="container page-content checkout-empty">
-        <h2 className="checkout-empty__title">Giỏ hàng của bạn đang trống!</h2>
-        <Link to="/products" className="checkout-empty__link">Quay lại trang Sản phẩm</Link>
+        <h2 className="checkout-empty__title">Bạn chưa chọn sản phẩm để thanh toán!</h2>
+        <Link to="/cart" className="checkout-empty__link">Quay lại giỏ hàng</Link>
       </main>
     );
   }
@@ -198,15 +212,17 @@ function CheckoutPage() {
             <p className="checkout-form-error">{formError}</p>
           )}
           <form onSubmit={handlePlaceOrder} id="checkout-form">
-            <div className="checkout-field">
-              <label className="checkout-field__label">Họ và tên</label>
-              <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required
-                className="checkout-field__input" placeholder="Nhập họ và tên..." />
-            </div>
-            <div className="checkout-field">
-              <label className="checkout-field__label">Số điện thoại</label>
-              <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required
-                className="checkout-field__input" placeholder="Nhập số điện thoại..." />
+            <div className="checkout-field-row">
+              <div className="checkout-field">
+                <label className="checkout-field__label">Họ và tên</label>
+                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required
+                  className="checkout-field__input" placeholder="Nhập họ và tên..." />
+              </div>
+              <div className="checkout-field">
+                <label className="checkout-field__label">Số điện thoại</label>
+                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required
+                  className="checkout-field__input" placeholder="Nhập số điện thoại..." />
+              </div>
             </div>
             <div className="checkout-field">
               <label className="checkout-field__label">Địa chỉ chi tiết</label>
@@ -228,10 +244,24 @@ function CheckoutPage() {
         <div className="checkout-summary">
           <h3 className="checkout-summary__title">Đơn hàng của bạn</h3>
           <div className="checkout-summary__items">
-            {cart.map(item => (
+            {selectedItems.map((item) => (
               <div key={item.id} className="checkout-summary__item">
-                <span>{item.name} <strong className="checkout-summary__item-qty">x{item.quantity}</strong></span>
-                <span className="checkout-summary__item-price">{formatPrice(parsePrice(item.price) * item.quantity)}</span>
+                <img
+                  src={getProductImageSrc(item)}
+                  alt={item.name}
+                  className="checkout-summary__item-thumb"
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = "/placeholder.svg";
+                  }}
+                />
+                <div className="checkout-summary__item-body">
+                  <span className="checkout-summary__item-name">{item.name}</span>
+                  <span className="checkout-summary__item-qty">x{item.quantity}</span>
+                </div>
+                <span className="checkout-summary__item-price">
+                  {formatPrice(parsePrice(item.finalPrice || item.price) * item.quantity)}
+                </span>
               </div>
             ))}
           </div>
@@ -283,7 +313,7 @@ function CheckoutPage() {
             <span>Tổng cộng:</span>
             <span className="checkout-summary__total-price">{formatPrice(finalTotal)}</span>
           </div>
-          
+
           <button type="submit" form="checkout-form" className="checkout-submit">
             Hoàn tất đặt hàng
           </button>
