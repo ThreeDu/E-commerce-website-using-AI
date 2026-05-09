@@ -11,12 +11,20 @@ const normalizeDiscountPayload = ({
   endDate,
   usageLimit,
   isActive,
+  usageLimitPerUser,
+  allowedUsers,
 }) => {
   const normalizedCode = String(code || "").trim().toUpperCase();
   const numericValue = Number(value || 0);
   const numericMinOrderValue = Number(minOrderValue || 0);
   const numericMaxDiscountValue = Number(maxDiscountValue || 0);
   const numericUsageLimit = Number(usageLimit || 0);
+  const numericUsageLimitPerUser = Number(usageLimitPerUser || 0);
+  
+  let validAllowedUsers = [];
+  if (Array.isArray(allowedUsers)) {
+    validAllowedUsers = allowedUsers.filter((id) => typeof id === "string" && id.length === 24);
+  }
 
   return {
     normalizedCode,
@@ -25,6 +33,8 @@ const normalizeDiscountPayload = ({
     numericMinOrderValue,
     numericMaxDiscountValue,
     numericUsageLimit,
+    numericUsageLimitPerUser,
+    allowedUsers: validAllowedUsers,
     hasStartDate: Boolean(startDate),
     hasEndDate: Boolean(endDate),
     startDate,
@@ -40,6 +50,7 @@ const validateDiscountPayload = ({
   numericMinOrderValue,
   numericMaxDiscountValue,
   numericUsageLimit,
+  numericUsageLimitPerUser,
   hasStartDate,
   hasEndDate,
   startDate,
@@ -71,6 +82,10 @@ const validateDiscountPayload = ({
 
   if (Number.isNaN(numericUsageLimit) || numericUsageLimit < 0) {
     return { status: 400, message: "Số lượt sử dụng tối đa không hợp lệ." };
+  }
+
+  if (Number.isNaN(numericUsageLimitPerUser) || numericUsageLimitPerUser < 0) {
+    return { status: 400, message: "Số lượt sử dụng mỗi người không hợp lệ." };
   }
 
   if (hasStartDate !== hasEndDate) {
@@ -107,7 +122,7 @@ const listDiscounts = async (req, res) => {
 const getDiscountById = async (req, res) => {
   try {
     const { id } = req.params;
-    const discount = await Discount.findById(id);
+    const discount = await Discount.findById(id).populate("allowedUsers", "email name");
 
     if (!discount) {
       return res.status(404).json({ message: "Không tìm thấy mã giảm giá." });
@@ -145,6 +160,8 @@ const createDiscount = async (req, res) => {
       startDate: normalizedPayload.hasStartDate ? validation.start : null,
       endDate: normalizedPayload.hasEndDate ? validation.end : null,
       usageLimit: normalizedPayload.numericUsageLimit,
+      usageLimitPerUser: normalizedPayload.numericUsageLimitPerUser,
+      allowedUsers: normalizedPayload.allowedUsers,
       isActive: normalizedPayload.isActive,
     });
 
@@ -199,6 +216,8 @@ const updateDiscount = async (req, res) => {
         startDate: normalizedPayload.hasStartDate ? validation.start : null,
         endDate: normalizedPayload.hasEndDate ? validation.end : null,
         usageLimit: normalizedPayload.numericUsageLimit,
+        usageLimitPerUser: normalizedPayload.numericUsageLimitPerUser,
+        allowedUsers: normalizedPayload.allowedUsers,
         isActive: normalizedPayload.isActive,
       },
       { new: true, runValidators: true }

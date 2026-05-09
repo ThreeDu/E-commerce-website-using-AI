@@ -10,7 +10,6 @@ import {
   faBoxOpen,
   faBrain,
   faCartShopping,
-  faChartLine,
   faFileLines,
   faGaugeHigh,
   faTags,

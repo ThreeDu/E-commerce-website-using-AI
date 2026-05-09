@@ -4,6 +4,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { useStatusMessageBridge } from "../../../hooks/useStatusMessageBridge";
 import { createAdminDiscount } from "../../../services/admin/discountService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
+import UserMultiSelect from "../../../components/admin/UserMultiSelect";
 import "../../../css/admin/discounts.css";
 
 const composeUtcDateTime = (date, time) => {
@@ -45,6 +46,8 @@ function AdminAddDiscountPage() {
     endDate: "",
     endTime: "",
     usageLimit: "0",
+    usageLimitPerUser: "0",
+    allowedUsers: [],
     isActive: true,
   });
 
@@ -59,6 +62,13 @@ function AdminAddDiscountPage() {
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleAllowedUsersChange = (selectedOptions) => {
+    setFormData((prev) => ({
+      ...prev,
+      allowedUsers: selectedOptions || [],
     }));
   };
 
@@ -94,6 +104,11 @@ function AdminAddDiscountPage() {
 
     if (Number.isNaN(usageLimit) || usageLimit < 0) {
       errors.usageLimit = "Số lượng không hợp lệ.";
+    }
+    
+    const usageLimitPerUser = Number(formData.usageLimitPerUser || 0);
+    if (Number.isNaN(usageLimitPerUser) || usageLimitPerUser < 0) {
+      errors.usageLimitPerUser = "Giới hạn mỗi người không hợp lệ.";
     }
 
     if (hasStartDate !== hasEndDate) {
@@ -141,6 +156,8 @@ function AdminAddDiscountPage() {
         startDate: startDateTime || null,
         endDate: endDateTime || null,
         usageLimit: Number(formData.usageLimit || 0),
+        usageLimitPerUser: Number(formData.usageLimitPerUser || 0),
+        allowedUsers: formData.allowedUsers.map(opt => opt.value),
         isActive: formData.isActive,
       });
 
@@ -269,7 +286,7 @@ function AdminAddDiscountPage() {
             </div>
 
             <div>
-              <label htmlFor="usageLimit">Số lượng</label>
+              <label htmlFor="usageLimit">Tổng số lượt dùng</label>
               <input
                 id="usageLimit"
                 name="usageLimit"
@@ -280,6 +297,29 @@ function AdminAddDiscountPage() {
               />
               {fieldErrors.usageLimit && <p className="field-error">{fieldErrors.usageLimit}</p>}
             </div>
+
+            <div>
+              <label htmlFor="usageLimitPerUser">Lượt dùng / Người</label>
+              <input
+                id="usageLimitPerUser"
+                name="usageLimitPerUser"
+                type="number"
+                min="0"
+                value={formData.usageLimitPerUser}
+                onChange={handleChange}
+                placeholder="0 = không giới hạn"
+              />
+              {fieldErrors.usageLimitPerUser && <p className="field-error">{fieldErrors.usageLimitPerUser}</p>}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "16px" }}>
+            <label style={{ display: 'block', marginBottom: '8px' }}>Tài khoản được chỉ định (để trống nếu áp dụng cho mọi người)</label>
+            <UserMultiSelect 
+              value={formData.allowedUsers} 
+              onChange={handleAllowedUsersChange} 
+              token={auth?.token}
+            />
           </div>
 
           <label>
