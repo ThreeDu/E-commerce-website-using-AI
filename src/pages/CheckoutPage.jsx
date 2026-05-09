@@ -6,7 +6,6 @@ import { useNotification } from "../context/NotificationContext";
 import { trackEvent } from "../services/analyticsService";
 import { parsePrice, formatPrice } from "../utils/priceUtils";
 import { getProductImageSrc } from "../utils/productUtils";
-import { verifyCoupon, createOrder } from "../services/orderService";
 import { verifyCoupon, createOrder, fetchMyVouchers } from "../services/orderService";
 import "../css/checkout.css";
 

@@ -208,12 +208,9 @@ function UserDashboard() {
       orderCount,
       points,
       wishlistCount: wishlist.length,
-      vouchers: 5,
-    };
-  }, [orders, wishlist.length]);
       vouchers: vouchers.length,
     };
-  }, [orders, vouchers]);
+  }, [orders, wishlist.length, vouchers.length]);
 
   const recentOrders = orders.slice(0, 3);
   const wishlistPreview = wishlist.slice(0, 3);
@@ -476,37 +473,6 @@ function UserDashboard() {
                 <div className="profile-hero__detail">
                   <span>Email</span>
                   <strong>{auth?.user?.email || "Chưa cập nhật"}</strong>
-          <p>Điểm tích lũy</p>
-          <strong>{metrics.points.toLocaleString("vi-VN")} điểm</strong>
-        </article>
-
-        <article 
-          className="bento-card metric-card tone-green" 
-          style={{ cursor: "pointer" }}
-          onClick={() => setIsVoucherModalOpen(true)}
-        >
-          <div className="metric-icon"><IconVoucher /></div>
-          <p>Ví voucher</p>
-          <strong>{metrics.vouchers} voucher</strong>
-        </article>
-
-        <article className="bento-card content-card recent-orders-card">
-          <div className="card-heading">
-            <h4>Đơn hàng gần đây</h4>
-            <button type="button" onClick={() => navigate("/order-history")}>Xem tất cả</button>
-          </div>
-          <div className="recent-orders-list">
-            {recentOrders.length === 0 ? (
-              <p className="empty-text">Chưa có đơn hàng gần đây.</p>
-            ) : (
-              recentOrders.map((order) => (
-                <div key={order._id} className="recent-order-item">
-                  <div className="recent-order-thumb" />
-                  <div>
-                    <p className="recent-order-id">#{String(order._id).slice(-8)}</p>
-                    <p className="recent-order-date">{new Date(order.createdAt).toLocaleString("vi-VN")}</p>
-                  </div>
-                  <span className="timeline-status">{getStatusLabel(order.status)}</span>
                 </div>
                 <div className="profile-hero__detail">
                   <span>Số điện thoại</span>
@@ -556,7 +522,11 @@ function UserDashboard() {
               </div>
             </article>
 
-            <article className="profile-stat-card stat-amber">
+            <article 
+              className="profile-stat-card stat-amber" 
+              style={{ cursor: "pointer" }}
+              onClick={() => setIsVoucherModalOpen(true)}
+            >
               <div className="stat-icon"><IconMenuVoucher /></div>
               <div className="stat-content">
                 <p className="stat-label">Voucher</p>
