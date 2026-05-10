@@ -8,6 +8,7 @@ import { parsePrice, formatPrice } from "../utils/priceUtils";
 import { getProductImageSrc } from "../utils/productUtils";
 import { verifyCoupon, createOrder, fetchMyVouchers } from "../services/orderService";
 import "../css/checkout.css";
+import "../css/profile.css";
 
 function CheckoutPage() {
   const { cart, removeSelectedItems } = useCart();
@@ -321,21 +322,17 @@ function CheckoutPage() {
 
       {isVoucherModalOpen && (
         <div className="profile-modal-backdrop" style={{ zIndex: 9999 }}>
-          <div className="profile-modal-card" style={{ maxWidth: "500px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ margin: 0 }}>Chọn Mã Giảm Giá</h3>
-              <button 
-                type="button" 
-                onClick={() => setIsVoucherModalOpen(false)}
-                style={{ background: "transparent", border: "none", fontSize: "20px", cursor: "pointer", color: "#62728a" }}
-              >
-                &times;
+          <div className="profile-modal-content" style={{ maxWidth: "500px" }}>
+            <div className="modal-header">
+              <h3>Chọn Mã Giảm Giá</h3>
+              <button type="button" className="modal-close" onClick={() => setIsVoucherModalOpen(false)}>
+                ✕
               </button>
             </div>
             
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "400px", overflowY: "auto" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "400px", overflowY: "auto", paddingRight: "4px", marginTop: "16px" }}>
               {vouchers.length === 0 ? (
-                <p className="empty-text">Bạn hiện chưa có mã giảm giá nào.</p>
+                <p className="empty-state">Bạn hiện chưa có mã giảm giá nào.</p>
               ) : (
                 vouchers.map(v => {
                   const minRequired = Number(v.minOrderValue || 0);
@@ -344,41 +341,41 @@ function CheckoutPage() {
 
                   return (
                     <div key={v.id} style={{ 
-                      border: "1px dashed #10375c", 
-                      borderRadius: "8px", 
-                      padding: "12px", 
-                      background: isEligible ? "#f8fbff" : "#f1f5f9", 
+                      border: "1px dashed var(--color-primary-light)", 
+                      borderRadius: "var(--radius-md)", 
+                      padding: "var(--spacing-md)", 
+                      background: isEligible ? "var(--color-primary-lighter)" : "var(--color-bg-tertiary)", 
                       opacity: isEligible ? 1 : 0.7,
                       display: "flex", 
                       justifyContent: "space-between", 
                       alignItems: "center" 
                     }}>
                       <div>
-                        <h4 style={{ margin: "0 0 4px", color: isEligible ? "#10375c" : "#62728a" }}>{v.code}</h4>
-                        <p style={{ margin: "0", fontSize: "13px", color: "#62728a" }}>
+                        <h4 style={{ margin: "0 0 4px", color: isEligible ? "var(--color-primary)" : "var(--color-text-secondary)", fontWeight: "700" }}>{v.code}</h4>
+                        <p style={{ margin: "0", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
                           Giảm {v.type === "percent" ? `${v.value}%` : `${Number(v.value).toLocaleString("vi-VN")}đ`} 
                           {minRequired > 0 && ` cho đơn từ ${minRequired.toLocaleString("vi-VN")}đ`}
                           {Number(v.maxDiscountValue) > 0 && ` (Tối đa ${Number(v.maxDiscountValue).toLocaleString("vi-VN")}đ)`}
                         </p>
                         {!isEligible && (
-                          <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#b42318", fontWeight: 600 }}>
+                          <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#b42318", fontWeight: 600 }}>
                             Mua thêm {missingAmount.toLocaleString("vi-VN")}đ để dùng mã
                           </p>
                         )}
                         {v.endDate && isEligible && (
-                          <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#b45309" }}>
+                          <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "var(--color-accent-amber)", fontWeight: "600" }}>
                             HSD: {new Date(v.endDate).toLocaleString("vi-VN")}
                           </p>
                         )}
                       </div>
                       <button 
                         type="button" 
-                        className="primary-action" 
+                        className={isEligible ? "btn-primary" : "btn-secondary"} 
                         disabled={!isEligible}
                         style={{ 
                           padding: "6px 12px", 
-                          fontSize: "12px",
-                          background: isEligible ? "#10375c" : "#cbd5e1",
+                          fontSize: "0.85rem",
+                          borderRadius: "var(--radius-sm)",
                           cursor: isEligible ? "pointer" : "not-allowed"
                         }}
                         onClick={() => {

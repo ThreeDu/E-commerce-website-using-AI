@@ -738,33 +738,38 @@ function UserDashboard() {
 
       {isVoucherModalOpen && (
         <div className="profile-modal-backdrop">
-          <div className="profile-modal-card" style={{ maxWidth: "500px" }}>
-            <h3>Ví Voucher của bạn</h3>
-            <p className="dashboard-subtitle" style={{ marginBottom: "16px" }}>Danh sách các mã giảm giá bạn có thể sử dụng ngay.</p>
+          <div className="profile-modal-content" style={{ maxWidth: "500px" }}>
+            <div className="modal-header">
+              <h3>Ví Voucher của bạn</h3>
+              <button type="button" className="modal-close" onClick={() => setIsVoucherModalOpen(false)}>
+                ✕
+              </button>
+            </div>
+            <p className="dashboard-subtitle" style={{ marginBottom: "16px", color: "var(--color-text-secondary)", fontSize: "0.9rem" }}>Danh sách các mã giảm giá bạn có thể sử dụng ngay.</p>
             
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "400px", overflowY: "auto" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "400px", overflowY: "auto", paddingRight: "4px" }}>
               {vouchers.length === 0 ? (
-                <p className="empty-text">Bạn hiện chưa có mã giảm giá nào.</p>
+                <p className="empty-state">Bạn hiện chưa có mã giảm giá nào.</p>
               ) : (
                 vouchers.map(v => (
-                  <div key={v.id} style={{ border: "1px dashed #10375c", borderRadius: "8px", padding: "12px", background: "#f8fbff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div key={v.id} style={{ border: "1px dashed var(--color-primary-light)", borderRadius: "var(--radius-md)", padding: "var(--spacing-md)", background: "var(--color-primary-lighter)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <h4 style={{ margin: "0 0 4px", color: "#10375c" }}>{v.code}</h4>
-                      <p style={{ margin: "0", fontSize: "13px", color: "#62728a" }}>
+                      <h4 style={{ margin: "0 0 4px", color: "var(--color-primary)", fontWeight: "700" }}>{v.code}</h4>
+                      <p style={{ margin: "0", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
                         Giảm {v.type === "percent" ? `${v.value}%` : `${Number(v.value).toLocaleString("vi-VN")}đ`} 
                         {Number(v.minOrderValue) > 0 && ` cho đơn từ ${Number(v.minOrderValue).toLocaleString("vi-VN")}đ`}
                         {Number(v.maxDiscountValue) > 0 && ` (Tối đa ${Number(v.maxDiscountValue).toLocaleString("vi-VN")}đ)`}
                       </p>
                       {v.endDate && (
-                        <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#b45309" }}>
+                        <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "var(--color-accent-amber)", fontWeight: "600" }}>
                           HSD: {new Date(v.endDate).toLocaleString("vi-VN")}
                         </p>
                       )}
                     </div>
                     <button 
                       type="button" 
-                      className="primary-action" 
-                      style={{ padding: "6px 12px", fontSize: "12px" }}
+                      className="btn-primary" 
+                      style={{ padding: "6px 12px", fontSize: "0.85rem", borderRadius: "var(--radius-sm)" }}
                       onClick={() => {
                         navigator.clipboard.writeText(v.code);
                         success(`Đã copy mã ${v.code}`);
@@ -777,11 +782,11 @@ function UserDashboard() {
               )}
             </div>
 
-            <div className="modal-actions" style={{ marginTop: "20px" }}>
+            <div className="modal-actions" style={{ marginTop: "24px" }}>
               <button
                 type="button"
                 onClick={() => setIsVoucherModalOpen(false)}
-                className="secondary-action"
+                className="btn-secondary"
                 style={{ width: "100%" }}
               >
                 Đóng
