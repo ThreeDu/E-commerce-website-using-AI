@@ -1,4 +1,4 @@
-# E-commerce Website Using AI 🚀
+# E-commerce Website Using AI
 
 **Khóa luận tốt nghiệp: Xây dựng website bán hàng thông minh ứng dụng AI**
 
@@ -81,7 +81,7 @@ PORT=5000
 ### Chạy toàn hệ thống
 
 ```bash
-.\start.bat
+.\start.bat
 ```
 
 Frontend: http://localhost:3000
