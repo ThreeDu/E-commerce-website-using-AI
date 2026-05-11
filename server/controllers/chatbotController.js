@@ -30,7 +30,7 @@ const chatWithAssistant = async (req, res) => {
     const context = req.body?.context || {};
 
     if (!message) {
-      return res.status(400).json({ message: "Tin nhan khong duoc de trong." });
+      return res.status(400).json({ message: "Tin nhắn không được để trống." });
     }
 
     const result = await processChatMessage({
@@ -43,7 +43,7 @@ const chatWithAssistant = async (req, res) => {
     return res.json(result);
   } catch (error) {
     return res.status(500).json({
-      message: "Khong the xu ly chatbot luc nay.",
+      message: "Không thể xử lý chatbot lúc này.",
     });
   }
 };

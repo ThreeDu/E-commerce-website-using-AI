@@ -1295,15 +1295,15 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
 
 function buildRuleReply(intent, recommendedProducts) {
   if (intent === "greeting") {
-    return "Chao ban, minh co the goi y san pham theo nhu cau va ngan sach. Ban dang quan tam nhom nao?";
+    return "Chào bạn, mình có thể gợi ý sản phẩm theo nhu cầu và ngân sách. Bạn đang quan tâm nhóm nào?";
   }
 
   if (intent === "policy") {
-    return "Minh ho tro tu van san pham la chinh. Ve chinh sach giao hang/doi tra, ban co the cho minh biet don cu the hoac phan can hoi de minh huong dan nhanh nhat.";
+    return "Mình hỗ trợ tư vấn là chính. Về chính sách giao hàng đổi trả, bạn có thể cho mình biết đơn hàng cụ thể hoặc phần cần hỏi để mình hướng dẫn nhanh nhất.";
   }
 
   if (recommendedProducts.length === 0) {
-    return "Minh chua tim duoc san pham phu hop ngay luc nay. Ban thu mo ta ro hon ve muc gia, nhu cau su dung hoac thuong hieu mong muon nhe.";
+    return "Mình chưa tìm được sản phẩm phù hợp lúc này. Bạn thử mô tả rõ hơn về nhu cầu sử dụng hoặc thương hiệu mong muốn.";
   }
 
   const preview = recommendedProducts
@@ -1311,15 +1311,15 @@ function buildRuleReply(intent, recommendedProducts) {
     .map((item) => `${item.name} (${Number(item.price || 0).toLocaleString("vi-VN")} đ)`)
     .join(", ");
 
-  return `Minh da chon nhanh cac san pham phu hop cho ban: ${preview}. Ban muon minh loc them theo ngan sach hoac muc dich su dung khong?`;
+  return `Mình đã chọn nhanh các sản phẩm phù hợp cho bạn: ${preview}. Bạn muốn mình lọc thêm theo ngân sách hoặc mục đích sử dụng không?`;
 }
 
 function buildQuickReplies(intent) {
   if (intent === "policy") {
-    return ["Phi van chuyen", "Thoi gian giao hang", "Chinh sach doi tra"];
+    return ["Phí vận chuyển", "Thời gian giao hàng", "Chính sách đổi trả"];
   }
 
-  return ["Ngan sach duoi 5 trieu", "Danh gia cao", "Ban chay nhat", "So sanh 2 san pham"];
+  return ["Ngân sách dưới 5 triệu", "Đánh giá cao", "Bán chạy nhất", "So sánh 2 sản phẩm"];
 }
 
 async function maybeGenerateLlmReply({ message, intent, recommendedProducts, history }) {
@@ -1340,7 +1340,7 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
   }));
 
   const systemPrompt =
-    "Ban la tro ly ban hang e-commerce. Tra loi ngan gon bang tieng Viet, uu tien de xuat hanh dong mua hang va khong bịa thong tin ngoai danh sach san pham duoc cung cap.";
+    "Bạn là trợ lý bán hàng e-commerce. Trả lời ngắn gọn bằng tiếng Việt, ưu tiên đề xuất hành động mua hàng và không bịa thông tin ngoài danh sách sản phẩm được cung cấp.";
 
   const userPrompt = JSON.stringify(
     {
@@ -1348,7 +1348,7 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
       message,
       products: contextProducts,
       recentHistory: history.slice(-4),
-      requirements: "Tra loi toi da 5 cau. Neu can, hoi them 1 cau de lam ro nhu cau.",
+      requirements: "Trả lời tối đa 5 câu. Nếu cần, hỏi thêm 1 câu để làm rõ nhu cầu.",
     },
     null,
     2
