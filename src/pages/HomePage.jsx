@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { getProductImageSrc, getProductPricing, isOutOfStock } from "../utils/productUtils";
 import { fetchProducts } from "../services/productService";
 import { fetchCategories } from "../services/categoryService";
+import { fetchRecommendations } from "../services/recommendationService";
 import "../css/home-neo.css";
 import "../css/shop-experience.css";
 
@@ -14,6 +15,8 @@ function HomePage() {
   const navigate = useNavigate();
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [recommendedProducts, setRecommendedProducts] = useState([]);
+  const [recommendReady, setRecommendReady] = useState(false);
 
   const level2Categories = useMemo(() => {
     if (!Array.isArray(categories) || categories.length === 0) {
@@ -82,6 +85,25 @@ function HomePage() {
     fetchData();
   }, []);
 
+  // Fetch personalized recommendations
+  useEffect(() => {
+    const loadRecommendations = async () => {
+      try {
+        const data = await fetchRecommendations({
+          token: auth?.token,
+          limit: 8,
+        });
+        setRecommendedProducts(Array.isArray(data?.products) ? data.products : []);
+      } catch (error) {
+        console.error("Lỗi tải gợi ý sản phẩm:", error);
+        setRecommendedProducts([]);
+      } finally {
+        setRecommendReady(true);
+      }
+    };
+    loadRecommendations();
+  }, [auth?.token]);
+
   const handleCategoryClick = (category) => {
     navigate("/products", {
       state: {
@@ -116,6 +138,70 @@ function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── Gợi ý sản phẩm cá nhân hóa ── */}
+      {recommendReady && recommendedProducts.length > 0 && (
+        <section className="neo-section neo-recommend-section" id="recommendations">
+          <div className="neo-section-head">
+            <h3>
+              <span className="neo-recommend-icon" aria-hidden="true">✨</span>
+              {" "}Gợi ý cho bạn
+              <span className="neo-recommend-badge">AI</span>
+            </h3>
+            <Link to="/products">Xem tất cả</Link>
+          </div>
+          <div className="neo-bento-grid neo-bento-grid-products neo-recommend-grid">
+            {recommendedProducts.map((product, index) => {
+              const pricing = getProductPricing(product);
+              const outOfStock = isOutOfStock(product);
+
+              return (
+                <article
+                  className="shopx-card neo-recommend-card"
+                  key={product._id}
+                  style={{ animationDelay: `${index * 0.06}s` }}
+                >
+                  <Link to={`/products/${product._id}`} style={{ textDecoration: "none" }}>
+                    <div className={`shopx-card-image-wrap ${outOfStock ? "is-out-of-stock" : ""}`}>
+                      {pricing.hasDiscount ? <span className="shopx-sale-badge">-{pricing.discountPercent}%</span> : null}
+                      {outOfStock ? <span className="shopx-stock-badge">Hết hàng</span> : null}
+                      <img
+                        src={getProductImageSrc(product)}
+                        alt={product.name}
+                        className="shopx-card-image"
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = "/placeholder.svg";
+                        }}
+                      />
+                    </div>
+                    <h3 className="shopx-card-name">{product.name}</h3>
+                    <div className="shopx-meta-row">
+                      <span className="shopx-chip shopx-chip--rating">
+                        {Number(product.averageRating || 0).toFixed(1)} sao ({Number(product.totalRatings || 0)})
+                      </span>
+                      <span className="shopx-chip shopx-chip--sold">{Number(product.totalPurchases || 0)} lượt mua</span>
+                    </div>
+                    <p className="shopx-price">{pricing.finalPrice.toLocaleString("vi-VN")} đ</p>
+                    {pricing.hasDiscount ? (
+                      <p className="shopx-old-price">{pricing.basePrice.toLocaleString("vi-VN")} đ</p>
+                    ) : null}
+                  </Link>
+                  <div className="shopx-card-actions">
+                    <button
+                      className={`shopx-btn shopx-btn--buy-now ${outOfStock ? "shopx-btn--out-of-stock" : ""}`}
+                      disabled={outOfStock}
+                      onClick={() => handleBuyNow(product)}
+                    >
+                      {outOfStock ? "Hết hàng" : "Mua ngay"}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section id="about" className="neo-section">
         <div className="neo-section-head">
@@ -195,4 +281,4 @@ function HomePage() {
   );
 }
 
-export default HomePage;
+export default HomePage;
