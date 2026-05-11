@@ -26,11 +26,15 @@ export function CartProvider({ children }) {
   successRef.current = success;
 
   const cartRef = useRef([]);
+  const isLoadingRef = useRef(false);
 
   const [cart, setCart] = useState(() => {
     try {
-      const saved = localStorage.getItem(getCartStorageKey(null));
-      return saved ? JSON.parse(saved) : [];
+      // Load from the correct user-specific key on first render
+      const saved = localStorage.getItem(storageKey);
+      const parsed = saved ? JSON.parse(saved) : [];
+      cartRef.current = parsed;
+      return parsed;
     } catch (error) {
       return [];
     }
@@ -38,6 +42,7 @@ export function CartProvider({ children }) {
 
   // Reload cart when user changes (login / logout)
   useEffect(() => {
+    isLoadingRef.current = true;
     try {
       const saved = localStorage.getItem(storageKey);
       setCart(saved ? JSON.parse(saved) : []);
@@ -47,7 +52,14 @@ export function CartProvider({ children }) {
   }, [storageKey]);
 
   // Persist cart to localStorage
+  // Guard: skip writing when the reload effect just triggered setCart,
+  // otherwise the stale (pre-reload) cart value overwrites the saved data.
   useEffect(() => {
+    if (isLoadingRef.current) {
+      isLoadingRef.current = false;
+      cartRef.current = cart;
+      return;
+    }
     localStorage.setItem(storageKey, JSON.stringify(cart));
     cartRef.current = cart;
   }, [storageKey, cart]);

@@ -10,7 +10,7 @@ import "../css/home-neo.css";
 import "../css/shop-experience.css";
 
 function HomePage() {
-  const { addToCart } = useCart();
+  const { addToCart, cart } = useCart();
   const { auth } = useAuth();
   const navigate = useNavigate();
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -85,6 +85,12 @@ function HomePage() {
     fetchData();
   }, []);
 
+  // Derive stable cart product IDs for recommendation API
+  const cartProductIds = useMemo(
+    () => cart.map((item) => String(item.id || item._id || "")).filter(Boolean),
+    [cart]
+  );
+
   // Fetch personalized recommendations
   useEffect(() => {
     const loadRecommendations = async () => {
@@ -92,6 +98,7 @@ function HomePage() {
         const data = await fetchRecommendations({
           token: auth?.token,
           limit: 8,
+          cartProductIds,
         });
         setRecommendedProducts(Array.isArray(data?.products) ? data.products : []);
       } catch (error) {
@@ -102,7 +109,7 @@ function HomePage() {
       }
     };
     loadRecommendations();
-  }, [auth?.token]);
+  }, [auth?.token, cartProductIds]);
 
   const handleCategoryClick = (category) => {
     navigate("/products", {

@@ -20,6 +20,12 @@ router.get("/recommendations", async (req, res) => {
     const limit = Math.min(Math.max(1, parseInt(req.query.limit, 10) || 8), 20);
     const anonymousId = String(req.query.anonymousId || "").trim();
 
+    // Parse cart product IDs (comma-separated)
+    const rawCartIds = String(req.query.cartProductIds || "").trim();
+    const cartProductIds = rawCartIds
+      ? rawCartIds.split(",").map((id) => id.trim()).filter(Boolean)
+      : [];
+
     // Try to extract userId from token
     let userId = null;
     const token = getTokenFromHeader(req);
@@ -37,10 +43,10 @@ router.get("/recommendations", async (req, res) => {
     let strategy;
 
     if (userId) {
-      products = await getPersonalizedRecommendations(userId, limit);
+      products = await getPersonalizedRecommendations(userId, limit, cartProductIds);
       strategy = "personalized";
     } else if (anonymousId) {
-      products = await getAnonymousRecommendations(anonymousId, limit);
+      products = await getAnonymousRecommendations(anonymousId, limit, cartProductIds);
       strategy = "anonymous";
     } else {
       products = await getTrendingProducts(limit);
