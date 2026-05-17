@@ -36,7 +36,8 @@ function createMessage(role, text, extra = {}) {
 }
 
 function formatVnd(value) {
-  return `${Number(value || 0).toLocaleString("vi-VN")} đ`;
+  const rounded = Math.round(Number(value || 0));
+  return `${rounded.toLocaleString("vi-VN")} đ`;
 }
 
 function getOrCreateSessionId() {
@@ -97,7 +98,7 @@ function ChatbotWidget() {
   const [messages, setMessages] = useState(() => [
     createMessage(
       "assistant",
-      "Xin chao, minh la AI Assistant. Ban can goi y san pham theo nhu cau hay ngan sach nao?"
+      "Xin chào, mình là AI Assistant. Bạn cần gợi ý sản phẩm theo nhu cầu hay ngân sách nào?"
     ),
   ]);
 
@@ -278,9 +279,19 @@ function ChatbotWidget() {
       {open ? (
         <section className="chatbot-panel" aria-label="AI chatbot">
           <header className="chatbot-header">
-            <div>
-              <strong>AI Shopping Assistant</strong>
-              <p>Goi y nhanh theo nhu cau cua ban</p>
+            <div className="chatbot-header-main">
+              <div className="chatbot-header-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                  <path
+                    d="M8 4.5a1 1 0 0 1 2 0v1h4v-1a1 1 0 1 1 2 0v1.2a4.5 4.5 0 0 1 4 4.48v5.32a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 15.5v-5.32a4.5 4.5 0 0 1 4-4.48V4.5Zm0 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm8 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </div>
+              <div className="chatbot-header-text">
+                <strong>AI Shopping Assistant</strong>
+                <p>Gợi ý nhanh theo nhu cầu của bạn</p>
+              </div>
             </div>
             <button type="button" onClick={() => setOpen(false)} aria-label="Dong chatbot">
               ×
@@ -290,66 +301,105 @@ function ChatbotWidget() {
           <div className="chatbot-messages">
             {messages.map((msg) => (
               <article key={msg.id} className={`chatbot-message ${msg.role}`}>
-                <p>{msg.text}</p>
-                {msg.products.length > 0 ? (
-                  <div className="chatbot-product-list">
-                    {msg.products.map((product) => (
-                      <article key={product._id} className="chatbot-product-card">
-                        <Link
-                          to={`/products/${product._id}`}
-                          className="chatbot-product-main"
-                          onClick={() => {
-                            trackEvent({
-                              eventType: "click",
-                              productId: product._id,
-                              category: product.category,
-                              metadata: {
-                                source: "chatbot_card_click",
-                              },
-                            });
-                          }}
-                        >
-                          <img
-                            src={getProductImageSrc(product)}
-                            alt={product.name}
-                            onError={(event) => {
-                              event.currentTarget.onerror = null;
-                              event.currentTarget.src = "/placeholder.svg";
-                            }}
-                          />
-                          <div>
-                            <h4>{product.name}</h4>
-                            <p className="price">{formatVnd(product.price)}</p>
-                            {Number(product.originalPrice || 0) > Number(product.price || 0) ? (
-                              <p className="old-price">{formatVnd(product.originalPrice)}</p>
-                            ) : null}
-                            <p className="reason">{product.reason}</p>
-                          </div>
-                        </Link>
+                <div className={`chatbot-message-row ${msg.role}`}>
+                  {msg.role === "assistant" ? (
+                    <div className="chatbot-avatar" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                        <path
+                          d="M8 4.5a1 1 0 0 1 2 0v1h4v-1a1 1 0 1 1 2 0v1.2a4.5 4.5 0 0 1 4 4.48v5.32a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 15.5v-5.32a4.5 4.5 0 0 1 4-4.48V4.5Zm0 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm8 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                    </div>
+                  ) : null}
+                  <div className="chatbot-bubble">
+                    <p>{msg.text}</p>
+                    {msg.products.length > 0 ? (
+                      <div className="chatbot-product-list">
+                        {msg.products.map((product, index) => (
+                          <article
+                            key={product._id}
+                            className="chatbot-product-card"
+                            style={{ animationDelay: `${Math.min(index, 6) * 60}ms` }}
+                          >
+                            <Link
+                              to={`/products/${product._id}`}
+                              className="chatbot-product-main"
+                              onClick={() => {
+                                trackEvent({
+                                  eventType: "click",
+                                  productId: product._id,
+                                  category: product.category,
+                                  metadata: {
+                                    source: "chatbot_card_click",
+                                  },
+                                });
+                              }}
+                            >
+                              <img
+                                src={getProductImageSrc(product)}
+                                alt={product.name}
+                                onError={(event) => {
+                                  event.currentTarget.onerror = null;
+                                  event.currentTarget.src = "/placeholder.svg";
+                                }}
+                              />
+                              <div>
+                                <h4>{product.name}</h4>
+                                <p className="price">{formatVnd(product.price)}</p>
+                                {Number(product.originalPrice || 0) > Number(product.price || 0) ? (
+                                  <p className="old-price">{formatVnd(product.originalPrice)}</p>
+                                ) : null}
+                                <p className="reason">{product.reason}</p>
+                              </div>
+                            </Link>
 
-                        <button
-                          type="button"
-                          className="chatbot-add-cart-btn"
-                          onClick={() => {
-                            addToCart({ ...product, id: product._id });
-                            trackEvent({
-                              eventType: "cart",
-                              productId: product._id,
-                              category: product.category,
-                              metadata: {
-                                source: "chatbot_add_to_cart",
-                              },
-                            });
-                          }}
-                        >
-                          Them vao gio
-                        </button>
-                      </article>
-                    ))}
+                            <button
+                              type="button"
+                              className="chatbot-add-cart-btn"
+                              onClick={() => {
+                                addToCart({ ...product, id: product._id });
+                                trackEvent({
+                                  eventType: "cart",
+                                  productId: product._id,
+                                  category: product.category,
+                                  metadata: {
+                                    source: "chatbot_add_to_cart",
+                                  },
+                                });
+                              }}
+                            >
+                              Them vao gio
+                            </button>
+                          </article>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
-                ) : null}
+                </div>
               </article>
             ))}
+            {pending ? (
+              <article className="chatbot-message assistant">
+                <div className="chatbot-message-row assistant">
+                  <div className="chatbot-avatar" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                      <path
+                        d="M8 4.5a1 1 0 0 1 2 0v1h4v-1a1 1 0 1 1 2 0v1.2a4.5 4.5 0 0 1 4 4.48v5.32a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 15.5v-5.32a4.5 4.5 0 0 1 4-4.48V4.5Zm0 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm8 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </div>
+                  <div className="chatbot-bubble">
+                    <div className="chatbot-typing" aria-label="Dang nhap">
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ) : null}
           </div>
 
           {quickReplies.length > 0 ? (
@@ -372,18 +422,32 @@ function ChatbotWidget() {
             <input
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Nhap nhu cau cua ban..."
+              placeholder="Nhập nhu cầu của bạn..."
               disabled={pending}
             />
-            <button type="submit" disabled={pending || !String(input).trim()}>
-              {pending ? "..." : "Gui"}
+            <button
+              type="submit"
+              disabled={pending || !String(input).trim()}
+              aria-label="Gửi"
+              title="Gửi"
+            >
+              {pending ? (
+                "..."
+              ) : (
+                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                  <path
+                    d="M3.4 11.2a1 1 0 0 0 0 1.6l16.6 8.4a1 1 0 0 0 1.4-1.1l-3.1-7.1-15-1.8Zm0 1.6 16.6-8.4a1 1 0 0 1 1.4 1.1l-3.1 7.1-15 1.8Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              )}
             </button>
           </form>
         </section>
       ) : null}
 
       <button type="button" className="chatbot-toggle" onClick={() => setOpen((prev) => !prev)}>
-        {open ? "Dong" : "Chat AI"}
+        {open ? "Đóng" : "Chat AI"}
       </button>
     </div>
   );
