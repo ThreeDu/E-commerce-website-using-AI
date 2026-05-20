@@ -608,8 +608,15 @@ function AdminListDiscountsPage() {
                             </div>
                           </td>
                           <td>
-                            <div className="truncate-text" title={`${formatDateTime(discount.startDate)} - ${formatDateTime(discount.endDate)}`}>
-                              {formatDateTime(discount.startDate)} - {formatDateTime(discount.endDate)}
+                            <div className="date-range-stack" title={`${formatDateTime(discount.startDate)} - ${formatDateTime(discount.endDate)}`}>
+                              <div className="date-item start-date">
+                                <span className="date-label">Từ:</span>
+                                <span className="date-val">{formatDateTime(discount.startDate)}</span>
+                              </div>
+                              <div className="date-item end-date">
+                                <span className="date-label">Đến:</span>
+                                <span className="date-val">{formatDateTime(discount.endDate)}</span>
+                              </div>
                             </div>
                           </td>
                           <td>

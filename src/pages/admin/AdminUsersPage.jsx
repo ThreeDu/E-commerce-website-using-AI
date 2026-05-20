@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useStatusMessageBridge } from "../../hooks/useStatusMessageBridge";
@@ -16,8 +16,12 @@ import {
   faCoins,
   faKey,
   faTrash,
+  faChevronLeft,
+  faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 import "../../css/admin/users.css";
+
+const ITEMS_PER_PAGE = 8;
 
 function AdminUsersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -32,6 +36,25 @@ function AdminUsersPage() {
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
   const [sortBy, setSortBy] = useState(searchParams.get("sort") || "newest");
   const [editForm, setEditForm] = useState({ name: "", email: "" });
+
+  const initialPage = useMemo(() => {
+    const parsed = Number(searchParams.get("page") || 1);
+    if (Number.isNaN(parsed) || parsed < 1) {
+      return 1;
+    }
+    return Math.floor(parsed);
+  }, [searchParams]);
+
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const hasInitializedFilters = useRef(false);
+
+  useEffect(() => {
+    if (!hasInitializedFilters.current) {
+      hasInitializedFilters.current = true;
+      return;
+    }
+    setCurrentPage(1);
+  }, [searchTerm, sortBy]);
 
   const [userPendingPoints, setUserPendingPoints] = useState(null);
   const [newPoints, setNewPoints] = useState("");
@@ -117,7 +140,15 @@ function AdminUsersPage() {
     if (!value) {
       return "-";
     }
-    return new Date(value).toLocaleString("vi-VN");
+    const dateObj = new Date(value);
+    const timeStr = dateObj.toLocaleTimeString("vi-VN");
+    const dateStr = dateObj.toLocaleDateString("vi-VN");
+    return (
+      <div className="datetime-stack" style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+        <span className="time-part" style={{ fontWeight: "500" }}>{timeStr}</span>
+        <span className="date-part" style={{ fontSize: "0.85em", color: "#718096" }}>{dateStr}</span>
+      </div>
+    );
   }, []);
 
   const loadUsers = useCallback(async () => {
@@ -151,8 +182,12 @@ function AdminUsersPage() {
       nextParams.set("sort", sortBy);
     }
 
+    if (currentPage > 1) {
+      nextParams.set("page", String(currentPage));
+    }
+
     setSearchParams(nextParams, { replace: true });
-  }, [searchTerm, sortBy, setSearchParams]);
+  }, [searchTerm, sortBy, currentPage, setSearchParams]);
 
   const startEdit = (user) => {
     setEditingUserId(user._id);
@@ -246,6 +281,19 @@ function AdminUsersPage() {
     () => filteredUsers.filter((user) => user.role !== "admin"),
     [filteredUsers]
   );
+
+  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedCustomers = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredCustomers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredCustomers, currentPage]);
 
   const totalUsers = users.length;
   const totalAdmins = users.filter((user) => user.role === "admin").length;
@@ -433,7 +481,39 @@ function AdminUsersPage() {
         ) : (
           <>
             {renderUsersTable("Tài khoản Admin", "Danh sách tài khoản có quyền quản trị hệ thống.", filteredAdmins)}
-            {renderUsersTable("Tài khoản Người dùng", "Danh sách tài khoản khách hàng đang hoạt động.", filteredCustomers)}
+            {renderUsersTable("Tài khoản Người dùng", "Danh sách tài khoản khách hàng đang hoạt động.", paginatedCustomers)}
+            {filteredCustomers.length > 0 && (
+              <div className="dashboard-pagination">
+                <p>
+                  Hiển thị <strong>{paginatedCustomers.length}</strong> / {filteredCustomers.length} khách hàng
+                </p>
+                <div className="pagination-actions">
+                  <button
+                    type="button"
+                    className="secondary-btn pager-btn"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <FontAwesomeIcon icon={faChevronLeft} />
+                    Trước
+                  </button>
+                  <span className="page-indicator">
+                    Trang {currentPage}/{totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    className="secondary-btn pager-btn"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    Sau
+                    <FontAwesomeIcon icon={faChevronRight} />
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </section>

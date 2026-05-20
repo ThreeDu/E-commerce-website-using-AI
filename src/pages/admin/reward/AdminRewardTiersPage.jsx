@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { useNotification } from "../../../context/NotificationContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -6,44 +7,21 @@ import {
   faPlus,
   faPen,
   faTrash,
-  faXmark,
   faGift,
-  faSave,
 } from "@fortawesome/free-solid-svg-icons";
-import "../../../css/admin/products.css";
+import "../../../css/admin/rewards.css";
 
 const API_BASE = "/api/auth/admin/rewards";
-
-const EMPTY_FORM = {
-  name: "",
-  pointsRequired: "",
-  discountType: "percent",
-  discountValue: "",
-  maxDiscountValue: "",
-  minOrderValue: "",
-  voucherValidDays: "",
-  isActive: true,
-};
 
 function AdminRewardTiersPage() {
   const { auth } = useAuth();
   const { success, error } = useNotification();
+  const navigate = useNavigate();
 
   const [tiers, setTiers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [form, setForm] = useState({ ...EMPTY_FORM });
-  const [editingId, setEditingId] = useState(null);
   const [tierPendingDelete, setTierPendingDelete] = useState(null);
-
-  const headers = useCallback(
-    () => ({
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${auth?.token}`,
-    }),
-    [auth?.token]
-  );
 
   const loadTiers = useCallback(async () => {
     if (!auth?.token) {
@@ -73,108 +51,6 @@ function AdminRewardTiersPage() {
     loadTiers();
   }, [loadTiers]);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  const resetForm = () => {
-    setForm({ ...EMPTY_FORM });
-    setEditingId(null);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!form.name.trim()) {
-      error("Vui lòng nhập tên mức đổi thưởng.");
-      return;
-    }
-
-    if (!form.pointsRequired || Number(form.pointsRequired) <= 0) {
-      error("Điểm cần phải lớn hơn 0.");
-      return;
-    }
-
-    if (!form.discountValue || Number(form.discountValue) <= 0) {
-      error("Giá trị giảm phải lớn hơn 0.");
-      return;
-    }
-
-    const payload = {
-      name: form.name.trim(),
-      pointsRequired: Number(form.pointsRequired),
-      discountType: form.discountType,
-      discountValue: Number(form.discountValue),
-      maxDiscountValue: Number(form.maxDiscountValue || 0),
-      minOrderValue: Number(form.minOrderValue || 0),
-      voucherValidDays: Number(form.voucherValidDays || 30),
-      isActive: form.isActive,
-    };
-
-    try {
-      setSubmitting(true);
-
-      if (editingId) {
-        const res = await fetch(`${API_BASE}/${editingId}`, {
-          method: "PUT",
-          headers: headers(),
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => null);
-          throw new Error(errData?.message || "Không thể cập nhật mức đổi thưởng.");
-        }
-
-        const updated = await res.json();
-        setTiers((prev) =>
-          prev.map((tier) => (tier._id === editingId ? (updated.tier || updated) : tier))
-        );
-        success("Cập nhật mức đổi thưởng thành công.");
-      } else {
-        const res = await fetch(API_BASE, {
-          method: "POST",
-          headers: headers(),
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => null);
-          throw new Error(errData?.message || "Không thể thêm mức đổi thưởng.");
-        }
-
-        const created = await res.json();
-        setTiers((prev) => [...prev, created.tier || created]);
-        success("Thêm mức đổi thưởng thành công.");
-      }
-
-      resetForm();
-    } catch (err) {
-      error(err.message || "Đã xảy ra lỗi. Vui lòng thử lại.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleEdit = (tier) => {
-    setEditingId(tier._id);
-    setForm({
-      name: tier.name || "",
-      pointsRequired: tier.pointsRequired ?? "",
-      discountType: tier.discountType || "percent",
-      discountValue: tier.discountValue ?? "",
-      maxDiscountValue: tier.maxDiscountValue ?? "",
-      minOrderValue: tier.minOrderValue ?? "",
-      voucherValidDays: tier.voucherValidDays ?? "",
-      isActive: Boolean(tier.isActive),
-    });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
   const handleDelete = async () => {
     if (!tierPendingDelete?._id) {
       return;
@@ -203,8 +79,8 @@ function AdminRewardTiersPage() {
   };
 
   return (
-    <main className="container page-content admin-products-page">
-      <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading || submitting || deleting}>
+    <main className="container page-content admin-products-page admin-rewards-page">
+      <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading || deleting}>
         <div className="dashboard-header-row">
           <div>
             <h2>
@@ -215,100 +91,28 @@ function AdminRewardTiersPage() {
               Cấu hình các mức điểm và phần thưởng voucher cho người dùng.
             </p>
           </div>
+          <button
+            type="button"
+            className="primary-link-btn"
+            onClick={() => navigate("/admin/rewards/create")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "10px 20px",
+              border: "none",
+              borderRadius: "6px",
+              fontWeight: "600",
+              fontSize: "14px",
+              cursor: "pointer",
+              backgroundColor: "var(--primary-color, #4f46e5)",
+              color: "#fff"
+            }}
+          >
+            <FontAwesomeIcon icon={faPlus} />
+            Thêm mới
+          </button>
         </div>
-
-        {/* Inline form */}
-        <form className="admin-product-add-form" onSubmit={handleSubmit}>
-          <h3>
-            <FontAwesomeIcon icon={editingId ? faPen : faPlus} style={{ marginRight: "8px", color: "var(--primary-color, #4f46e5)" }} />
-            {editingId ? "Cập nhật mức đổi thưởng" : "Thêm mức đổi thưởng mới"}
-          </h3>
-
-          <input
-            name="name"
-            type="text"
-            placeholder="Tên mức đổi thưởng"
-            value={form.name}
-            onChange={handleChange}
-          />
-
-          <input
-            name="pointsRequired"
-            type="number"
-            placeholder="Điểm cần"
-            min="0"
-            value={form.pointsRequired}
-            onChange={handleChange}
-          />
-
-          <select name="discountType" value={form.discountType} onChange={handleChange}>
-            <option value="percent">Phần trăm (%)</option>
-            <option value="fixed">Cố định (VNĐ)</option>
-          </select>
-
-          <input
-            name="discountValue"
-            type="number"
-            placeholder="Giá trị giảm"
-            min="0"
-            value={form.discountValue}
-            onChange={handleChange}
-          />
-
-          <input
-            name="maxDiscountValue"
-            type="number"
-            placeholder="Giảm tối đa (VNĐ)"
-            min="0"
-            value={form.maxDiscountValue}
-            onChange={handleChange}
-          />
-
-          <input
-            name="minOrderValue"
-            type="number"
-            placeholder="Đơn tối thiểu (VNĐ)"
-            min="0"
-            value={form.minOrderValue}
-            onChange={handleChange}
-          />
-
-          <input
-            name="voucherValidDays"
-            type="number"
-            placeholder="Hiệu lực (ngày)"
-            min="1"
-            value={form.voucherValidDays}
-            onChange={handleChange}
-          />
-
-          <label style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-            <input
-              name="isActive"
-              type="checkbox"
-              checked={form.isActive}
-              onChange={handleChange}
-            />
-            Kích hoạt
-          </label>
-
-          <div className="add-form-actions">
-            <button type="submit" disabled={submitting} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-              <FontAwesomeIcon icon={editingId ? faSave : faPlus} />
-              {submitting
-                ? "Đang xử lý..."
-                : editingId
-                  ? "Cập nhật"
-                  : "Thêm mới"}
-            </button>
-            {editingId && (
-              <button type="button" className="secondary-btn" onClick={resetForm} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                <FontAwesomeIcon icon={faXmark} />
-                Hủy
-              </button>
-            )}
-          </div>
-        </form>
 
         {/* Table */}
         {loading ? (
@@ -361,7 +165,7 @@ function AdminRewardTiersPage() {
                           <button
                             type="button"
                             className="table-link-btn"
-                            onClick={() => handleEdit(tier)}
+                            onClick={() => navigate(`/admin/rewards/edit/${tier._id}`)}
                             style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                             title="Chỉnh sửa mức đổi thưởng"
                           >

@@ -48,6 +48,8 @@ const AdminNotificationsPage = lazy(() => import("./pages/admin/AdminNotificatio
 
 const AdminCustomerIntelligencePage = lazy(() => import("./pages/admin/AdminCustomerIntelligencePage"));
 const AdminRewardTiersPage = lazy(() => import("./pages/admin/reward/AdminRewardTiersPage"));
+const AdminAddRewardTierPage = lazy(() => import("./pages/admin/reward/AdminAddRewardTierPage"));
+const AdminEditRewardTierPage = lazy(() => import("./pages/admin/reward/AdminEditRewardTierPage"));
 
 function GuestRoute({ children }) {
   const { auth } = useAuth();
@@ -269,6 +271,22 @@ function App() {
                       element={
                         <ProtectedRoute requiredRole="admin">
                           <AdminRewardTiersPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/rewards/create"
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminAddRewardTierPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/rewards/edit/:id"
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminEditRewardTierPage />
                         </ProtectedRoute>
                       }
                     />
