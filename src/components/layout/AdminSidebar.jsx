@@ -12,6 +12,7 @@ import {
   faCartShopping,
   faFileLines,
   faGaugeHigh,
+  faGift,
   faTags,
   faTableCellsLarge,
   faUsers,
@@ -67,6 +68,10 @@ function AdminSidebar({ isSidebarOpen, onToggleSidebar, onLogout }) {
           <NavLink to="/admin/discounts" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
             <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faTags} /></span>
             <span className="admin-sidebar-link-title">Quản lý mã giảm giá</span>
+          </NavLink>
+          <NavLink to="/admin/rewards" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
+            <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faGift} /></span>
+            <span className="admin-sidebar-link-title">Đổi thưởng điểm</span>
           </NavLink>
           <NavLink to="/admin/orders" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
             <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faCartShopping} /></span>

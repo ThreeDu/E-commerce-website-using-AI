@@ -6,6 +6,7 @@ import { trackEvent } from "../services/analyticsService";
 import AvatarEditor from "../components/common/AvatarEditor";
 import { formatPrice, parsePrice } from "../utils/priceUtils";
 import { fetchMyVouchers } from "../services/orderService";
+import { getMyPoints, getRewards, redeemPoints } from "../services/pointService";
 import "../css/profile.css";
 import "../css/avatar-editor.css";
 
@@ -117,6 +118,11 @@ function UserDashboard() {
   const [vouchers, setVouchers] = useState([]);
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [pointHistory, setPointHistory] = useState([]);
+  const [rewardTiers, setRewardTiers] = useState([]);
+  const [isRedeemModalOpen, setIsRedeemModalOpen] = useState(false);
+  const [isRedeeming, setIsRedeeming] = useState(false);
   const [activeMenu, setActiveMenu] = useState("profile");
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -201,16 +207,67 @@ function UserDashboard() {
     loadVouchers();
   }, [auth?.token]);
 
+  useEffect(() => {
+    const loadPoints = async () => {
+      if (!auth?.token) {
+        setLoyaltyPoints(0);
+        setPointHistory([]);
+        return;
+      }
+      try {
+        const data = await getMyPoints(auth.token);
+        setLoyaltyPoints(Number(data?.points || 0));
+        setPointHistory(Array.isArray(data?.history) ? data.history : []);
+      } catch (err) {
+        setLoyaltyPoints(0);
+      }
+    };
+    loadPoints();
+  }, [auth?.token]);
+
+  useEffect(() => {
+    const loadRewards = async () => {
+      try {
+        const data = await getRewards(auth?.token);
+        setRewardTiers(Array.isArray(data?.rewards) ? data.rewards : []);
+      } catch (err) {
+        setRewardTiers([]);
+      }
+    };
+    loadRewards();
+  }, [auth?.token]);
+
+  const handleRedeem = async (tierId) => {
+    if (isRedeeming) return;
+    setIsRedeeming(true);
+    try {
+      const data = await redeemPoints(tierId, auth?.token);
+      success(data?.message || "Đổi điểm thành công!", { title: "Đổi thưởng" });
+      setLoyaltyPoints(Number(data?.remainingPoints || 0));
+
+      // Reload vouchers & points history
+      const [ptsData, vData] = await Promise.all([
+        getMyPoints(auth.token),
+        fetchMyVouchers(auth.token),
+      ]);
+      setPointHistory(Array.isArray(ptsData?.history) ? ptsData.history : []);
+      setVouchers(Array.isArray(vData?.vouchers) ? vData.vouchers : []);
+    } catch (err) {
+      error(err?.message || "Không thể đổi điểm.", { title: "Đổi thưởng" });
+    } finally {
+      setIsRedeeming(false);
+    }
+  };
+
   const metrics = useMemo(() => {
     const orderCount = orders.length;
-    const points = orderCount * 50;
     return {
       orderCount,
-      points,
+      points: loyaltyPoints,
       wishlistCount: wishlist.length,
       vouchers: vouchers.length,
     };
-  }, [orders, wishlist.length, vouchers.length]);
+  }, [orders, wishlist.length, vouchers.length, loyaltyPoints]);
 
   const recentOrders = orders.slice(0, 3);
   const wishlistPreview = wishlist.slice(0, 3);
@@ -534,7 +591,11 @@ function UserDashboard() {
               </div>
             </article>
 
-            <article className="profile-stat-card stat-violet">
+            <article 
+              className="profile-stat-card stat-violet" 
+              style={{ cursor: "pointer" }}
+              onClick={() => setIsRedeemModalOpen(true)}
+            >
               <div className="stat-icon">
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" /></svg>
               </div>
@@ -786,6 +847,111 @@ function UserDashboard() {
               <button
                 type="button"
                 onClick={() => setIsVoucherModalOpen(false)}
+                className="btn-secondary"
+                style={{ width: "100%" }}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isRedeemModalOpen && (
+        <div className="profile-modal-backdrop">
+          <div className="profile-modal-content" style={{ maxWidth: "520px" }}>
+            <div className="modal-header">
+              <h3>Đổi điểm lấy Voucher</h3>
+              <button type="button" className="modal-close" onClick={() => setIsRedeemModalOpen(false)}>
+                ✕
+              </button>
+            </div>
+
+            <div style={{ textAlign: "center", padding: "16px 0 20px", borderBottom: "1px solid var(--color-border-light, #e2eaf4)", marginBottom: "16px" }}>
+              <p style={{ margin: "0 0 4px", fontSize: "0.9rem", color: "var(--color-text-secondary, #62728a)" }}>Số dư hiện tại</p>
+              <strong style={{ fontSize: "2rem", color: "var(--color-primary, #10375c)" }}>{loyaltyPoints.toLocaleString("vi-VN")}</strong>
+              <span style={{ fontSize: "1rem", color: "var(--color-text-secondary, #62728a)", marginLeft: "6px" }}>điểm</span>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "320px", overflowY: "auto", paddingRight: "4px" }}>
+              {rewardTiers.length === 0 ? (
+                <p className="empty-state">Chưa có mức đổi thưởng nào. Vui lòng quay lại sau.</p>
+              ) : (
+                rewardTiers.map(tier => {
+                  const canRedeem = loyaltyPoints >= tier.pointsRequired;
+                  const missingPoints = tier.pointsRequired - loyaltyPoints;
+
+                  return (
+                    <div key={tier._id} style={{
+                      border: `1px ${canRedeem ? "solid" : "dashed"} ${canRedeem ? "var(--color-primary-light, #b5ccf0)" : "var(--color-border-light, #e2eaf4)"}`,
+                      borderRadius: "var(--radius-md, 8px)",
+                      padding: "var(--spacing-md, 12px)",
+                      background: canRedeem ? "var(--color-primary-lighter, #f8fbff)" : "#f8f9fa",
+                      opacity: canRedeem ? 1 : 0.7,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}>
+                      <div>
+                        <h4 style={{ margin: "0 0 4px", color: canRedeem ? "var(--color-primary, #10375c)" : "#888", fontWeight: "700" }}>{tier.name}</h4>
+                        <p style={{ margin: "0", fontSize: "0.85rem", color: "var(--color-text-secondary, #62728a)" }}>
+                          {tier.pointsRequired.toLocaleString("vi-VN")} điểm →{" "}
+                          Giảm {tier.discountType === "percent" ? `${tier.discountValue}%` : `${Number(tier.discountValue).toLocaleString("vi-VN")}đ`}
+                          {Number(tier.maxDiscountValue) > 0 && ` (tối đa ${Number(tier.maxDiscountValue).toLocaleString("vi-VN")}đ)`}
+                        </p>
+                        {Number(tier.minOrderValue) > 0 && (
+                          <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: "#888" }}>
+                            Đơn tối thiểu {Number(tier.minOrderValue).toLocaleString("vi-VN")}đ · Hiệu lực {tier.voucherValidDays} ngày
+                          </p>
+                        )}
+                        {!canRedeem && (
+                          <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "var(--color-danger, #b42318)", fontWeight: 600 }}>
+                            Còn thiếu {missingPoints.toLocaleString("vi-VN")} điểm
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        disabled={!canRedeem || isRedeeming}
+                        style={{
+                          padding: "8px 16px",
+                          fontSize: "0.85rem",
+                          borderRadius: "var(--radius-sm, 6px)",
+                          opacity: canRedeem ? 1 : 0.5,
+                          cursor: canRedeem ? "pointer" : "not-allowed",
+                          whiteSpace: "nowrap",
+                        }}
+                        onClick={() => handleRedeem(tier._id)}
+                      >
+                        {isRedeeming ? "Đang đổi..." : "Đổi ngay"}
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {pointHistory.length > 0 && (
+              <div style={{ marginTop: "20px", borderTop: "1px solid var(--color-border-light, #e2eaf4)", paddingTop: "16px" }}>
+                <h4 style={{ margin: "0 0 10px", fontSize: "0.9rem", color: "var(--color-text-secondary, #62728a)" }}>Lịch sử gần đây</h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "140px", overflowY: "auto" }}>
+                  {pointHistory.slice(0, 8).map(h => (
+                    <div key={h._id} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", padding: "4px 0" }}>
+                      <span style={{ color: "var(--color-text-secondary, #62728a)" }}>{h.reason}</span>
+                      <span style={{ fontWeight: 700, color: h.amount >= 0 ? "var(--color-success, #166534)" : "var(--color-danger, #b42318)" }}>
+                        {h.amount >= 0 ? "+" : ""}{h.amount}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="modal-actions" style={{ marginTop: "20px" }}>
+              <button
+                type="button"
+                onClick={() => setIsRedeemModalOpen(false)}
                 className="btn-secondary"
                 style={{ width: "100%" }}
               >

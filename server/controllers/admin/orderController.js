@@ -1,7 +1,15 @@
 const Order = require("../../models/Order");
+const User = require("../../models/User");
+const PointHistory = require("../../models/PointHistory");
 const { logAdminAction } = require("../../utils/adminAuditLogger");
 
 const ALLOWED_STATUS = ["pending", "confirmed", "shipping", "delivered", "cancelled"];
+
+const POINTS_PER_UNIT = 10000; // 10.000đ = 1 điểm
+
+const calculatePoints = (totalPrice) => {
+  return Math.floor(Number(totalPrice || 0) / POINTS_PER_UNIT);
+};
 
 const listOrders = async (req, res) => {
   try {
@@ -61,6 +69,14 @@ const updateOrderStatus = async (req, res) => {
       return res.status(400).json({ message: "Trạng thái đơn hàng không hợp lệ." });
     }
 
+    // Lấy đơn hàng hiện tại để biết trạng thái cũ
+    const existingOrder = await Order.findById(req.params.id);
+    if (!existingOrder) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng." });
+    }
+
+    const oldStatus = existingOrder.status;
+
     const updatePayload = {
       status,
       isDelivered: status === "delivered",
@@ -73,8 +89,51 @@ const updateOrderStatus = async (req, res) => {
       runValidators: true,
     }).populate("user", "_id name email");
 
-    if (!updatedOrder) {
-      return res.status(404).json({ message: "Không tìm thấy đơn hàng." });
+    // ── Xử lý điểm tích lũy ──
+    const userId = existingOrder.user;
+
+    if (userId) {
+      // Trường hợp 1: Chuyển sang "delivered" (từ trạng thái khác) → Cộng điểm
+      if (status === "delivered" && oldStatus !== "delivered") {
+        const earnedPoints = calculatePoints(existingOrder.totalPrice);
+        if (earnedPoints > 0) {
+          const user = await User.findByIdAndUpdate(
+            userId,
+            { $inc: { loyaltyPoints: earnedPoints } },
+            { new: true }
+          );
+
+          await PointHistory.create({
+            user: userId,
+            amount: earnedPoints,
+            type: "earn",
+            reason: `Đơn hàng #${String(existingOrder._id).slice(-8)} giao thành công`,
+            relatedOrder: existingOrder._id,
+            balanceAfter: user.loyaltyPoints,
+          });
+        }
+      }
+
+      // Trường hợp 2: Hủy đơn đã giao → Trừ lại điểm
+      if (status === "cancelled" && oldStatus === "delivered") {
+        const revokedPoints = calculatePoints(existingOrder.totalPrice);
+        if (revokedPoints > 0) {
+          const user = await User.findById(userId);
+          const newBalance = Math.max(0, (user.loyaltyPoints || 0) - revokedPoints);
+
+          user.loyaltyPoints = newBalance;
+          await user.save();
+
+          await PointHistory.create({
+            user: userId,
+            amount: -revokedPoints,
+            type: "earn",
+            reason: `Hoàn trả điểm — đơn #${String(existingOrder._id).slice(-8)} bị hủy sau giao`,
+            relatedOrder: existingOrder._id,
+            balanceAfter: newBalance,
+          });
+        }
+      }
     }
 
     logAdminAction({

@@ -47,6 +47,7 @@ const AdminSystemLogsPage = lazy(() => import("./pages/admin/AdminSystemLogsPage
 const AdminNotificationsPage = lazy(() => import("./pages/admin/AdminNotificationsPage"));
 
 const AdminCustomerIntelligencePage = lazy(() => import("./pages/admin/AdminCustomerIntelligencePage"));
+const AdminRewardTiersPage = lazy(() => import("./pages/admin/reward/AdminRewardTiersPage"));
 
 function GuestRoute({ children }) {
   const { auth } = useAuth();
@@ -260,6 +261,14 @@ function App() {
                       element={
                         <ProtectedRoute requiredRole="admin">
                           <AdminSystemLogsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/rewards"
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminRewardTiersPage />
                         </ProtectedRoute>
                       }
                     />
