@@ -4,6 +4,8 @@ import { useAuth } from "../../context/AuthContext";
 import { useStatusMessageBridge } from "../../hooks/useStatusMessageBridge";
 import { getAdminOrders, updateAdminOrderStatus } from "../../services/admin/orderService";
 import { getErrorMessage } from "../../utils/adminErrorUtils";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChevronLeft, faChevronRight, faReceipt, faFilter, faEye } from "@fortawesome/free-solid-svg-icons";
 import "../../css/admin/orders.css";
 
 const STATUS_OPTIONS = [
@@ -138,7 +140,10 @@ function AdminOrdersPage() {
       <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading}>
         <div className="dashboard-header-row">
           <div>
-            <h2>Quản lý đơn hàng</h2>
+            <h2>
+              <FontAwesomeIcon icon={faReceipt} style={{ marginRight: "10px", color: "var(--primary-color, #4f46e5)" }} />
+              Quản lý đơn hàng
+            </h2>
             <p className="dashboard-subtitle">Theo dõi và cập nhật trạng thái đơn hàng theo thời gian thực.</p>
           </div>
         </div>
@@ -151,7 +156,10 @@ function AdminOrdersPage() {
 
         <div className="dashboard-filter-bar">
           <div className="filter-control">
-            <label htmlFor="order-status">Trạng thái đơn hàng</label>
+            <label htmlFor="order-status">
+              <FontAwesomeIcon icon={faFilter} style={{ marginRight: "6px", color: "var(--text-secondary, #6b7280)" }} />
+              Trạng thái đơn hàng
+            </label>
             <select
               id="order-status"
               value={statusFilter}
@@ -190,6 +198,7 @@ function AdminOrdersPage() {
                       title="Bấm để xem chi tiết đơn hàng"
                     >
                       <div className="cell-title" title={order._id}>
+                        <FontAwesomeIcon icon={faEye} style={{ marginRight: "6px", color: "var(--primary-color, #4f46e5)" }} />
                         {order._id}
                       </div>
                     </td>
@@ -243,7 +252,8 @@ function AdminOrdersPage() {
               disabled={loading || page <= 1}
               onClick={() => setPage((prev) => Math.max(1, prev - 1))}
             >
-              ← Trước
+              <FontAwesomeIcon icon={faChevronLeft} style={{ marginRight: "6px" }} />
+              Trước
             </button>
             <button
               type="button"
@@ -251,7 +261,8 @@ function AdminOrdersPage() {
               disabled={loading || page >= totalPages}
               onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
             >
-              Sau →
+              Sau
+              <FontAwesomeIcon icon={faChevronRight} style={{ marginLeft: "6px" }} />
             </button>
           </div>
         </div>

@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { useNotification } from "../../../context/NotificationContext";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faPlus,
+  faPen,
+  faTrash,
+  faXmark,
+  faGift,
+  faSave,
+} from "@fortawesome/free-solid-svg-icons";
 import "../../../css/admin/products.css";
 
 const API_BASE = "/api/auth/admin/rewards";
@@ -198,7 +207,10 @@ function AdminRewardTiersPage() {
       <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading || submitting || deleting}>
         <div className="dashboard-header-row">
           <div>
-            <h2>Quản lý mức đổi thưởng</h2>
+            <h2>
+              <FontAwesomeIcon icon={faGift} style={{ marginRight: "10px", color: "var(--primary-color, #4f46e5)" }} />
+              Quản lý mức đổi thưởng
+            </h2>
             <p className="dashboard-subtitle">
               Cấu hình các mức điểm và phần thưởng voucher cho người dùng.
             </p>
@@ -207,7 +219,10 @@ function AdminRewardTiersPage() {
 
         {/* Inline form */}
         <form className="admin-product-add-form" onSubmit={handleSubmit}>
-          <h3>{editingId ? "Cập nhật mức đổi thưởng" : "Thêm mức đổi thưởng mới"}</h3>
+          <h3>
+            <FontAwesomeIcon icon={editingId ? faPen : faPlus} style={{ marginRight: "8px", color: "var(--primary-color, #4f46e5)" }} />
+            {editingId ? "Cập nhật mức đổi thưởng" : "Thêm mức đổi thưởng mới"}
+          </h3>
 
           <input
             name="name"
@@ -278,7 +293,8 @@ function AdminRewardTiersPage() {
           </label>
 
           <div className="add-form-actions">
-            <button type="submit" disabled={submitting}>
+            <button type="submit" disabled={submitting} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <FontAwesomeIcon icon={editingId ? faSave : faPlus} />
               {submitting
                 ? "Đang xử lý..."
                 : editingId
@@ -286,7 +302,8 @@ function AdminRewardTiersPage() {
                   : "Thêm mới"}
             </button>
             {editingId && (
-              <button type="button" className="secondary-btn" onClick={resetForm}>
+              <button type="button" className="secondary-btn" onClick={resetForm} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <FontAwesomeIcon icon={faXmark} />
                 Hủy
               </button>
             )}
@@ -345,15 +362,21 @@ function AdminRewardTiersPage() {
                             type="button"
                             className="table-link-btn"
                             onClick={() => handleEdit(tier)}
+                            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                            title="Chỉnh sửa mức đổi thưởng"
                           >
-                            <span aria-hidden="true">✎</span> Sửa
+                            <FontAwesomeIcon icon={faPen} />
+                            Sửa
                           </button>
                           <button
                             type="button"
                             className="danger-btn"
                             onClick={() => setTierPendingDelete(tier)}
+                            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                            title="Xóa mức đổi thưởng"
                           >
-                            <span aria-hidden="true">🗑</span> Xóa
+                            <FontAwesomeIcon icon={faTrash} />
+                            Xóa
                           </button>
                         </div>
                       </td>

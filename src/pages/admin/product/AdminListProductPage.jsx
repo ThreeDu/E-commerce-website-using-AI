@@ -6,6 +6,18 @@ import { useNotification } from "../../../context/NotificationContext";
 import { getAdminCategories } from "../../../services/admin/categoryService";
 import { deleteAdminProduct, getAdminProducts } from "../../../services/admin/productService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faPlus,
+  faPen,
+  faTrash,
+  faChevronLeft,
+  faChevronRight,
+  faFileImport,
+  faFileExport,
+  faBoxArchive,
+  faRotateLeft,
+} from "@fortawesome/free-solid-svg-icons";
 import "../../../css/admin/products.css";
 
 const ITEMS_PER_PAGE = 8;
@@ -533,18 +545,24 @@ function AdminListProductPage() {
       <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading}>
         <div className="dashboard-header-row">
           <div>
-            <h2>Quản lý sản phẩm</h2>
+            <h2>
+              <FontAwesomeIcon icon={faBoxArchive} style={{ marginRight: "10px", color: "var(--primary-color, #4f46e5)" }} />
+              Quản lý sản phẩm
+            </h2>
             <p className="dashboard-subtitle">Theo dõi kho hàng và giá bán trong một bảng điều khiển tập trung.</p>
           </div>
           <div className="bulk-action-buttons">
-            <Link to="/admin/products/import" className="secondary-btn">
-              Nhập danh sách sản phẩm
+            <Link to="/admin/products/import" className="secondary-btn" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <FontAwesomeIcon icon={faFileImport} />
+              Nhập sản phẩm
             </Link>
-            <button type="button" className="secondary-btn" onClick={handleExportTemplate}>
-              Xuất danh sách sản phẩm
+            <button type="button" className="secondary-btn" onClick={handleExportTemplate} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <FontAwesomeIcon icon={faFileExport} />
+              Xuất sản phẩm
             </button>
-            <Link to="/admin/products/add" className="primary-link-btn">
-              + Thêm sản phẩm
+            <Link to="/admin/products/add" className="primary-link-btn" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <FontAwesomeIcon icon={faPlus} />
+              Thêm sản phẩm
             </Link>
           </div>
         </div>
@@ -675,7 +693,9 @@ function AdminListProductPage() {
                   name: `${selectedProducts.length} sản phẩm đã chọn`,
                 })
               }
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
             >
+              <FontAwesomeIcon icon={faTrash} />
               Xóa đã chọn
             </button>
             <button
@@ -683,7 +703,9 @@ function AdminListProductPage() {
               className="secondary-btn"
               disabled={selectedProducts.length === 0}
               onClick={() => setSelectedProductIds([])}
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
             >
+              <FontAwesomeIcon icon={faRotateLeft} />
               Bỏ chọn
             </button>
           </div>
@@ -767,15 +789,24 @@ function AdminListProductPage() {
                         </td>
                         <td>
                           <div className="table-actions">
-                            <Link to={`/admin/products/edit/${product._id}`} className="table-link-btn">
-                              <span aria-hidden="true">✎</span> Sửa
+                            <Link
+                              to={`/admin/products/edit/${product._id}`}
+                              className="table-link-btn"
+                              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                              title="Chỉnh sửa sản phẩm"
+                            >
+                              <FontAwesomeIcon icon={faPen} />
+                              Sửa
                             </Link>
                             <button
                               type="button"
                               className="danger-btn"
                               onClick={() => setProductPendingDelete(product)}
+                              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                              title="Xóa sản phẩm"
                             >
-                              <span aria-hidden="true">🗑</span> Xóa
+                              <FontAwesomeIcon icon={faTrash} />
+                              Xóa
                             </button>
                           </div>
                         </td>
@@ -803,8 +834,10 @@ function AdminListProductPage() {
                   className="secondary-btn pager-btn"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
-                  ← Trước
+                  <FontAwesomeIcon icon={faChevronLeft} />
+                  Trước
                 </button>
                 <span className="page-indicator">
                   Trang {currentPage}/{totalPages}
@@ -814,8 +847,10 @@ function AdminListProductPage() {
                   className="secondary-btn pager-btn"
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
-                  Sau →
+                  Sau
+                  <FontAwesomeIcon icon={faChevronRight} />
                 </button>
               </div>
             </div>

@@ -4,6 +4,17 @@ import { useAuth } from "../../context/AuthContext";
 import { useStatusMessageBridge } from "../../hooks/useStatusMessageBridge";
 import { getAdminNotifications } from "../../services/admin/notificationService";
 import { getErrorMessage } from "../../utils/adminErrorUtils";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faRotate,
+  faEye,
+  faBox,
+  faPen,
+  faShoppingBag,
+  faCircleXmark,
+  faWarehouse,
+  faTicket,
+} from "@fortawesome/free-solid-svg-icons";
 import "../../css/admin/notifications.css";
 
 const AUTO_REFRESH_MS = 30000;
@@ -20,11 +31,14 @@ function formatCurrency(value) {
   return Number(value || 0).toLocaleString("vi-VN");
 }
 
-function NotificationSection({ title, subtitle, items, emptyText, renderItem, tone = "neutral" }) {
+function NotificationSection({ title, subtitle, items, emptyText, renderItem, tone = "neutral", icon }) {
   return (
     <article className={`admin-notify-panel ${tone}`}>
       <header>
-        <h3>{title}</h3>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "4px" }}>
+          {icon && <FontAwesomeIcon icon={icon} style={{ fontSize: "16px" }} />}
+          <h3 style={{ margin: 0 }}>{title}</h3>
+        </div>
         <p>{subtitle}</p>
       </header>
       {items.length === 0 ? (
@@ -101,36 +115,42 @@ function AdminNotificationsPage() {
         label: "Đơn hàng mới (24h)",
         value: Number(summary.newOrders || 0),
         tone: "info",
+        icon: faShoppingBag,
       },
       {
         key: "cancelledOrders",
         label: "Đơn bị hủy (24h)",
         value: Number(summary.cancelledOrders || 0),
         tone: "danger",
+        icon: faCircleXmark,
       },
       {
         key: "lowStockProducts",
         label: "Sản phẩm sắp hết",
         value: Number(summary.lowStockProducts || 0),
         tone: "warning",
+        icon: faWarehouse,
       },
       {
         key: "outOfStockProducts",
         label: "Sản phẩm hết hàng",
         value: Number(summary.outOfStockProducts || 0),
         tone: "danger",
+        icon: faWarehouse,
       },
       {
         key: "nearLimitDiscounts",
         label: "Mã giảm giá sắp hết lượt hoặc hạn",
         value: Number(summary.nearLimitDiscounts || 0),
         tone: "warning",
+        icon: faTicket,
       },
       {
         key: "exhaustedDiscounts",
         label: "Mã giảm giá đã hết lượt hoặc hạn",
         value: Number(summary.exhaustedDiscounts || 0),
         tone: "danger",
+        icon: faTicket,
       },
     ],
     [summary]
@@ -155,7 +175,9 @@ function AdminNotificationsPage() {
               className="secondary-btn"
               onClick={() => loadNotifications({ silent: true })}
               disabled={refreshing}
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
             >
+              <FontAwesomeIcon icon={faRotate} spin={refreshing} />
               {refreshing ? "Đang làm mới..." : "Làm mới"}
             </button>
           </div>
@@ -170,7 +192,10 @@ function AdminNotificationsPage() {
         <section className="admin-notify-summary" aria-label="Tổng hợp cảnh báo">
           {summaryCards.map((card) => (
             <article key={card.key} className={`admin-notify-card ${card.tone}`}>
-              <p>{card.label}</p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
+                <p style={{ margin: 0 }}>{card.label}</p>
+                <FontAwesomeIcon icon={card.icon} style={{ fontSize: "16px", opacity: 0.6 }} />
+              </div>
               <strong>{card.value}</strong>
             </article>
           ))}
@@ -183,6 +208,7 @@ function AdminNotificationsPage() {
             items={sections.newOrders || []}
             emptyText="Chưa có đơn hàng mới trong khung thời gian theo dõi."
             tone="info"
+            icon={faShoppingBag}
             renderItem={(item) => (
               <div className="admin-notify-item">
                 <div>
@@ -192,7 +218,9 @@ function AdminNotificationsPage() {
                 <div className="admin-notify-item-right">
                   <strong>{formatCurrency(item.totalPrice)} đ</strong>
                   <span>{formatDateTime(item.createdAt)}</span>
-                  <Link to={`/admin/orders/${item._id}`}>Xem đơn</Link>
+                  <Link to={`/admin/orders/${item._id}`} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <FontAwesomeIcon icon={faEye} /> Xem đơn
+                  </Link>
                 </div>
               </div>
             )}
@@ -204,6 +232,7 @@ function AdminNotificationsPage() {
             items={sections.cancelledOrders || []}
             emptyText="Không có đơn hàng bị hủy trong khung thời gian theo dõi."
             tone="danger"
+            icon={faCircleXmark}
             renderItem={(item) => (
               <div className="admin-notify-item">
                 <div>
@@ -213,7 +242,9 @@ function AdminNotificationsPage() {
                 <div className="admin-notify-item-right">
                   <strong>{formatCurrency(item.totalPrice)} đ</strong>
                   <span>{formatDateTime(item.cancelledAt || item.updatedAt)}</span>
-                  <Link to={`/admin/orders/${item._id}`}>Xem đơn</Link>
+                  <Link to={`/admin/orders/${item._id}`} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <FontAwesomeIcon icon={faEye} /> Xem đơn
+                  </Link>
                 </div>
               </div>
             )}
@@ -225,6 +256,7 @@ function AdminNotificationsPage() {
             items={sections.lowStockProducts || []}
             emptyText="Hiện chưa có sản phẩm nào chạm ngưỡng sắp hết hàng."
             tone="warning"
+            icon={faWarehouse}
             renderItem={(item) => (
               <div className="admin-notify-item">
                 <div>
@@ -233,7 +265,9 @@ function AdminNotificationsPage() {
                 </div>
                 <div className="admin-notify-item-right">
                   <span>{formatDateTime(item.updatedAt)}</span>
-                  <Link to={`/admin/products/edit/${item._id}`}>Cập nhật kho</Link>
+                  <Link to={`/admin/products/edit/${item._id}`} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <FontAwesomeIcon icon={faBox} /> Cập nhật kho
+                  </Link>
                 </div>
               </div>
             )}
@@ -245,6 +279,7 @@ function AdminNotificationsPage() {
             items={sections.outOfStockProducts || []}
             emptyText="Không có sản phẩm nào đang hết hàng."
             tone="danger"
+            icon={faWarehouse}
             renderItem={(item) => (
               <div className="admin-notify-item">
                 <div>
@@ -253,7 +288,9 @@ function AdminNotificationsPage() {
                 </div>
                 <div className="admin-notify-item-right">
                   <span>{formatDateTime(item.updatedAt)}</span>
-                  <Link to={`/admin/products/edit/${item._id}`}>Nhập thêm</Link>
+                  <Link to={`/admin/products/edit/${item._id}`} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <FontAwesomeIcon icon={faBox} /> Nhập thêm
+                  </Link>
                 </div>
               </div>
             )}
@@ -265,6 +302,7 @@ function AdminNotificationsPage() {
             items={sections.nearLimitDiscounts || []}
             emptyText="Chưa có mã giảm giá nào sắp hết lượt hoặc sắp hết hạn."
             tone="warning"
+            icon={faTicket}
             renderItem={(item) => (
               <div className="admin-notify-item">
                 <div>
@@ -282,7 +320,9 @@ function AdminNotificationsPage() {
                       : "Sắp hết hạn"}
                   </strong>
                   <span>{item.endDate ? `Hạn: ${formatDateTime(item.endDate)}` : "Không giới hạn ngày"}</span>
-                  <Link to={`/admin/discounts/edit/${item._id}`}>Chỉnh sửa</Link>
+                  <Link to={`/admin/discounts/edit/${item._id}`} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <FontAwesomeIcon icon={faPen} /> Chỉnh sửa
+                  </Link>
                 </div>
               </div>
             )}
@@ -294,6 +334,7 @@ function AdminNotificationsPage() {
             items={sections.exhaustedDiscounts || []}
             emptyText="Không có mã giảm giá nào đã hết lượt hoặc hết hạn."
             tone="danger"
+            icon={faTicket}
             renderItem={(item) => (
               <div className="admin-notify-item">
                 <div>
@@ -313,7 +354,9 @@ function AdminNotificationsPage() {
                         : "Hết hạn"}
                   </strong>
                   <span>{item.endDate ? `Hạn: ${formatDateTime(item.endDate)}` : "Không giới hạn ngày"}</span>
-                  <Link to={`/admin/discounts/edit/${item._id}`}>Xử lý</Link>
+                  <Link to={`/admin/discounts/edit/${item._id}`} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <FontAwesomeIcon icon={faPen} /> Xử lý
+                  </Link>
                 </div>
               </div>
             )}
