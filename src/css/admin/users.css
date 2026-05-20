@@ -49,6 +49,8 @@
 
 .users-table-wrap {
   margin-top: 16px;
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   border: 1px solid #dde7f3;
   border-radius: 14px;
@@ -108,33 +110,40 @@
   width: 100%;
   border-collapse: collapse;
   background: #fff;
-  min-width: 760px;
+  min-width: 980px;
   table-layout: fixed;
 }
 
 .users-table th:nth-child(1),
 .users-table td:nth-child(1) {
-  width: 18%;
+  width: 12%;
 }
 
 .users-table th:nth-child(2),
 .users-table td:nth-child(2) {
-  width: 28%;
+  width: 20%;
 }
 
 .users-table th:nth-child(3),
 .users-table td:nth-child(3) {
-  width: 13%;
+  width: 8%;
+  font-weight: 600;
+  color: #1e293b;
 }
 
 .users-table th:nth-child(4),
 .users-table td:nth-child(4) {
-  width: 19%;
+  width: 8%;
 }
 
 .users-table th:nth-child(5),
 .users-table td:nth-child(5) {
-  width: 22%;
+  width: 16%;
+}
+
+.users-table th:nth-child(6),
+.users-table td:nth-child(6) {
+  width: 36%;
 }
 
 .users-table th,
@@ -146,13 +155,13 @@
   box-sizing: border-box;
 }
 
-.users-table td:nth-child(-n + 4) {
+.users-table td:nth-child(-n + 5) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.users-table td:nth-child(5) {
+.users-table td:nth-child(6) {
   white-space: nowrap;
 }
 
@@ -186,12 +195,21 @@
 }
 
 .table-actions button {
-  padding: 7px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
   border-radius: 8px;
   border: 1px solid #d0d9e4;
   background: #fff;
   cursor: pointer;
   font-weight: 600;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+
+.table-actions button svg {
+  font-size: 11px;
 }
 
 .table-actions button:disabled {
@@ -199,9 +217,48 @@
   opacity: 0.7;
 }
 
+.table-actions .action-btn-edit {
+  color: #475569;
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+.table-actions .action-btn-edit:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.table-actions .action-btn-points {
+  color: #0f766e;
+  border-color: #99f6e4;
+  background: #f0fdfa;
+}
+.table-actions .action-btn-points:hover:not(:disabled) {
+  background: #ccfbf1;
+  border-color: #5eead4;
+  color: #0d9488;
+}
+
+.table-actions .action-btn-password {
+  color: #4338ca;
+  border-color: #c7d2fe;
+  background: #eef2ff;
+}
+.table-actions .action-btn-password:hover:not(:disabled) {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+  color: #4f46e5;
+}
+
 .table-actions .danger-btn {
-  border-color: #df6b6b;
-  color: #b42318;
+  color: #b91c1c;
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+.table-actions .danger-btn:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #f87171;
+  color: #991b1b;
 }
 
 .role-badge {
@@ -301,4 +358,94 @@
 .hero-card textarea:focus-visible {
   outline: 3px solid #1d4ed8;
   outline-offset: 2px;
+}
+
+/* Premium Modal Styles */
+.confirm-modal.points-modal,
+.confirm-modal.password-modal {
+  width: min(500px, 100%) !important;
+}
+
+.modal-title {
+  font-size: 20px;
+  color: #0f172a;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.modal-subtitle {
+  color: #475569;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.modal-subtitle strong {
+  color: #0f172a;
+}
+
+.modal-form-grid {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.modal-form-group {
+  display: grid;
+  gap: 6px;
+}
+
+.modal-form-group.row-group {
+  gap: 4px;
+}
+
+.modal-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.modal-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.modal-input {
+  height: 40px;
+  font-size: 15px;
+}
+
+.modal-textarea {
+  padding: 10px 12px;
+  font-size: 14px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.modal-btn {
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.modal-btn-save-points {
+  background: #0f766e !important;
+  color: #fff !important;
+  border-color: #0f766e !important;
+}
+.modal-btn-save-points:hover:not(:disabled) {
+  background: #0d9488 !important;
+  border-color: #0d9488 !important;
+}
+
+.modal-btn-save-password {
+  background: #4338ca !important;
+  color: #fff !important;
+  border-color: #4338ca !important;
+}
+.modal-btn-save-password:hover:not(:disabled) {
+  background: #4f46e5 !important;
+  border-color: #4f46e5 !important;
 }
