@@ -165,6 +165,14 @@ const createDiscount = async (req, res) => {
       isActive: normalizedPayload.isActive,
     });
 
+    // Trigger gửi thông báo mã giảm giá mới
+    if (discount.isActive) {
+      const { notifyNewCoupon } = require("../../helpers/notificationHelper");
+      notifyNewCoupon(discount).catch((err) =>
+        console.error("Gửi thông báo coupon mới thất bại:", err)
+      );
+    }
+
     logAdminAction({
       req,
       adminUser: req.adminUser,

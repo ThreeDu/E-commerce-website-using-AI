@@ -2,6 +2,7 @@ const Order = require("../../models/Order");
 const User = require("../../models/User");
 const PointHistory = require("../../models/PointHistory");
 const { logAdminAction } = require("../../utils/adminAuditLogger");
+const { notifyOrderStatusChange } = require("../../helpers/notificationHelper");
 
 const ALLOWED_STATUS = ["pending", "confirmed", "shipping", "delivered", "cancelled"];
 
@@ -88,6 +89,11 @@ const updateOrderStatus = async (req, res) => {
       new: true,
       runValidators: true,
     }).populate("user", "_id name email");
+
+    // Gửi thông báo trạng thái đơn hàng
+    notifyOrderStatusChange(updatedOrder, status).catch((err) =>
+      console.error("Gửi thông báo cập nhật đơn hàng thất bại:", err)
+    );
 
     // ── Xử lý điểm tích lũy ──
     const userId = existingOrder.user;

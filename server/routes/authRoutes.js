@@ -22,6 +22,8 @@ const adminNotificationRoutes = require("./admin/notificationRoutes");
 
 const adminIntelligenceRoutes = require("./admin/intelligenceRoutes");
 const adminRewardTierRoutes = require("./admin/rewardTierRoutes");
+const cartRoutes = require("./cartRoutes");
+const userNotificationRoutes = require("./userNotificationRoutes");
 
 const router = express.Router();
 router.post("/register", register);
@@ -35,6 +37,9 @@ router.put("/change-password", changePassword);
 router.get("/wishlist", getWishlist);
 router.post("/wishlist", addWishlist);
 router.delete("/wishlist/:productId", removeWishlist);
+
+router.use("/cart", cartRoutes);
+router.use("/notifications", userNotificationRoutes);
 
 router.use("/admin/users", adminUserRoutes);
 router.use("/admin/products", adminProductRoutes);

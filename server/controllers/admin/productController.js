@@ -418,6 +418,13 @@ const updateProduct = async (req, res) => {
     const computedFinalPrice = Math.round(numericPrice * (1 - numericDiscount / 100));
     const inferred = deriveStructuredFromName({ name, category: category || "Chua phan loai" });
 
+    // Lấy thông tin sản phẩm trước khi cập nhật để so sánh discountPercent
+    const existingProduct = await Product.findById(id);
+    if (!existingProduct) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm." });
+    }
+    const oldDiscount = existingProduct.discountPercent || 0;
+
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
       {
@@ -441,6 +448,15 @@ const updateProduct = async (req, res) => {
 
     if (!updatedProduct) {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm." });
+    }
+
+    // Trigger gửi thông báo khi mức giảm giá được tăng lên
+    const newDiscount = updatedProduct.discountPercent || 0;
+    if (newDiscount > oldDiscount && newDiscount > 0) {
+      const { notifyProductDiscount } = require("../../helpers/notificationHelper");
+      notifyProductDiscount(updatedProduct, oldDiscount, newDiscount).catch((err) =>
+        console.error("Gửi thông báo giảm giá sản phẩm thất bại:", err)
+      );
     }
 
     logAdminAction({

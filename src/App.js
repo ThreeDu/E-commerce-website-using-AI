@@ -12,6 +12,7 @@ import LoadingFallback from "./components/common/LoadingFallback";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import { UserNotificationProvider } from "./context/UserNotificationContext";
 
 // ── Eager-loaded pages (critical path, always needed) ──
 import HomePage from "./pages/HomePage";
@@ -70,7 +71,8 @@ function App() {
     <AuthProvider>
       <NotificationProvider>
         <CartProvider>
-          <BrowserRouter>
+          <UserNotificationProvider>
+            <BrowserRouter>
             <StatusNotificationCenter />
             <div className="app-shell">
               <Header />
@@ -298,6 +300,7 @@ function App() {
               <Footer />
             </div>
           </BrowserRouter>
+          </UserNotificationProvider>
         </CartProvider>
       </NotificationProvider>
     </AuthProvider>

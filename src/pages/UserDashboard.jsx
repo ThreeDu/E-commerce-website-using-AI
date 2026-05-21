@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
 import { trackEvent } from "../services/analyticsService";
@@ -82,6 +82,14 @@ function IconSupport() {
   );
 }
 
+function IconGift() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path fill="currentColor" d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h16v6z" />
+    </svg>
+  );
+}
+
 function normalizeImageSrc(value) {
   const raw = String(value || "").trim();
   if (!raw) {
@@ -102,6 +110,7 @@ function normalizeImageSrc(value) {
 
 function UserDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { auth, login, logout } = useAuth();
   const { success, error, warning } = useNotification();
   const profileEditRef = useRef(null);
@@ -129,6 +138,14 @@ function UserDashboard() {
     newPassword: "",
     confirmPassword: "",
   });
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("openVoucher") === "true") {
+      setIsVoucherModalOpen(true);
+      navigate("/profile", { replace: true });
+    }
+  }, [location.search, navigate]);
 
   useEffect(() => {
     const loadMyOrders = async () => {
@@ -285,6 +302,16 @@ function UserDashboard() {
   };
 
   const handleMenuAction = (key) => {
+    if (key === "voucher") {
+      setIsVoucherModalOpen(true);
+      return;
+    }
+
+    if (key === "redeem") {
+      setIsRedeemModalOpen(true);
+      return;
+    }
+
     setActiveMenu(key);
 
     if (key === "profile") {
@@ -299,11 +326,6 @@ function UserDashboard() {
 
     if (key === "wishlist") {
       navigate("/wishlist");
-      return;
-    }
-
-    if (key === "voucher") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
@@ -326,6 +348,7 @@ function UserDashboard() {
     { key: "orders", label: "Đơn hàng của tôi", icon: <IconMenuOrders /> },
     { key: "wishlist", label: "Sản phẩm yêu thích", icon: <IconHeart /> },
     { key: "voucher", label: "Voucher của tôi", icon: <IconMenuVoucher /> },
+    { key: "redeem", label: "Đổi điểm tích lũy", icon: <IconGift /> },
     { key: "address", label: "Địa chỉ của tôi", icon: <IconMenuAddress /> },
     { key: "payment", label: "Phương thức thanh toán", icon: <IconMenuCard /> },
     { key: "password", label: "Đổi mật khẩu", icon: <IconMenuLock /> },
@@ -550,16 +573,7 @@ function UserDashboard() {
               </button>
             </div>
 
-            <div className="profile-hero__summary">
-              <div className="profile-hero__summary-card">
-                <span>Điểm tích lũy</span>
-                <strong>{metrics.points.toLocaleString("vi-VN")}</strong>
-              </div>
-              <div className="profile-hero__summary-card profile-hero__summary-card--soft">
-                <span>Trạng thái</span>
-                <strong>Hoạt động</strong>
-              </div>
-            </div>
+
           </article>
 
           <section className="profile-stats-grid">

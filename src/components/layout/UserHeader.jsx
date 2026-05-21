@@ -9,6 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { getProductImageSrc } from "../../utils/productUtils";
 import { fetchProducts } from "../../services/productService";
+import NotificationBell from "../notification/NotificationBell";
 
 function IconCart() {
   return (
@@ -194,11 +195,14 @@ function UserHeader() {
 
         <div className="nav-actions">
           {isAuthenticated ? (
-            <Link to="/cart" className="icon-action" aria-label="Giỏ hàng">
-              <IconCart />
-              <span>Giỏ hàng</span>
-              {totalItems > 0 ? <span className="cart-count">{totalItems}</span> : null}
-            </Link>
+            <>
+              <Link to="/cart" className="icon-action" aria-label="Giỏ hàng">
+                <IconCart />
+                <span>Giỏ hàng</span>
+                {totalItems > 0 ? <span className="cart-count">{totalItems}</span> : null}
+              </Link>
+              <NotificationBell />
+            </>
           ) : null}
 
           {!auth ? (
