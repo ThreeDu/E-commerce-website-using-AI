@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
-const { processChatMessage, trackChatbotEvent } = require("../services/chatbotService");
+const { processChatMessage, trackChatbotEvent } = require("./service");
 const { getTokenFromHeader } = require("../routes/helpers/authHelpers");
 
 function getOptionalUserId(req) {

@@ -1,5 +1,5 @@
 const express = require("express");
-const { chatWithAssistant, trackEvent } = require("../controllers/chatbotController");
+const { chatWithAssistant, trackEvent } = require("./controller");
 
 const router = express.Router();
 

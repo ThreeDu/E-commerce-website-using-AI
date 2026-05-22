@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 from pymongo import MongoClient
+from bson import ObjectId
 
 from config import (
     MONGO_URI,
@@ -215,6 +216,123 @@ def extract_features_for_all_users():
 
     df = pd.DataFrame(rows)
     return df
+
+
+def extract_features_for_user(user_id):
+    """
+    Return a single-row DataFrame with features for a specific user.
+    """
+    if not user_id:
+        return pd.DataFrame(columns=["_id", "name", "email"] + FEATURE_NAMES)
+
+    try:
+        oid = ObjectId(str(user_id))
+    except Exception:
+        return pd.DataFrame(columns=["_id", "name", "email"] + FEATURE_NAMES)
+
+    db = _get_db()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    window_start = now - timedelta(days=RECENCY_WINDOW_DAYS)
+    prev_window_start = now - timedelta(days=TREND_COMPARE_DAYS)
+
+    user = db.users.find_one(
+        {"_id": oid, "role": {"$ne": "admin"}},
+        {"name": 1, "email": 1, "phone": 1, "address": 1, "wishlist": 1, "createdAt": 1},
+    )
+
+    if not user:
+        return pd.DataFrame(columns=["_id", "name", "email"] + FEATURE_NAMES)
+
+    orders = list(
+        db.orders.find(
+            {"user": oid},
+            {"user": 1, "totalPrice": 1, "status": 1, "createdAt": 1},
+        )
+    )
+
+    events_recent = list(
+        db.analyticsevents.find(
+            {"userId": oid, "occurredAt": {"$gte": window_start}},
+            {"userId": 1, "eventName": 1, "occurredAt": 1},
+        )
+    )
+
+    events_prev = list(
+        db.analyticsevents.find(
+            {
+                "userId": oid,
+                "occurredAt": {"$gte": prev_window_start, "$lt": window_start},
+            },
+            {"userId": 1, "eventName": 1},
+        )
+    )
+
+    chatbot_events = list(
+        db.chatbotevents.find(
+            {"user": oid, "createdAt": {"$gte": window_start}},
+            {"user": 1, "sessionId": 1, "eventType": 1},
+        )
+    )
+
+    row = {
+        "_id": str(user.get("_id")),
+        "name": user.get("name", ""),
+        "email": user.get("email", ""),
+    }
+
+    completed_orders = [o for o in orders if o.get("status") != "cancelled"]
+    cancelled_orders = [o for o in orders if o.get("status") == "cancelled"]
+
+    if completed_orders:
+        last_order_date = max(o.get("createdAt", now) for o in completed_orders)
+        row["recency_days"] = max(0, (now - last_order_date).days) if last_order_date else 999
+    else:
+        row["recency_days"] = 999
+
+    row["frequency"] = len(completed_orders)
+    row["monetary"] = sum(float(o.get("totalPrice", 0)) for o in completed_orders)
+    row["avg_order_value"] = _safe_ratio(row["monetary"], row["frequency"])
+    row["cancel_rate"] = _safe_ratio(len(cancelled_orders), len(orders)) if orders else 0.0
+
+    recent_order_count = sum(
+        1 for o in completed_orders
+        if o.get("createdAt") and o["createdAt"] >= window_start
+    )
+    prev_order_count = sum(
+        1 for o in completed_orders
+        if o.get("createdAt") and prev_window_start <= o["createdAt"] < window_start
+    )
+    row["order_trend"] = recent_order_count - prev_order_count
+
+    row["product_views_30d"] = sum(1 for e in events_recent if e.get("eventName") == "product_view")
+    row["add_to_cart_30d"] = sum(1 for e in events_recent if e.get("eventName") == "add_to_cart")
+    row["wishlist_adds_30d"] = sum(1 for e in events_recent if e.get("eventName") == "wishlist_add")
+    row["view_to_cart_ratio"] = _safe_ratio(row["add_to_cart_30d"], row["product_views_30d"])
+
+    recent_engagement = len(events_recent)
+    prev_engagement = len(events_prev)
+    row["engagement_trend"] = recent_engagement - prev_engagement
+
+    unique_sessions = set(e.get("sessionId", "") for e in chatbot_events if e.get("sessionId"))
+    row["chatbot_sessions_30d"] = len(unique_sessions)
+    row["chatbot_queries_30d"] = sum(1 for e in chatbot_events if e.get("eventType") == "message")
+
+    created_at = user.get("createdAt")
+    row["account_age_days"] = max(0, (now - created_at).days) if created_at else 0
+
+    wishlist = user.get("wishlist", [])
+    row["wishlist_size"] = len(wishlist) if isinstance(wishlist, list) else 0
+
+    completeness = 0
+    if user.get("name"):
+        completeness += 1
+    if user.get("phone"):
+        completeness += 1
+    if user.get("address"):
+        completeness += 1
+    row["profile_completeness"] = round(completeness / 3, 2)
+
+    return pd.DataFrame([row])
 
 
 def generate_churn_labels(df):

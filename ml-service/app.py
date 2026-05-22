@@ -23,6 +23,7 @@ from config import ML_PORT, MODEL_DIR
 from features.feature_engineering import (
     FEATURE_NAMES,
     extract_features_for_all_users,
+    extract_features_for_user,
 )
 from models.churn_model import ChurnPredictor
 from models.potential_model import PotentialScorer
@@ -214,6 +215,38 @@ def get_customers():
             "total": total,
             "page": page,
             "limit": limit,
+        })
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+
+@app.route("/api/intelligence/customer/<user_id>", methods=["GET"])
+def get_customer(user_id):
+    """Return churn/potential scores for a single customer."""
+    if not churn_predictor.is_trained or not potential_scorer.is_trained:
+        return jsonify({
+            "message": "Models not trained yet.",
+            "models_ready": False,
+        }), 400
+
+    try:
+        df = extract_features_for_user(user_id)
+        if df.empty:
+            return jsonify({"message": "Customer not found."}), 404
+
+        X = df[FEATURE_NAMES].fillna(0).values
+        churn_prob = float(churn_predictor.predict(X)[0])
+        potential_score = float(potential_scorer.predict(X)[0])
+
+        churn_score = round(churn_prob * 100, 1)
+        potential_score = round(potential_score, 1)
+
+        return jsonify({
+            "user_id": str(user_id),
+            "churn_score": churn_score,
+            "churn_level": _classify_risk(churn_score),
+            "potential_score": potential_score,
+            "potential_level": _classify_risk(potential_score),
         })
     except Exception as e:
         return jsonify({"message": str(e)}), 500

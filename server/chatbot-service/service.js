@@ -2,7 +2,9 @@ const crypto = require("crypto");
 const mongoose = require("mongoose");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
-const ChatbotEvent = require("../models/ChatbotEvent");
+const ChatbotEvent = require("./models/ChatbotEvent");
+
+// Chatbot service implementation with structured replies and recommendation logic.
 
 const MAX_HISTORY = 10;
 const MAX_SESSION_IDLE_MS = 1000 * 60 * 30;
@@ -13,6 +15,9 @@ const knnCache = {
   productActorWeights: new Map(),
   actorProductWeights: new Map(),
 };
+
+const LLM_TIMEOUT_MS = Number(process.env.CHATBOT_LLM_TIMEOUT_MS || 2500);
+const ML_SERVICE_URL = String(process.env.ML_SERVICE_URL || "http://localhost:5001").trim();
 
 const DEFAULT_EXPLICIT_PRICE_TERMS = [
   "gia",
@@ -159,6 +164,94 @@ function normalizeHintValue(value) {
   return normalized || "";
 }
 
+function formatVnd(value) {
+  const numeric = Number(value || 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return "-";
+  }
+
+  return `${numeric.toLocaleString("vi-VN")} VND`;
+}
+
+function formatBudgetVn(value) {
+  const numeric = Number(value || 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return null;
+  }
+
+  if (numeric % 1000000 === 0) {
+    return `${numeric / 1000000} triệu`;
+  }
+
+  return `${numeric.toLocaleString("vi-VN")} VND`;
+}
+
+function formatStructuredReply(structured) {
+  if (!structured || typeof structured !== "object") {
+    return "";
+  }
+
+  const lines = [];
+  if (structured.title) {
+    lines.push(String(structured.title).trim());
+  }
+
+  if (Array.isArray(structured.items) && structured.items.length > 0) {
+    structured.items.forEach((item) => {
+      const name = String(item?.name || "").trim();
+      const price = String(item?.price || "").trim();
+      if (name) {
+        lines.push(`${name}${price ? ` với giá ${price}` : ""}`);
+      }
+    });
+  }
+
+  if (structured.followUp) {
+    if (lines.length > 0) {
+      lines.push("");
+    }
+    lines.push(String(structured.followUp).trim());
+  }
+
+  return lines.filter((line) => line !== null && line !== undefined).join("\n");
+}
+
+function getSessionMemory(session) {
+  if (!session.memory || typeof session.memory !== "object") {
+    session.memory = {};
+  }
+  return session.memory;
+}
+
+function updateSessionMemory(session, updates) {
+  const memory = getSessionMemory(session);
+  const next = { ...memory };
+
+  if (updates?.budget != null) {
+    next.budget = Number(updates.budget);
+  }
+
+  if (updates?.category) {
+    next.category = String(updates.category);
+  }
+
+  if (updates?.brand) {
+    next.brand = String(updates.brand);
+  }
+
+  if (updates?.series) {
+    next.series = String(updates.series);
+  }
+
+  if (updates?.model) {
+    next.model = String(updates.model);
+  }
+
+  next.updatedAt = Date.now();
+  session.memory = next;
+  return next;
+}
+
 function extractJsonObjectFromText(text) {
   const raw = String(text || "").trim();
   if (!raw) {
@@ -206,7 +299,7 @@ async function maybeParseQueryWithLlm(message) {
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
 
     const response = await (async () => {
       if (isGemini) {
@@ -291,7 +384,6 @@ async function maybeParseQueryWithLlm(message) {
 function parseBudgetFromText(message) {
   const rawText = String(message || "");
   const text = normalizeText(message);
-  // If the user is asking for the price (e.g., "gia bao nhieu"), treat as a price question, not a budget
   if (isAskingForPrice(text)) {
     return null;
   }
@@ -321,7 +413,6 @@ function parseBudgetFromText(message) {
     return null;
   }
 
-  // Hỗ trợ định dạng tiền kiểu 32.000.000 hoặc 20 370 000.
   if (groupedMatch) {
     const groupedNumeric = Number(String(groupedMatch[1]).replace(/[\.,\s]/g, ""));
     if (groupedNumeric && !Number.isNaN(groupedNumeric)) {
@@ -353,12 +444,10 @@ function parseBudgetFromText(message) {
     return null;
   }
 
-  // Tránh hiểu nhầm "co iphone 15 k" (k = không) thành ngân sách 15k.
   if (!hasExplicitPriceSignal && unit === "k" && numeric < 100) {
     return null;
   }
 
-  // Nếu không có ngữ cảnh giá rõ ràng và số quá nhỏ (mã model), bỏ qua.
   if (!hasExplicitPriceSignal && !unit && numeric < 1000) {
     return null;
   }
@@ -381,8 +470,6 @@ function parseBudgetFromText(message) {
 function isAskingForPrice(text) {
   if (!text) return false;
   const t = String(text || "").toLowerCase();
-  // Chỉ nhận diện là "hỏi giá" khi có cụm rõ ràng kèm "gia" hoặc "bao nhieu tien"
-  // Tránh: "bao nhieu san pham duoi 5 trieu" bị nhầm thành hỏi giá
   return includesAny(t, [
     "gia bao nhieu",
     "gia la bao",
@@ -578,8 +665,6 @@ async function refreshKnnCache() {
     return;
   }
 
-  // Fix: Lấy event theo thời gian (7 ngày gần đây) thay vì số lượng cố định
-  // Tránh user cũ bị đẩy ra ngoài window khi traffic cao
   const sevenDaysAgo = new Date(Date.now() - 1000 * 60 * 60 * 24 * 7);
 
   const events = await ChatbotEvent.find({
@@ -588,7 +673,7 @@ async function refreshKnnCache() {
     createdAt: { $gte: sevenDaysAgo },
   })
     .sort({ createdAt: -1 })
-    .limit(10000) // tăng limit để không bỏ sót user cũ trong 7 ngày
+    .limit(10000)
     .select("sessionId user eventType product")
     .lean();
 
@@ -770,7 +855,6 @@ function buildSemanticSignal(product, queryTokens) {
   const matched = [];
 
   queryTokens.forEach((token) => {
-    // Exact match - điểm cao nhất
     if (nameSet.has(token)) {
       semanticRaw += 4;
       matched.push(token);
@@ -789,7 +873,6 @@ function buildSemanticSignal(product, queryTokens) {
       return;
     }
 
-    // Fix: Prefix matching cho brand/model viết tắt (sam→samsung, iph→iphone)
     if (token.length >= 3) {
       const prefixMatchInName = nameTokens.find(
         (nt) =>
@@ -966,9 +1049,34 @@ function buildRecommendationReason(item) {
   return reasons.join(" | ");
 }
 
+async function fetchMlCustomerSignal(userId) {
+  const id = String(userId || "").trim();
+  if (!id || !ML_SERVICE_URL) {
+    return null;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1200);
+    const response = await fetch(
+      `${ML_SERVICE_URL.replace(/\/$/, "")}/api/intelligence/customer/${encodeURIComponent(id)}`,
+      { signal: controller.signal }
+    );
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return data && typeof data === "object" ? data : null;
+  } catch (error) {
+    return null;
+  }
+}
+
 async function findRecommendedProducts(message, context = {}, options = {}) {
   const queryTokens = tokenize(message);
-  // Fix: Mở rộng stopword list để threshold lọc không bị sai
   const QUERY_STOPWORDS = new Set([
     "co", "khong", "ngan", "sach", "duoi", "tren", "toi", "da", "min", "max",
     "gia", "mua", "san", "pham", "goi", "cho", "voi", "cai", "cac",
@@ -986,6 +1094,7 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
   const hasNumericToken = queryTokens.some((token) => /^\d+$/.test(token));
   const behaviorProfile = buildBehaviorProfile(context.userBehavior);
   const llmQueryHints = options.llmQueryHints && typeof options.llmQueryHints === "object" ? options.llmQueryHints : null;
+  const memory = options.memory && typeof options.memory === "object" ? options.memory : null;
   const parsedPriceConstraint = parsePriceConstraint(message);
   const llmPriceConstraint =
     llmQueryHints?.priceMin != null || llmQueryHints?.priceMax != null
@@ -996,13 +1105,54 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
           strictUpperBound: false,
         }
       : null;
-  const priceConstraint = parsedPriceConstraint || llmPriceConstraint;
-  const budget = priceConstraint?.maxPrice || parseBudgetFromText(message);
-  const categoryConstraint = buildCategoryConstraint(message);
+  let priceConstraint = parsedPriceConstraint || llmPriceConstraint;
+  const categoryFromMessage = buildCategoryConstraint(message);
+  const categoryConstraint = categoryFromMessage || memory?.category || "";
+
+  if (!priceConstraint && memory?.budget) {
+    priceConstraint = {
+      minPrice: 0,
+      maxPrice: Number(memory.budget),
+      source: "memory",
+      strictUpperBound: false,
+    };
+  }
+
+  const budget = priceConstraint?.maxPrice ?? null;
 
   const dbFilter = {
     stock: { $gt: 0 },
   };
+
+  if (priceConstraint?.minPrice != null || priceConstraint?.maxPrice != null) {
+    const minPrice =
+      priceConstraint.minPrice != null ? Number(priceConstraint.minPrice) : null;
+    const maxPrice =
+      priceConstraint.maxPrice != null ? Number(priceConstraint.maxPrice) : null;
+    const allowSlightOverBudget =
+      priceConstraint.source === "implicit-max" && priceConstraint.strictUpperBound !== true;
+    const effectiveMax =
+      maxPrice != null
+        ? allowSlightOverBudget
+          ? Math.round(maxPrice * 1.05)
+          : maxPrice
+        : null;
+    const effectivePriceExpr = {
+      $cond: [{ $gt: ["$finalPrice", 0] }, "$finalPrice", "$price"],
+    };
+    const exprFilters = [];
+    if (minPrice != null) {
+      exprFilters.push({ $gte: [effectivePriceExpr, minPrice] });
+    }
+    if (effectiveMax != null) {
+      exprFilters.push({ $lte: [effectivePriceExpr, effectiveMax] });
+    }
+    if (exprFilters.length === 1) {
+      dbFilter.$expr = exprFilters[0];
+    } else if (exprFilters.length > 1) {
+      dbFilter.$expr = { $and: exprFilters };
+    }
+  }
 
   const rawProducts = await Product.find(dbFilter)
     .select(
@@ -1106,10 +1256,8 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
     const llmConfidence = Number(llmQueryHints?.confidence) || 0;
 
     if (constrainedByHints.length > 0 && llmConfidence >= 0.75) {
-      // High-confidence LLM hints: apply full constraint (brand/series/model)
       products = constrainedByHints;
     } else if (constrainedByHints.length > 0 && llmConfidence >= 0.5) {
-      // Medium confidence: only apply brand constraint (safer fallback)
       const brandOnlyFiltered = products.filter((item) => {
         if (!brandHint) return true;
         const nb = normalizeText(item.brand || "");
@@ -1163,6 +1311,12 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
   });
   const knnScores = computeKnnScores(seedProductIds);
 
+  const mlSignal = options.mlSignal && typeof options.mlSignal === "object" ? options.mlSignal : null;
+  const churnScore = Number(mlSignal?.churn_score ?? mlSignal?.churnScore ?? 0);
+  const potentialScore = Number(mlSignal?.potential_score ?? mlSignal?.potentialScore ?? 0);
+  const isChurnRisk = churnScore >= 60;
+  const isPotentialHigh = potentialScore >= 60;
+
   const rankedCandidates = products
     .map((product) => {
       const normalizedName = normalizeText(product.name);
@@ -1190,6 +1344,23 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
         totalPurchases,
       });
 
+      const sellingPrice = getEffectivePrice(product);
+      const discountFeature = Math.min(1, Number(product.discountPercent || 0) / 30);
+      const ratingFeature = Math.min(1, Number(product.averageRating || 0) / 5);
+      const priceFitMl = budget
+        ? Math.max(0, 1 - Math.abs(sellingPrice - budget) / budget)
+        : Math.max(0, 1 - sellingPrice / 20000000);
+      const premiumFeature = Math.min(1, sellingPrice / 25000000);
+
+      let mlBoost = 0;
+      if (isChurnRisk) {
+        mlBoost += discountFeature * 0.08 + priceFitMl * 0.06;
+      }
+
+      if (isPotentialHigh) {
+        mlBoost += ratingFeature * 0.06 + premiumFeature * 0.04;
+      }
+
       let hardMatchOverride = 0;
       if (queryType === "exact_product_search") {
         if (exactMatch) {
@@ -1210,7 +1381,8 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
         ltrScore:
           ltr.ltrScore +
           (shouldUseStrictNameFilter ? queryCoverage * 0.35 + Math.min(0.12, nameOverlap * 0.02) : 0) +
-          hardMatchOverride,
+          hardMatchOverride +
+          mlBoost,
         nameOverlap,
         queryCoverage,
         exactMatch,
@@ -1262,8 +1434,6 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
     dedupedCandidates.push(item);
   });
 
-  // Nếu truy vấn thiên về ngân sách/ngữ cảnh chung khiến semantic thấp,
-  // vẫn trả về top candidate hợp lệ từ DB thay vì báo không tìm thấy.
   const pickedCandidates = dedupedCandidates.filter((item) => item.ltrScore > 0.06);
   const finalCandidates = (pickedCandidates.length > 0 ? pickedCandidates : dedupedCandidates)
     .slice(0, 5)
@@ -1293,25 +1463,60 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
   return finalCandidates;
 }
 
-function buildRuleReply(intent, recommendedProducts) {
+// === REFACTORED FUNCTIONS WITH STRUCTURED FORMAT ===
+
+function buildRuleReply(intent, recommendedProducts, options = {}) {
+  const categoryLabels = {
+    "dien thoai": "điện thoại",
+    laptop: "laptop",
+    "phu kien": "phụ kiện",
+  };
+
   if (intent === "greeting") {
-    return "Chào bạn, mình có thể gợi ý sản phẩm theo nhu cầu và ngân sách. Bạn đang quan tâm nhóm nào?";
+    return {
+      title: "Chào bạn, tôi là AI Shopping Assistant",
+      followUp: "Bạn đang quan tâm nhóm sản phẩm nào?",
+      items: [],
+    };
   }
 
   if (intent === "policy") {
-    return "Mình hỗ trợ tư vấn là chính. Về chính sách giao hàng đổi trả, bạn có thể cho mình biết đơn hàng cụ thể hoặc phần cần hỏi để mình hướng dẫn nhanh nhất.";
+    return {
+      title: "Hỗ trợ Chính sách",
+      followUp: "Bạn có thể cho biết cần hỏi về chính sách nào?",
+      items: [],
+    };
   }
 
   if (recommendedProducts.length === 0) {
-    return "Mình chưa tìm được sản phẩm phù hợp lúc này. Bạn thử mô tả rõ hơn về nhu cầu sử dụng hoặc thương hiệu mong muốn.";
+    return {
+      title: "Chưa tìm được sản phẩm phù hợp",
+      followUp: "Bạn thử mô tả rõ hơn về nhu cầu sử dụng, ngân sách, hoặc thương hiệu mong muốn nhé.",
+      items: [],
+    };
   }
 
-  const preview = recommendedProducts
-    .slice(0, 3)
-    .map((item) => `${item.name} (${Number(item.price || 0).toLocaleString("vi-VN")} đ)`)
-    .join(", ");
+  const budget = options?.priceConstraint?.maxPrice ?? options?.budget ?? null;
+  const category = options?.categoryConstraint || "";
+  const categoryLabel = categoryLabels[category] || (category ? category : "sản phẩm");
+  const budgetText = formatBudgetVn(budget);
 
-  return `Mình đã chọn nhanh các sản phẩm phù hợp cho bạn: ${preview}. Bạn muốn mình lọc thêm theo ngân sách hoặc mục đích sử dụng không?`;
+  const title = budgetText
+    ? `Với ngân sách ${budgetText}, bạn có thể tham khảo các ${categoryLabel} sau:`
+    : `Một vài ${categoryLabel} phù hợp cho bạn:`;
+
+  const followUp = budgetText
+    ? `Bạn có muốn xem chi tiết về các sản phẩm này không, hay bạn đang tìm sản phẩm có giá chính xác ${budgetText}?`
+    : "Bạn có muốn xem chi tiết về các sản phẩm này không?";
+
+  return {
+    title,
+    followUp,
+    items: recommendedProducts.slice(0, 3).map((item) => ({
+      name: item.name,
+      price: formatVnd(item.price),
+    })),
+  };
 }
 
 function buildQuickReplies(intent) {
@@ -1319,7 +1524,7 @@ function buildQuickReplies(intent) {
     return ["Phí vận chuyển", "Thời gian giao hàng", "Chính sách đổi trả"];
   }
 
-  return ["Ngân sách dưới 5 triệu", "Đánh giá cao", "Bán chạy nhất", "So sánh 2 sản phẩm"];
+  return ["Ngân sách dưới 5 triệu", "Đánh giá cao", "Bán chạy nhất"];
 }
 
 async function maybeGenerateLlmReply({ message, intent, recommendedProducts, history }) {
@@ -1340,7 +1545,7 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
   }));
 
   const systemPrompt =
-    "Bạn là trợ lý bán hàng e-commerce. Trả lời ngắn gọn bằng tiếng Việt, ưu tiên đề xuất hành động mua hàng và không bịa thông tin ngoài danh sách sản phẩm được cung cấp.";
+    "Bạn là trợ lý bán hàng e-commerce. Trả lời ngắn gọn bằng tiếng Việt, ưu tiên đề xuất hành động mua hàng, không bịa thông tin ngoài danh sách sản phẩm được cung cấp, và khi liệt kê sản phẩm thì mỗi sản phẩm một dòng, không dùng ký hiệu bullet.";
 
   const userPrompt = JSON.stringify(
     {
@@ -1348,7 +1553,8 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
       message,
       products: contextProducts,
       recentHistory: history.slice(-4),
-      requirements: "Trả lời tối đa 5 câu. Nếu cần, hỏi thêm 1 câu để làm rõ nhu cầu.",
+      requirements:
+        "Trả lời tối đa 5 câu. Nếu cần, hỏi thêm 1 câu để làm rõ nhu cầu. Khi liệt kê sản phẩm: mỗi sản phẩm một dòng, không dùng ký hiệu bullet.",
     },
     null,
     2
@@ -1358,7 +1564,7 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
 
     const response = await (async () => {
       if (isGemini) {
@@ -1436,8 +1642,6 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
   const session = getOrCreateSession(sessionId);
   const plainMessage = String(message || "").trim();
 
-  // Fix: Làm phong phú message từ context lịch sử hội thoại
-  // Nếu user hỏi ngắn như "cái đó" hoặc "còn màu khác không", dùng history để hiểu
   let enrichedMessage = plainMessage;
   if (session.history.length >= 2 && plainMessage.split(" ").length <= 5) {
     const pronouns = ["no", "cai do", "may do", "san pham do", "cai nay", "loai do", "con", "it"];
@@ -1446,7 +1650,6 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
       normalizedMsg.length < 15;
 
     if (hasVagueRef) {
-      // Lấy câu trả lời gần nhất của assistant để lấy tên sản phẩm đã nhắc
       const lastAssistant = [...session.history].reverse().find((h) => h.role === "assistant");
       const lastUser = [...session.history].reverse().find((h) => h.role === "user");
       if (lastUser && lastAssistant) {
@@ -1456,8 +1659,10 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
   }
 
   const intent = detectIntent(plainMessage);
+  const priceConstraint = parsePriceConstraint(plainMessage);
+  const categoryConstraint = buildCategoryConstraint(plainMessage);
 
-  await trackChatbotEvent({
+  void trackChatbotEvent({
     sessionId: session.id,
     eventType: "message",
     queryText: plainMessage,
@@ -1466,15 +1671,42 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
       page: String(context?.page || ""),
     },
     userId,
+  }).catch(() => null);
+
+  const normalizedMessage = normalizeText(plainMessage);
+  const queryTokens = tokenize(plainMessage);
+  const informativeQueryTokens = queryTokens.filter(
+    (token) => token.length >= 3 && !GENERIC_QUERY_TOKENS.has(token)
+  );
+  const hasPriceSignal = Boolean(parsePriceConstraint(plainMessage));
+  const hasBrandHint = includesAny(normalizedMessage, KNOWN_BRAND_HINTS);
+  const hasModelHint = informativeQueryTokens.some((token) => isModelAnchorToken(token));
+  const isShortQuery = queryTokens.length <= 4;
+  const shouldUseLlmParser =
+    !hasPriceSignal &&
+    ((hasBrandHint || hasModelHint) || (isShortQuery && informativeQueryTokens.length <= 1));
+
+  const llmQueryHints = shouldUseLlmParser ? await maybeParseQueryWithLlm(plainMessage) : null;
+
+  const memory = updateSessionMemory(session, {
+    budget: priceConstraint?.maxPrice ?? null,
+    category: categoryConstraint || null,
+    brand: llmQueryHints?.brand || null,
+    series: llmQueryHints?.series || llmQueryHints?.productLine || null,
+    model: llmQueryHints?.model || null,
   });
+
+  const mlSignal = userId ? await fetchMlCustomerSignal(userId) : null;
 
   const recommendedProducts =
     intent === "policy"
       ? []
-      : await findRecommendedProducts(enrichedMessage, context, {
+        : await findRecommendedProducts(enrichedMessage, context, {
           sessionId: session.id,
           userId,
-          llmQueryHints: await maybeParseQueryWithLlm(plainMessage),
+          llmQueryHints,
+          memory,
+          mlSignal,
         });
 
   const shouldUseLlm = recommendedProducts.length > 0;
@@ -1488,36 +1720,36 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
       })
     : null;
 
-  // Fix: Response validator - kiểm tra LLM có nhắc sản phẩm ngoài danh sách không
   let llmReply = rawLlmReply;
   if (rawLlmReply && recommendedProducts.length > 0) {
-    const allowedNames = new Set(
-      recommendedProducts.map((p) => normalizeText(p.name))
-    );
     const replyNormalized = normalizeText(rawLlmReply);
-    // Nếu reply có vẻ nói về sản phẩm nhưng không khớp bất kỳ sản phẩm nào → fallback
     const hasProductMention = recommendedProducts.some((p) => {
       const tokens = tokenize(p.name).filter((t) => t.length >= 4);
       return tokens.some((t) => replyNormalized.includes(t));
     });
     if (!hasProductMention && rawLlmReply.length > 80) {
-      // LLM trả lời không liên quan đến sản phẩm trong danh sách
       llmReply = null;
     }
   }
 
-  const reply = llmReply || buildRuleReply(intent, recommendedProducts);
+  // Build structured reply (new format)
+  const ruleReplyStructured = buildRuleReply(intent, recommendedProducts, {
+    priceConstraint,
+    categoryConstraint: categoryConstraint || memory?.category || "",
+  });
+  const replyText = llmReply || formatStructuredReply(ruleReplyStructured);
   const quickReplies = buildQuickReplies(intent);
 
   session.history.push({ role: "user", content: plainMessage, at: new Date().toISOString() });
-  session.history.push({ role: "assistant", content: reply, at: new Date().toISOString() });
+  session.history.push({ role: "assistant", content: replyText, at: new Date().toISOString() });
   session.history = session.history.slice(-MAX_HISTORY);
   session.updatedAt = Date.now();
 
   return {
     sessionId: session.id,
     intent,
-    reply,
+    reply: replyText,
+    replyStructured: ruleReplyStructured,
     products: recommendedProducts,
     quickReplies,
     metadata: {

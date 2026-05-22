@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useCart } from "../context/CartContext";
-import { useAuth } from "../context/AuthContext";
-import "../css/chatbot.css";
+import { useCart } from "../../context/CartContext";
+import { useAuth } from "../../context/AuthContext";
+import "./chatbot.css";
 
 const SESSION_STORAGE_KEY = "chatbot_session_id";
 const BEHAVIOR_STORAGE_KEY = "chatbot_behavior";
-const BLOCKED_QUICK_REPLIES = new Set(["so sanh 2 san pham"]);
+const BLOCKED_QUICK_REPLIES = new Set();
 
 function normalizeQuickReply(value) {
   return String(value || "")
@@ -45,6 +45,7 @@ function createMessage(role, text, extra = {}) {
     text,
     products: extra.products || [],
     quickReplies: extra.quickReplies || [],
+    replyStructured: extra.replyStructured || null,
   };
 }
 
@@ -256,10 +257,15 @@ function ChatbotWidget() {
 
       setMessages((prev) => [
         ...prev,
-        createMessage("assistant", data?.reply || "Minh da nhan thong tin.", {
-          products: Array.isArray(data?.products) ? data.products : [],
-          quickReplies: Array.isArray(data?.quickReplies) ? data.quickReplies : [],
-        }),
+        createMessage(
+          "assistant",
+          data?.reply || "Minh da nhan thong tin.",
+          {
+            products: Array.isArray(data?.products) ? data.products : [],
+            quickReplies: Array.isArray(data?.quickReplies) ? data.quickReplies : [],
+            replyStructured: data?.replyStructured || null,
+          }
+        ),
       ]);
 
       const products = Array.isArray(data?.products) ? data.products : [];
@@ -283,6 +289,7 @@ function ChatbotWidget() {
       setPending(false);
     }
   };
+
 
   if (isAdminArea) {
     return null;
@@ -327,7 +334,31 @@ function ChatbotWidget() {
                     </div>
                   ) : null}
                   <div className="chatbot-bubble">
-                    <p>{msg.text}</p>
+                    {msg.replyStructured ? (
+                      <div className="chatbot-structured-reply">
+                        {msg.replyStructured.title ? (
+                          <h4 className="reply-title">{msg.replyStructured.title}</h4>
+                        ) : null}
+
+                        {msg.replyStructured.items && msg.replyStructured.items.length > 0 ? (
+                          <div className="reply-items">
+                            {msg.replyStructured.items.map((it, idx) => (
+                              <p key={idx} className="reply-item">
+                                {it.name}
+                                {it.price ? ` - ${it.price}` : ""}
+                              </p>
+                            ))}
+                          </div>
+                        ) : null}
+
+                        {msg.replyStructured.followUp ? (
+                          <p className="reply-followup">{msg.replyStructured.followUp}</p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="chatbot-text">{msg.text}</p>
+                    )}
+
                     {msg.products.length > 0 ? (
                       <div className="chatbot-product-list">
                         {msg.products.map((product, index) => (
@@ -391,7 +422,7 @@ function ChatbotWidget() {
                     ) : null}
                   </div>
                 </div>
-              </article>
+                </article>
             ))}
             {pending ? (
               <article className="chatbot-message assistant">
@@ -458,11 +489,17 @@ function ChatbotWidget() {
             </button>
           </form>
         </section>
-      ) : null}
-
-      <button type="button" className="chatbot-toggle" onClick={() => setOpen((prev) => !prev)}>
-        {open ? "Đóng" : "Chat AI"}
-      </button>
+      ) : (
+        <button
+          type="button"
+          className="chatbot-toggle"
+          onClick={() => setOpen(true)}
+          aria-label="Mo chatbot"
+          title="Chat voi tro ly"
+        >
+          💬 Chat
+        </button>
+      )}
     </div>
   );
 }
