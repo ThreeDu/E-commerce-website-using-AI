@@ -8,6 +8,17 @@ import {
   updateAdminCategory,
 } from "../../../services/admin/categoryService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faPlus,
+  faPen,
+  faTrash,
+  faCheck,
+  faXmark,
+  faChevronDown,
+  faChevronRight,
+  faFolderOpen,
+} from "@fortawesome/free-solid-svg-icons";
 import "../../../css/admin/categories.css";
 
 function AdminListCategoriesPage() {
@@ -275,9 +286,12 @@ function AdminListCategoriesPage() {
     editingCategory && String(editingCategory.parentId || "") !== String(editingCategory.originalParentId || "");
 
   return (
-    <main className="container page-content">
+    <main className="container page-content admin-categories-page">
       <section className="hero-card admin-form-surface" aria-busy={loading || deleting}>
-        <h2>Quản lý danh mục</h2>
+        <h2>
+          <FontAwesomeIcon icon={faFolderOpen} style={{ marginRight: "10px", color: "var(--primary-color, #4f46e5)" }} />
+          Quản lý danh mục
+        </h2>
         <p className="admin-surface-subtitle">
           Danh sách hiển thị theo cấu trúc cha-con: cấp 1 (danh mục chính), cấp 2 và cấp 3 tương
           ứng.
@@ -285,6 +299,7 @@ function AdminListCategoriesPage() {
 
         <div className="admin-page-toolbar">
           <Link to="/admin/categories/add" className="primary-link-btn">
+            <FontAwesomeIcon icon={faPlus} style={{ marginRight: "6px" }} />
             Thêm danh mục mới
           </Link>
         </div>
@@ -309,8 +324,8 @@ function AdminListCategoriesPage() {
         {loading ? (
           <p>Đang tải danh sách danh mục...</p>
         ) : (
-          <div className="users-table-wrap">
-            <table className="users-table">
+          <div className="users-table-wrap categories-table-wrap">
+            <table className="users-table categories-table">
               <thead>
                 <tr>
                   <th>Tên danh mục</th>
@@ -348,8 +363,13 @@ function AdminListCategoriesPage() {
                                 className="category-expand-btn"
                                 onClick={() => toggleExpand(category._id)}
                                 aria-label={isExpanded ? "Thu gọn danh mục" : "Mở rộng danh mục"}
+                                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                               >
-                                {isExpanded ? "▾" : "▸"}
+                                {isExpanded ? (
+                                  <FontAwesomeIcon icon={faChevronDown} style={{ fontSize: "11px" }} />
+                                ) : (
+                                  <FontAwesomeIcon icon={faChevronRight} style={{ fontSize: "11px" }} />
+                                )}
                               </button>
                             ) : (
                               <span className="category-expand-placeholder" aria-hidden="true">
@@ -357,7 +377,6 @@ function AdminListCategoriesPage() {
                               </span>
                             )}
                             <span>
-                              {depth > 0 ? "- " : ""}
                               {category.name}
                             </span>
                           </div>
@@ -396,10 +415,42 @@ function AdminListCategoriesPage() {
                         <div className="table-actions">
                           {isEditing ? (
                             <>
-                              <button type="button" onClick={handleSaveEdit}>
+                              <button
+                                type="button"
+                                onClick={handleSaveEdit}
+                                style={{
+                                  background: "var(--success-color, #22c55e)",
+                                  color: "white",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  padding: "6px 12px",
+                                  borderRadius: "6px",
+                                  border: "none",
+                                  cursor: "pointer"
+                                }}
+                                title="Lưu thay đổi"
+                              >
+                                <FontAwesomeIcon icon={faCheck} />
                                 Lưu
                               </button>
-                              <button type="button" onClick={() => setEditingCategory(null)}>
+                              <button
+                                type="button"
+                                onClick={() => setEditingCategory(null)}
+                                style={{
+                                  background: "var(--text-secondary, #6b7280)",
+                                  color: "white",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  padding: "6px 12px",
+                                  borderRadius: "6px",
+                                  border: "none",
+                                  cursor: "pointer"
+                                }}
+                                title="Hủy chỉnh sửa"
+                              >
+                                <FontAwesomeIcon icon={faXmark} />
                                 Hủy
                               </button>
                             </>
@@ -415,14 +466,34 @@ function AdminListCategoriesPage() {
                                     originalParentId: category.parentId || null,
                                   })
                                 }
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  padding: "6px 12px",
+                                  borderRadius: "6px",
+                                  cursor: "pointer"
+                                }}
+                                title="Chỉnh sửa danh mục"
                               >
+                                <FontAwesomeIcon icon={faPen} />
                                 Sửa
                               </button>
                               <button
                                 type="button"
                                 className="danger-btn"
                                 onClick={() => setCategoryPendingDelete(category)}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  padding: "6px 12px",
+                                  borderRadius: "6px",
+                                  cursor: "pointer"
+                                }}
+                                title="Xóa danh mục"
                               >
+                                <FontAwesomeIcon icon={faTrash} />
                                 Xóa
                               </button>
                             </>

@@ -17,6 +17,16 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBrain,
+  faSync,
+  faArrowDown,
+  faArrowUp,
+  faRobot,
+  faUserCheck,
+  faSortAmountDown,
+} from "@fortawesome/free-solid-svg-icons";
 import "../../css/admin/intelligence.css";
 
 const API_BASE = "/api/auth/admin/intelligence";
@@ -141,7 +151,10 @@ function AdminCustomerIntelligencePage() {
   return (
     <main className="container page-content intel-page">
       <div className="intel-header">
-        <h1 className="intel-header__title">🧠 Customer Intelligence</h1>
+        <h1 className="intel-header__title">
+          <FontAwesomeIcon icon={faBrain} style={{ marginRight: "10px", color: "var(--primary-color, #4f46e5)" }} />
+          Customer Intelligence
+        </h1>
         <div className="intel-header__actions">
           {overview?.last_training?.trained_at ? (
             <span className="intel-model-info">
@@ -153,14 +166,26 @@ function AdminCustomerIntelligencePage() {
             onClick={handleTrain}
             disabled={training}
           >
-            {training ? "Đang training..." : "🔄 Train Model"}
+            {training ? (
+              <>
+                <FontAwesomeIcon icon={faSync} spin style={{ marginRight: "6px" }} />
+                Đang training...
+              </>
+            ) : (
+              <>
+                <FontAwesomeIcon icon={faSync} style={{ marginRight: "6px" }} />
+                Train Model
+              </>
+            )}
           </button>
         </div>
       </div>
 
       {!modelsReady ? (
         <div className="intel-empty">
-          <div className="intel-empty__icon">🤖</div>
+          <div className="intel-empty__icon">
+            <FontAwesomeIcon icon={faRobot} style={{ color: "var(--primary-color, #4f46e5)" }} />
+          </div>
           <h2 className="intel-empty__title">Chưa có model</h2>
           <p className="intel-empty__text">
             Nhấn nút <strong>"Train Model"</strong> để bắt đầu phân tích dữ liệu
@@ -172,7 +197,17 @@ function AdminCustomerIntelligencePage() {
             onClick={handleTrain}
             disabled={training}
           >
-            {training ? "Đang training..." : "🚀 Bắt đầu Training"}
+            {training ? (
+              <>
+                <FontAwesomeIcon icon={faSync} spin style={{ marginRight: "6px" }} />
+                Đang training...
+              </>
+            ) : (
+              <>
+                <FontAwesomeIcon icon={faBrain} style={{ marginRight: "6px" }} />
+                Bắt đầu Training
+              </>
+            )}
           </button>
         </div>
       ) : (
@@ -285,9 +320,15 @@ function AdminCustomerIntelligencePage() {
           {/* Customer Table */}
           <div className="intel-table-card">
             <div className="intel-table-card__header">
-              <h3 className="intel-table-card__title">Danh sách khách hàng</h3>
+              <h3 className="intel-table-card__title">
+                <FontAwesomeIcon icon={faUserCheck} style={{ marginRight: "8px", color: "var(--primary-color, #4f46e5)" }} />
+                Danh sách khách hàng
+              </h3>
               <div className="intel-table-sort">
-                <label>Sắp xếp:</label>
+                <label>
+                  <FontAwesomeIcon icon={faSortAmountDown} style={{ marginRight: "4px", color: "var(--text-secondary, #6b7280)" }} />
+                  Sắp xếp:
+                </label>
                 <select value={sortBy} onChange={handleSortChange}>
                   <option value="churn_score">Churn Risk</option>
                   <option value="potential_score">Potential Score</option>
@@ -305,9 +346,22 @@ function AdminCustomerIntelligencePage() {
                     background: "#fff",
                     cursor: "pointer",
                     fontSize: "13px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
                   }}
                 >
-                  {sortOrder === "desc" ? "↓ Giảm dần" : "↑ Tăng dần"}
+                  {sortOrder === "desc" ? (
+                    <>
+                      <FontAwesomeIcon icon={faArrowDown} style={{ color: "var(--danger-color, #ef4444)" }} />
+                      Giảm dần
+                    </>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon icon={faArrowUp} style={{ color: "var(--success-color, #22c55e)" }} />
+                      Tăng dần
+                    </>
+                  )}
                 </button>
               </div>
             </div>

@@ -64,6 +64,34 @@ export function CartProvider({ children }) {
     cartRef.current = cart;
   }, [storageKey, cart]);
 
+  // Đồng bộ giỏ hàng lên server với debounce 2 giây
+  useEffect(() => {
+    const token = auth?.token;
+    if (!token) return;
+
+    const delayDebounce = setTimeout(() => {
+      const syncItems = cart.map((item) => ({
+        productId: item._id || item.id,
+        quantity: item.quantity,
+      }));
+
+      fetch("/api/auth/cart/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ items: syncItems }),
+      })
+        .then((res) => {
+          if (!res.ok) console.error("Lỗi đồng bộ giỏ hàng:", res.statusText);
+        })
+        .catch((err) => console.error("Lỗi đồng bộ giỏ hàng:", err));
+    }, 2000);
+
+    return () => clearTimeout(delayDebounce);
+  }, [cart, auth?.token]);
+
   // ── Stable callbacks (never re-created) ──
 
   const addToCart = useCallback((product) => {

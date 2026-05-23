@@ -172,6 +172,140 @@
   width: 100%;
 }
 
+/* Scoped discounts page table layout with scrollable min-width */
+.admin-discounts-page .dashboard-table,
+.admin-discounts-page .users-table {
+  table-layout: fixed !important;
+  width: 100% !important;
+  min-width: 0 !important; /* Overrides global 980px from users.css */
+  font-size: 13px !important;
+}
+
+.admin-discounts-page .dashboard-table th:nth-child(1),
+.admin-discounts-page .dashboard-table td:nth-child(1) {
+  width: 5% !important;
+  text-align: center !important;
+}
+
+.admin-discounts-page .dashboard-table th:nth-child(2),
+.admin-discounts-page .dashboard-table td:nth-child(2) {
+  width: 20% !important;
+}
+
+.admin-discounts-page .dashboard-table th:nth-child(3),
+.admin-discounts-page .dashboard-table td:nth-child(3) {
+  width: 23% !important;
+}
+
+.admin-discounts-page .dashboard-table th:nth-child(4),
+.admin-discounts-page .dashboard-table td:nth-child(4) {
+  width: 22% !important;
+}
+
+.admin-discounts-page .dashboard-table th:nth-child(5),
+.admin-discounts-page .dashboard-table td:nth-child(5) {
+  width: 12% !important;
+  text-align: center !important;
+}
+
+.admin-discounts-page .dashboard-table th:nth-child(6),
+.admin-discounts-page .dashboard-table td:nth-child(6) {
+  width: 18% !important;
+}
+
+/* Responsive adjustments to fully wrap table contents, reduce paddings and keep actions compact */
+.admin-discounts-page .users-table-wrap {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+.admin-discounts-page .dashboard-table th,
+.admin-discounts-page .dashboard-table td {
+  padding: 8px 6px !important;
+  word-wrap: break-word !important;
+  word-break: break-word !important;
+  white-space: normal !important;
+  vertical-align: middle !important;
+}
+
+.admin-discounts-page .dashboard-table .truncate-text {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  word-wrap: break-word !important;
+  word-break: break-word !important;
+  display: block;
+}
+
+.admin-discounts-page .table-actions {
+  display: flex !important;
+  gap: 4px !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  width: 100% !important;
+}
+
+.admin-discounts-page .table-actions button,
+.admin-discounts-page .table-actions .table-link-btn {
+  padding: 5px 8px !important;
+  font-size: 11px !important;
+  gap: 3px !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.admin-discounts-page .pill {
+  padding: 3px 6px !important;
+  font-size: 11px !important;
+}
+
+.admin-discounts-page .date-val {
+  font-family: inherit !important;
+  font-size: 11px !important;
+}
+
+.admin-discounts-page .date-label {
+  font-size: 9px !important;
+  width: 32px !important;
+  white-space: nowrap !important;
+}
+
+/* Premium Stacked Date-Time styles */
+.date-range-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.date-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.date-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #94a3b8;
+  width: 32px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.date-val {
+  color: #334155;
+  font-weight: 500;
+  font-family: 'Courier New', Courier, monospace;
+}
+
 .dashboard-table th:first-child,
 .dashboard-table td:first-child {
   text-align: center;

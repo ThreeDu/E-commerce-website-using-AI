@@ -18,6 +18,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     setAuth(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
+    window.location.href = "/login";
   }, []);
 
   const value = useMemo(

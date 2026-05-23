@@ -5,15 +5,29 @@ import { useStatusMessageBridge } from "../../hooks/useStatusMessageBridge";
 import { getAdminNotifications } from "../../services/admin/notificationService";
 import { getAdminRevenueOverview } from "../../services/admin/orderService";
 import { getErrorMessage } from "../../utils/adminErrorUtils";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faRotate,
+  faBell,
+  faReceipt,
+  faPlusCircle,
+  faTag,
+  faChevronRight,
+  faTriangleExclamation,
+  faBoxArchive,
+  faCartPlus,
+  faCircleXmark,
+  faClock,
+} from "@fortawesome/free-solid-svg-icons";
 import "../../css/admin/dashboard.css";
 
 const AUTO_REFRESH_MS = 30000;
 
 const quickActions = [
-  { label: "Trung tâm thông báo", to: "/admin/notifications" },
-  { label: "Quản lý đơn hàng", to: "/admin/orders" },
-  { label: "Thêm sản phẩm", to: "/admin/products/add" },
-  { label: "Thêm mã giảm giá", to: "/admin/discounts/add" },
+  { label: "Trung tâm thông báo", to: "/admin/notifications", icon: faBell },
+  { label: "Quản lý đơn hàng", to: "/admin/orders", icon: faReceipt },
+  { label: "Thêm sản phẩm", to: "/admin/products/add", icon: faPlusCircle },
+  { label: "Thêm mã giảm giá", to: "/admin/discounts/add", icon: faTag },
 ];
 
 const PIE_COLORS = [
@@ -225,24 +239,28 @@ function AdminDashboard() {
         value: Number(summary.newOrders || 0),
         trend: `Trong ${Number(config.recentWindowHours || 24)} giờ gần nhất`,
         tone: "info",
+        icon: faCartPlus,
       },
       {
         label: "Đơn bị hủy",
         value: Number(summary.cancelledOrders || 0),
         trend: "Cần kiểm tra nguyên nhân",
         tone: "danger",
+        icon: faCircleXmark,
       },
       {
         label: "Sản phẩm sắp hết",
         value: Number(summary.lowStockProducts || 0),
         trend: `Ngưỡng cảnh báo <= ${Number(config.lowStockThreshold || 5)} sản phẩm`,
         tone: "warning",
+        icon: faTriangleExclamation,
       },
       {
         label: "Sản phẩm hết hàng",
         value: Number(summary.outOfStockProducts || 0),
         trend: "Ưu tiên bổ sung kho",
         tone: "danger",
+        icon: faBoxArchive,
       },
     ],
     [summary, config]
@@ -406,6 +424,7 @@ function AdminDashboard() {
               onClick={() => loadDashboard({ silent: true })}
               disabled={refreshing}
             >
+              <FontAwesomeIcon icon={faRotate} spin={refreshing} style={{ marginRight: "6px" }} />
               {refreshing ? "Đang làm mới..." : "Làm mới"}
             </button>
           </div>
@@ -420,7 +439,10 @@ function AdminDashboard() {
         <section className="admin-metric-grid" aria-label="Chỉ số nhanh">
           {metrics.map((metric) => (
             <article key={metric.label} className={`admin-metric-card ${metric.tone}`}>
-              <p>{metric.label}</p>
+              <div className="metric-header-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                <p style={{ margin: 0 }}>{metric.label}</p>
+                <FontAwesomeIcon icon={metric.icon} style={{ fontSize: "18px", opacity: 0.6 }} />
+              </div>
               <strong>{metric.value}</strong>
               <span>{metric.trend}</span>
             </article>
@@ -436,9 +458,14 @@ function AdminDashboard() {
             <div className="dashboard-alert-list">
               {alerts.map((alert) => (
                 <div key={alert.title} className={`dashboard-alert-item ${alert.level}`}>
-                  <h4>{alert.title}</h4>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "4px" }}>
+                    <FontAwesomeIcon icon={alert.level === "danger" ? faCircleXmark : alert.level === "warning" ? faTriangleExclamation : faBell} />
+                    <h4 style={{ margin: 0 }}>{alert.title}</h4>
+                  </div>
                   <p>{alert.description}</p>
-                  <Link to={alert.to}>Xem chi tiết</Link>
+                  <Link to={alert.to}>
+                    Xem chi tiết <FontAwesomeIcon icon={faChevronRight} style={{ fontSize: "10px", marginLeft: "4px" }} />
+                  </Link>
                 </div>
               ))}
             </div>
@@ -455,7 +482,10 @@ function AdminDashboard() {
                   <p>{activity.action}</p>
                   <div>
                     <span>{activity.actor}</span>
-                    <span>{formatRelativeTime(activity.time)}</span>
+                    <span>
+                      <FontAwesomeIcon icon={faClock} style={{ marginRight: "4px", fontSize: "11px", opacity: 0.7 }} />
+                      {formatRelativeTime(activity.time)}
+                    </span>
                   </div>
                 </li>
               ))}
@@ -576,8 +606,9 @@ function AdminDashboard() {
           </div>
           <div className="quick-actions-grid">
             {quickActions.map((action) => (
-              <Link key={action.label} to={action.to} className="quick-action-link">
-                {action.label}
+              <Link key={action.label} to={action.to} className="quick-action-link" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                <FontAwesomeIcon icon={action.icon} />
+                <span>{action.label}</span>
               </Link>
             ))}
           </div>
