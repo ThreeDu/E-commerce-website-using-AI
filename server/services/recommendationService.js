@@ -18,6 +18,7 @@ const AnalyticsEvent = require("../models/AnalyticsEvent");
 const Product = require("../models/Product");
 const User = require("../models/User");
 const Order = require("../models/Order");
+const Cart = require("../models/Cart");
 
 const WINDOW_DAYS = 30;
 const DEFAULT_LIMIT = 8;
@@ -165,8 +166,8 @@ async function getPersonalizedRecommendations(userId, limit = DEFAULT_LIMIT, car
 
   const since = windowStart();
 
-  // 1. Gather behavioral signals + ML churn data in parallel
-  const [viewEvents, cartEvents, user, recentOrders, churnData, cartSignals] = await Promise.all([
+  // 1. Gather behavioral signals + ML churn data + server cart in parallel
+  const [viewEvents, cartEvents, user, recentOrders, churnData, dbCart] = await Promise.all([
     AnalyticsEvent.find({
       userId: uid,
       eventName: "product_view",
@@ -198,8 +199,22 @@ async function getPersonalizedRecommendations(userId, limit = DEFAULT_LIMIT, car
 
     fetchUserChurnData(userId),
 
-    extractCartSignals(cartProductIds),
+    Cart.findOne({ user: uid }).lean(),
   ]);
+
+  // Extract and merge client-side and server-side cart items
+  const dbCartProductIds = dbCart && Array.isArray(dbCart.items)
+    ? dbCart.items.map((item) => String(item.product || ""))
+    : [];
+
+  const mergedCartProductIds = Array.from(
+    new Set([
+      ...cartProductIds.map(String),
+      ...dbCartProductIds
+    ].filter(Boolean))
+  );
+
+  const cartSignals = await extractCartSignals(mergedCartProductIds);
 
   // 2. Collect product IDs the user has already interacted with
   const interactedProductIds = new Set();
