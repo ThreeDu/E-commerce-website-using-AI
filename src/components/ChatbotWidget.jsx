@@ -20,6 +20,23 @@ function isBlockedQuickReply(value) {
   return BLOCKED_QUICK_REPLIES.has(normalizeQuickReply(value));
 }
 
+function normalizeSearchText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function looksLikeSpecSearchQuery(value) {
+  const text = normalizeSearchText(value);
+  if (!text) {
+    return false;
+  }
+
+  return /\b(\d+(?:[.,]\d+)?\s*(gb|tb|mp|hz|mah|inch|")|camera|ram|rom|dung luong|bo nho|man hinh|tan so quet|pin|battery|screen|display|chip)\b/.test(text);
+}
+
 function getProductImageSrc(product) {
   const rawValue = String(product?.image || product?.imageUrl || "").trim();
   if (!rawValue) {
@@ -210,6 +227,10 @@ function ChatbotWidget() {
       return;
     }
 
+    if (looksLikeSpecSearchQuery(text)) {
+      return sendDescriptionSearch(text);
+    }
+
     const userMsg = createMessage("user", text);
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
@@ -225,6 +246,11 @@ function ChatbotWidget() {
 
     try {
       const behavior = readBehavior();
+      const recentHistory = [...messages, userMsg].slice(-8).map((item) => ({
+        role: item.role,
+        content: item.text,
+        products: Array.isArray(item.products) ? item.products : [],
+      }));
       const response = await fetch("/api/chatbot/message", {
         method: "POST",
         headers: {
@@ -233,6 +259,7 @@ function ChatbotWidget() {
         body: JSON.stringify({
           message: text,
           sessionId,
+          history: recentHistory,
           context: {
             page: location.pathname,
             userBehavior: behavior,
@@ -279,6 +306,50 @@ function ChatbotWidget() {
         ...prev,
         createMessage("assistant", "Khong the ket noi chatbot luc nay. Ban thu lai trong giay lat."),
       ]);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const sendDescriptionSearch = async (descriptionText) => {
+    const text = String(descriptionText || input || "").trim();
+    if (!text || pending) return;
+
+    const userMsg = createMessage("user", text);
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setPending(true);
+
+    trackEvent({ eventType: "description_search", queryText: text });
+
+    try {
+      const behavior = readBehavior();
+      const response = await fetch("/api/chatbot/description-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, descriptionText: text, context: { page: location.pathname, userBehavior: behavior } }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data) {
+        setMessages((prev) => [...prev, createMessage("assistant", data?.message || "Không tìm được gợi ý theo mô tả.")]);
+        return;
+      }
+
+      const products = Array.isArray(data?.products) ? data.products : [];
+
+      setMessages((prev) => [
+        ...prev,
+        createMessage("assistant", products.length ? `Tìm thấy ${products.length} sản phẩm phù hợp.` : "Không tìm thấy sản phẩm phù hợp.", {
+          products,
+        }),
+      ]);
+
+      products.forEach((item) => {
+        trackEvent({ eventType: "impression", productId: item._id, category: item.category, metadata: { source: "chatbot_description_search" } });
+      });
+    } catch (error) {
+      setMessages((prev) => [...prev, createMessage("assistant", "Lỗi khi tìm gợi ý theo mô tả.")]);
     } finally {
       setPending(false);
     }
@@ -439,23 +510,35 @@ function ChatbotWidget() {
               placeholder="Nhập nhu cầu của bạn..."
               disabled={pending}
             />
-            <button
-              type="submit"
-              disabled={pending || !String(input).trim()}
-              aria-label="Gửi"
-              title="Gửi"
-            >
-              {pending ? (
-                "..."
-              ) : (
-                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                  <path
-                    d="M3.4 11.2a1 1 0 0 0 0 1.6l16.6 8.4a1 1 0 0 0 1.4-1.1l-3.1-7.1-15-1.8Zm0 1.6 16.6-8.4a1 1 0 0 1 1.4 1.1l-3.1 7.1-15 1.8Z"
-                    fill="currentColor"
-                  />
-                </svg>
-              )}
-            </button>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button
+                type="button"
+                disabled={pending || !String(input).trim()}
+                onClick={() => sendDescriptionSearch(input)}
+                title="Gợi ý theo mô tả"
+                aria-label="Gợi ý theo mô tả"
+              >
+                Gợi ý theo mô tả
+              </button>
+
+              <button
+                type="submit"
+                disabled={pending || !String(input).trim()}
+                aria-label="Gửi"
+                title="Gửi"
+              >
+                {pending ? (
+                  "..."
+                ) : (
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path
+                      d="M3.4 11.2a1 1 0 0 0 0 1.6l16.6 8.4a1 1 0 0 0 1.4-1.1l-3.1-7.1-15-1.8Zm0 1.6 16.6-8.4a1 1 0 0 1 1.4 1.1l-3.1 7.1-15 1.8Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                )}
+              </button>
+            </div>
           </form>
         </section>
       ) : null}

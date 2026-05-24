@@ -69,6 +69,29 @@ const GENERIC_QUERY_TOKENS = new Set([
   "seri",
 ]);
 
+const PHONE_BRAND_HINTS = new Set(["iphone", "samsung", "xiaomi", "oppo", "vivo", "realme"]);
+const COLOR_HINTS = new Set([
+  "den",
+  "trang",
+  "xanh",
+  "do",
+  "tim",
+  "vang",
+  "hong",
+  "bac",
+  "xam",
+  "nau",
+  "cam",
+  "green",
+  "blue",
+  "black",
+  "white",
+  "silver",
+  "gold",
+  "pink",
+]);
+const AVAILABILITY_HINTS = ["co hang", "con hang", "co san", "ton kho", "hang khong", "available"];
+
 function cleanupOldSessions() {
   const now = Date.now();
   for (const [sessionId, session] of sessionStore.entries()) {
@@ -247,9 +270,203 @@ function updateSessionMemory(session, updates) {
     next.model = String(updates.model);
   }
 
+  if (updates?.selectedProductId) {
+    next.selectedProductId = String(updates.selectedProductId);
+  }
+
+  if (updates?.selectedProductName) {
+    next.selectedProductName = String(updates.selectedProductName);
+  }
+
+  if (updates?.selectedProductVariant) {
+    next.selectedProductVariant = String(updates.selectedProductVariant);
+  }
+
   next.updatedAt = Date.now();
   session.memory = next;
   return next;
+}
+
+function normalizeConversationHistory(history, limit = 6) {
+  if (!Array.isArray(history) || history.length === 0) {
+    return [];
+  }
+
+  return history
+    .slice(-Math.max(1, Number(limit) || 6))
+    .map((item) => ({
+      role: item?.role === "assistant" ? "assistant" : "user",
+      content: String(item?.content || item?.text || "").trim(),
+      products: Array.isArray(item?.products) ? item.products : [],
+    }))
+    .filter((item) => item.content || item.products.length > 0);
+}
+
+function formatConversationHistoryForPrompt(history, limit = 6) {
+  const normalizedHistory = normalizeConversationHistory(history, limit);
+  if (normalizedHistory.length === 0) {
+    return "Chua co lich su.";
+  }
+
+  return normalizedHistory
+    .map((item) => {
+      const speaker = item.role === "assistant" ? "Assistant" : "User";
+      const productNames = item.products
+        .map((product) => {
+          const name = String(product?.name || product?.title || "").trim();
+          const variant = String(product?.variant || "").trim();
+          return variant && variant !== name ? `${name} (${variant})` : name;
+        })
+        .filter(Boolean)
+        .slice(0, 3);
+      const productSuffix = productNames.length > 0 ? ` [products: ${productNames.join(", ")}]` : "";
+      return `${speaker}: ${item.content}${productSuffix}`.trim();
+    })
+    .join("\n");
+}
+
+function detectFollowUpSignals(message) {
+  const text = normalizeText(message);
+  const tokenSet = new Set(tokenize(message));
+
+  const availability = AVAILABILITY_HINTS.some((hint) => text.includes(hint));
+  const colorHint = Array.from(COLOR_HINTS).find((hint) => tokenSet.has(hint) || text.includes(hint));
+  const storageMatch = text.match(/\b(\d+\s*(gb|tb))\b/);
+  let storageHint = "";
+  let ramHint = "";
+
+  if (storageMatch) {
+    const numericValue = Number(String(storageMatch[1]).replace(/[^0-9]/g, ""));
+    const compactValue = storageMatch[1].replace(/\s+/g, "");
+    const explicitStorageSignal = includesAny(text, ["dung luong", "bo nho trong", "rom", "storage", "capacity"]);
+
+    if (numericValue > 0 && numericValue <= 64 && !explicitStorageSignal) {
+      ramHint = compactValue;
+    } else {
+      storageHint = compactValue;
+    }
+  }
+
+  return {
+    availability,
+    colorHint: colorHint || "",
+    storageHint,
+    ramHint,
+    isDirectFollowUp: Boolean(availability || colorHint || storageHint),
+  };
+}
+
+function getLatestAssistantProducts(history) {
+  const normalizedHistory = normalizeConversationHistory(history, 8);
+  const recentAssistant = [...normalizedHistory].reverse().find((item) => item.role === "assistant");
+  return Array.isArray(recentAssistant?.products) ? recentAssistant.products.filter(Boolean) : [];
+}
+
+function pickConversationAnchorProduct(history, message) {
+  const products = getLatestAssistantProducts(history);
+  if (products.length === 0) {
+    return null;
+  }
+
+  const signals = detectFollowUpSignals(message);
+  const candidates = [...products];
+
+  if (signals.storageHint) {
+    const storageToken = normalizeText(signals.storageHint);
+    const storageMatch = candidates.find((product) => {
+      const haystack = normalizeText([product?.name, product?.variant, product?.model, product?.description].join(" "));
+      return haystack.includes(storageToken);
+    });
+
+    if (storageMatch) {
+      return storageMatch;
+    }
+  }
+
+  if (signals.colorHint) {
+    const colorToken = normalizeText(signals.colorHint);
+    const colorMatch = candidates.find((product) => {
+      const haystack = normalizeText([product?.name, product?.variant, product?.description].join(" "));
+      return haystack.includes(colorToken);
+    });
+
+    if (colorMatch) {
+      return colorMatch;
+    }
+  }
+
+  return candidates[0] || null;
+}
+
+function buildConversationFocus({ history, message, memory }) {
+  const signals = detectFollowUpSignals(message);
+  const anchorProduct = pickConversationAnchorProduct(history, message);
+  const memorySelectedProductId = String(memory?.selectedProductId || "").trim();
+
+  const anchorProductId = String(anchorProduct?._id || memory?.selectedProductId || "").trim();
+  const anchorProductName = String(anchorProduct?.name || memory?.selectedProductName || "").trim();
+  const anchorProductVariant = String(anchorProduct?.variant || memory?.selectedProductVariant || "").trim();
+
+  const type = signals.availability
+    ? "availability"
+    : signals.storageHint
+      ? "storage"
+      : signals.colorHint
+        ? "color"
+        : "";
+
+  const isFollowUp = Boolean(type && (anchorProductId || memorySelectedProductId));
+
+  return {
+    ...signals,
+    type,
+    isFollowUp,
+    anchorProductId: anchorProductId || memorySelectedProductId,
+    anchorProductName,
+    anchorProductVariant,
+    anchorProduct,
+  };
+}
+
+function buildHistoryEnrichedMessage(message, history) {
+  const plainMessage = String(message || "").trim();
+  if (!plainMessage) {
+    return plainMessage;
+  }
+
+  const normalizedMessage = normalizeText(plainMessage);
+  const tokenCount = tokenize(plainMessage).length;
+  const shortContext = tokenCount <= 5 || normalizedMessage.length < 18;
+
+  if (!shortContext) {
+    return plainMessage;
+  }
+
+  const normalizedHistory = normalizeConversationHistory(history, 6);
+  const recentAssistant = [...normalizedHistory].reverse().find((item) => item.role === "assistant");
+  const recentUser = [...normalizedHistory].reverse().find((item) => item.role === "user");
+
+  const productNames = Array.isArray(recentAssistant?.products)
+    ? recentAssistant.products
+        .map((product) => String(product?.name || product?.title || "").trim())
+        .filter(Boolean)
+        .slice(0, 3)
+    : [];
+
+  const contextParts = [];
+  if (productNames.length > 0) {
+    contextParts.push(`san pham gan day: ${productNames.join(", ")}`);
+  }
+
+  if (recentUser?.content) {
+    contextParts.push(`cau truoc: ${recentUser.content.slice(0, 120)}`);
+  }
+
+  if (contextParts.length === 0) {
+    return plainMessage;
+  }
+
+  return `${plainMessage} [context: ${contextParts.join(" | ")}]`;
 }
 
 function extractJsonObjectFromText(text) {
@@ -275,7 +492,7 @@ function extractJsonObjectFromText(text) {
   }
 }
 
-async function maybeParseQueryWithLlm(message) {
+async function maybeParseQueryWithLlm(message, history = []) {
   const llmEnabled = String(process.env.CHATBOT_LLM_ENABLED || "").toLowerCase() === "true";
   const parserEnabled =
     String(process.env.CHATBOT_LLM_QUERY_PARSER_ENABLED || "true").toLowerCase() === "true";
@@ -294,6 +511,10 @@ async function maybeParseQueryWithLlm(message) {
     "intent, brand, series, model, product_line, storage, ram, price_min, price_max, confidence.",
     "Use null for unknown values.",
     "Do not include markdown or explanation.",
+    "Use the conversation history to resolve short follow-up messages and inherit the product category, brand, or model from the previous turn when the current message is underspecified.",
+    "If the current message is a budget-only follow-up like 'duoi 20 trieu', infer the implied category from history.",
+    "If the current message asks about color or availability, use the latest referenced product from history.",
+    `Conversation history:\n${formatConversationHistoryForPrompt(history, 6)}`,
     `User message: ${String(message || "")}`,
   ].join("\n");
 
@@ -507,7 +728,7 @@ function buildCategoryConstraint(message) {
   const text = normalizeText(message);
   const tokenSet = new Set(tokenize(message));
   const aliases = {
-    "dien thoai": ["dien thoai", "smartphone", "phone"],
+    "dien thoai": ["dien thoai", "smartphone", "phone", "iphone", "android", "galaxy"],
     laptop: ["laptop", "notebook", "ultrabook"],
     "phu kien": ["phu kien", "accessory", "tai nghe", "chuot", "ban phim", "webcam", "man hinh", "dong ho"],
   };
@@ -529,6 +750,35 @@ function buildCategoryConstraint(message) {
     if (matched) {
       return category;
     }
+  }
+
+  return "";
+}
+
+function inferBrandHint(message, llmQueryHints = null) {
+  const normalized = normalizeText(message);
+  for (const brand of KNOWN_BRAND_HINTS) {
+    if (normalized.includes(brand)) {
+      return brand;
+    }
+  }
+
+  const llmBrand = normalizeHintValue(llmQueryHints?.brand);
+  return llmBrand || "";
+}
+
+function inferCategoryFromBrandHint(brandHint) {
+  const normalizedBrand = normalizeHintValue(brandHint);
+  if (!normalizedBrand) {
+    return "";
+  }
+
+  if (PHONE_BRAND_HINTS.has(normalizedBrand) || normalizedBrand === "iphone") {
+    return "dien thoai";
+  }
+
+  if (normalizedBrand === "macbook" || normalizedBrand === "ipad") {
+    return normalizedBrand === "ipad" ? "tablet" : "laptop";
   }
 
   return "";
@@ -1095,6 +1345,7 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
   const behaviorProfile = buildBehaviorProfile(context.userBehavior);
   const llmQueryHints = options.llmQueryHints && typeof options.llmQueryHints === "object" ? options.llmQueryHints : null;
   const memory = options.memory && typeof options.memory === "object" ? options.memory : null;
+  const conversationFocus = options.conversationFocus && typeof options.conversationFocus === "object" ? options.conversationFocus : null;
   const parsedPriceConstraint = parsePriceConstraint(message);
   const llmPriceConstraint =
     llmQueryHints?.priceMin != null || llmQueryHints?.priceMax != null
@@ -1107,7 +1358,23 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
       : null;
   let priceConstraint = parsedPriceConstraint || llmPriceConstraint;
   const categoryFromMessage = buildCategoryConstraint(message);
-  const categoryConstraint = categoryFromMessage || memory?.category || "";
+  const hardBrandHint = inferBrandHint(message, llmQueryHints);
+  const categoryFromBrand = inferCategoryFromBrandHint(hardBrandHint);
+  const hasStrongBrandSignal = Boolean(hardBrandHint);
+  const categoryConstraint = categoryFromMessage || categoryFromBrand || (!hasStrongBrandSignal ? memory?.category || "" : "");
+  const brandConstraint = hardBrandHint || normalizeHintValue(llmQueryHints?.brand) || (!hasStrongBrandSignal ? memory?.brand || "" : "");
+
+  if (conversationFocus?.isFollowUp && conversationFocus.anchorProductId) {
+    const anchorProduct = await Product.findById(conversationFocus.anchorProductId)
+      .select(
+        "_id name brand series model variant sku slug price finalPrice discountPercent description category image averageRating totalRatings totalViews stock"
+      )
+      .lean();
+
+    if (anchorProduct) {
+      return [anchorProduct];
+    }
+  }
 
   if (!priceConstraint && memory?.budget) {
     priceConstraint = {
@@ -1171,6 +1438,55 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
         );
       })
     : rawProducts;
+
+  if (brandConstraint) {
+    const normalizedBrandConstraint = normalizeHintValue(brandConstraint);
+    const brandFilteredProducts = products.filter((item) => {
+      const normalizedName = normalizeText(item.name);
+      const normalizedBrand = normalizeText(item.brand);
+      const normalizedSeries = normalizeText(item.series);
+      const normalizedModel = normalizeText(item.model);
+      const normalizedVariant = normalizeText(item.variant);
+
+      return (
+        normalizedBrand.includes(normalizedBrandConstraint) ||
+        normalizedName.includes(normalizedBrandConstraint) ||
+        normalizedSeries.includes(normalizedBrandConstraint) ||
+        normalizedModel.includes(normalizedBrandConstraint) ||
+        normalizedVariant.includes(normalizedBrandConstraint)
+      );
+    });
+
+    if (brandFilteredProducts.length > 0) {
+      products = brandFilteredProducts;
+    } else if (hasStrongBrandSignal) {
+      products = [];
+    }
+  }
+
+  if (conversationFocus?.isFollowUp && conversationFocus.type === "storage") {
+    const storageToken = normalizeText(conversationFocus.storageHint);
+    const storageMatches = products.filter((item) => {
+      const haystack = normalizeText([item.name, item.variant, item.model, item.description].join(" "));
+      return haystack.includes(storageToken);
+    });
+
+    if (storageMatches.length > 0) {
+      products = storageMatches;
+    }
+  }
+
+  if (conversationFocus?.isFollowUp && conversationFocus.type === "color") {
+    const colorToken = normalizeText(conversationFocus.colorHint);
+    const colorMatches = products.filter((item) => {
+      const haystack = normalizeText([item.name, item.variant, item.description].join(" "));
+      return haystack.includes(colorToken);
+    });
+
+    if (colorMatches.length > 0) {
+      products = colorMatches;
+    }
+  }
 
   const normalizedMessage = normalizeText(message);
   const numericTokens = queryTokens.filter((token) => /^\d+$/.test(token));
@@ -1451,6 +1767,12 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
         finalPrice: Number(item.finalPrice || 0),
         discountPercent: Number(item.discountPercent || 0),
         image: item.image,
+        brand: item.brand,
+        series: item.series,
+        model: item.model,
+        variant: item.variant,
+        description: item.description,
+        stock: Number(item.stock || 0),
         averageRating: item.averageRating,
         totalRatings: item.totalRatings,
         totalViews: item.totalViews,
@@ -1471,6 +1793,10 @@ function buildRuleReply(intent, recommendedProducts, options = {}) {
     laptop: "laptop",
     "phu kien": "phụ kiện",
   };
+  const conversationFocus = options?.conversationFocus || null;
+  const anchorName = String(conversationFocus?.anchorProductName || recommendedProducts?.[0]?.name || "").trim();
+  const storageHint = String(conversationFocus?.storageHint || "").trim();
+  const colorHint = String(conversationFocus?.colorHint || "").trim();
 
   if (intent === "greeting") {
     return {
@@ -1493,6 +1819,45 @@ function buildRuleReply(intent, recommendedProducts, options = {}) {
       title: "Chưa tìm được sản phẩm phù hợp",
       followUp: "Bạn thử mô tả rõ hơn về nhu cầu sử dụng, ngân sách, hoặc thương hiệu mong muốn nhé.",
       items: [],
+    };
+  }
+
+  if (conversationFocus?.isFollowUp && conversationFocus?.type === "availability") {
+    return {
+      title: anchorName ? `${anchorName} hiện còn hàng:` : "Sản phẩm này hiện còn hàng:",
+      followUp: "Bạn muốn xem chi tiết hoặc thêm vào giỏ không?",
+      items: recommendedProducts.slice(0, 3).map((item) => ({
+        name: item.name,
+        price: formatVnd(item.price),
+      })),
+    };
+  }
+
+  if (conversationFocus?.isFollowUp && conversationFocus?.type === "storage") {
+    const hintLabel = storageHint || "phiên bản";
+    return {
+      title: anchorName
+        ? `Mình tìm thấy ${hintLabel} phù hợp cho ${anchorName}:`
+        : `Mình tìm thấy ${hintLabel} phù hợp:`,
+      followUp: "Bạn muốn mình lọc thêm theo màu hoặc giá không?",
+      items: recommendedProducts.slice(0, 3).map((item) => ({
+        name: item.name,
+        price: formatVnd(item.price),
+      })),
+    };
+  }
+
+  if (conversationFocus?.isFollowUp && conversationFocus?.type === "color") {
+    const hintLabel = colorHint || "màu bạn muốn";
+    return {
+      title: anchorName
+        ? `Mình tìm thấy ${hintLabel} cho ${anchorName}:`
+        : `Mình tìm thấy sản phẩm ${hintLabel}:`,
+      followUp: "Bạn muốn xem thêm biến thể khác hoặc so sánh giá không?",
+      items: recommendedProducts.slice(0, 3).map((item) => ({
+        name: item.name,
+        price: formatVnd(item.price),
+      })),
     };
   }
 
@@ -1638,20 +2003,23 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
   }
 }
 
-async function processChatMessage({ message, sessionId, context = {}, userId = null }) {
+async function processChatMessage({ message, sessionId, context = {}, userId = null, history = [] }) {
   const session = getOrCreateSession(sessionId);
   const plainMessage = String(message || "").trim();
 
-  let enrichedMessage = plainMessage;
-  if (session.history.length >= 2 && plainMessage.split(" ").length <= 5) {
+  const providedHistory = normalizeConversationHistory(history, 6);
+  const historyContext = providedHistory.length > 0 ? providedHistory : session.history;
+
+  let enrichedMessage = buildHistoryEnrichedMessage(plainMessage, historyContext);
+  if (historyContext.length >= 2 && plainMessage.split(" ").length <= 5) {
     const pronouns = ["no", "cai do", "may do", "san pham do", "cai nay", "loai do", "con", "it"];
     const normalizedMsg = normalizeText(plainMessage);
     const hasVagueRef = pronouns.some((p) => normalizedMsg.includes(p)) ||
       normalizedMsg.length < 15;
 
     if (hasVagueRef) {
-      const lastAssistant = [...session.history].reverse().find((h) => h.role === "assistant");
-      const lastUser = [...session.history].reverse().find((h) => h.role === "user");
+      const lastAssistant = [...historyContext].reverse().find((h) => h.role === "assistant");
+      const lastUser = [...historyContext].reverse().find((h) => h.role === "user");
       if (lastUser && lastAssistant) {
         enrichedMessage = `${plainMessage} [context: ${lastUser.content.slice(0, 80)}]`;
       }
@@ -1660,7 +2028,6 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
 
   const intent = detectIntent(plainMessage);
   const priceConstraint = parsePriceConstraint(plainMessage);
-  const categoryConstraint = buildCategoryConstraint(plainMessage);
 
   void trackChatbotEvent({
     sessionId: session.id,
@@ -1686,14 +2053,26 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
     !hasPriceSignal &&
     ((hasBrandHint || hasModelHint) || (isShortQuery && informativeQueryTokens.length <= 1));
 
-  const llmQueryHints = shouldUseLlmParser ? await maybeParseQueryWithLlm(plainMessage) : null;
+  const llmQueryHints = shouldUseLlmParser ? await maybeParseQueryWithLlm(plainMessage, historyContext) : null;
+  const categoryFromMessage = buildCategoryConstraint(plainMessage);
+  const brandHint = inferBrandHint(plainMessage, llmQueryHints);
+  const categoryFromBrand = inferCategoryFromBrandHint(brandHint);
+  const inferredCategory = categoryFromMessage || categoryFromBrand || null;
+  const conversationFocus = buildConversationFocus({
+    history: historyContext,
+    message: plainMessage,
+    memory: session.memory,
+  });
 
   const memory = updateSessionMemory(session, {
     budget: priceConstraint?.maxPrice ?? null,
-    category: categoryConstraint || null,
-    brand: llmQueryHints?.brand || null,
+    category: inferredCategory || (!brandHint ? session.memory?.category || null : null),
+    brand: brandHint || null,
     series: llmQueryHints?.series || llmQueryHints?.productLine || null,
     model: llmQueryHints?.model || null,
+    selectedProductId: conversationFocus.anchorProductId || null,
+    selectedProductName: conversationFocus.anchorProductName || null,
+    selectedProductVariant: conversationFocus.anchorProductVariant || null,
   });
 
   const mlSignal = userId ? await fetchMlCustomerSignal(userId) : null;
@@ -1707,6 +2086,7 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
           llmQueryHints,
           memory,
           mlSignal,
+          conversationFocus,
         });
 
   const shouldUseLlm = recommendedProducts.length > 0;
@@ -1735,13 +2115,28 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
   // Build structured reply (new format)
   const ruleReplyStructured = buildRuleReply(intent, recommendedProducts, {
     priceConstraint,
-    categoryConstraint: categoryConstraint || memory?.category || "",
+    categoryConstraint: inferredCategory || memory?.category || "",
+    conversationFocus,
   });
   const replyText = llmReply || formatStructuredReply(ruleReplyStructured);
   const quickReplies = buildQuickReplies(intent);
 
   session.history.push({ role: "user", content: plainMessage, at: new Date().toISOString() });
-  session.history.push({ role: "assistant", content: replyText, at: new Date().toISOString() });
+  session.history.push({
+    role: "assistant",
+    content: replyText,
+    products: recommendedProducts.slice(0, 5).map((item) => ({
+      _id: item._id,
+      name: item.name,
+      category: item.category,
+      price: item.price,
+      brand: item.brand,
+      model: item.model,
+      variant: item.variant,
+      stock: item.stock,
+    })),
+    at: new Date().toISOString(),
+  });
   session.history = session.history.slice(-MAX_HISTORY);
   session.updatedAt = Date.now();
 

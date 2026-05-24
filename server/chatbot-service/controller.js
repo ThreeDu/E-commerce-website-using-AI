@@ -28,6 +28,7 @@ const chatWithAssistant = async (req, res) => {
     const message = String(req.body?.message || "").trim();
     const sessionId = String(req.body?.sessionId || "").trim();
     const context = req.body?.context || {};
+    const history = Array.isArray(req.body?.history) ? req.body.history : [];
 
     if (!message) {
       return res.status(400).json({ message: "Tin nhắn không được để trống." });
@@ -37,6 +38,7 @@ const chatWithAssistant = async (req, res) => {
       message,
       sessionId,
       context,
+      history,
       userId: getOptionalUserId(req),
     });
 
