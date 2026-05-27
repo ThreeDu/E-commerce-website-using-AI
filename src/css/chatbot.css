@@ -181,6 +181,83 @@
   line-height: 1.45;
 }
 
+.chatbot-markdown {
+  display: grid;
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.chatbot-markdown > :first-child {
+  margin-top: 0;
+}
+
+.chatbot-markdown p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.chatbot-markdown > table {
+  margin-bottom: 12px;
+}
+
+.chatbot-markdown > p {
+  margin-top: 8px;
+}
+
+.chatbot-markdown-table {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 2px solid #1e1e1e;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 4px 4px 0px #1e1e1e;
+  background: linear-gradient(180deg, #f7f1ff, #eef8ff);
+  font-size: 12px;
+}
+
+.chatbot-markdown-table th,
+.chatbot-markdown-table td {
+  padding: 8px 10px;
+  border-right: 1px solid rgba(30, 30, 30, 0.12);
+  border-bottom: 1px solid rgba(30, 30, 30, 0.12);
+  vertical-align: top;
+}
+
+.chatbot-markdown-table th:last-child,
+.chatbot-markdown-table td:last-child {
+  border-right: none;
+}
+
+.chatbot-markdown-table tr:last-child td {
+  border-bottom: none;
+}
+
+.chatbot-markdown-table thead th {
+  background: linear-gradient(180deg, #ffe8c7, #ffd9f0);
+  font-weight: 800;
+  color: #1e1e1e;
+  text-align: left;
+}
+
+.chatbot-markdown-table tbody tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.chatbot-markdown-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.chatbot-markdown-table td {
+  color: #202124;
+  line-height: 1.4;
+}
+
+.chatbot-markdown-table td:first-child {
+  font-weight: 700;
+}
+
 .chatbot-message.user .chatbot-bubble {
   background: #efeaff;
   border-color: rgba(15, 49, 79, 0.12);

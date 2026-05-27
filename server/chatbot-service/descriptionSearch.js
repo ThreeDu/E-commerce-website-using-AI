@@ -1,11 +1,14 @@
 const Redis = require("ioredis");
 const Product = require("../models/Product");
+const { processChatMessage } = require("./service");
 
 const REDIS_KEY_PREFIX = "chatbot:history:";
 const HISTORY_TTL_SECONDS = 900;
 const HISTORY_WINDOW = 8;
 
 let redisClient = null;
+let redisUnavailable = false;
+const memoryHistoryStore = new Map();
 
 function normalizeText(value) {
   return String(value || "")
@@ -24,6 +27,41 @@ function normalizeAccentText(value) {
     .replace(/đ/g, "d")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function looksLikeCompareQuery(value) {
+  const text = normalizeAccentText(value);
+  if (!text) {
+    return false;
+  }
+
+  const compareSeparators = /\s+(?:va|và|vs\.?|v\.s\.?|with|and|so voi|so sanh|giua|\/|vs\s+|vs\.\s+)/i;
+  const parts = text
+    .split(compareSeparators)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const isProductLikePart = (part) => {
+    if (!part) {
+      return false;
+    }
+
+    if (/\b(iphone|samsung|galaxy|xiaomi|oppo|vivo|realme|ipad|macbook|pro|max|ultra|plus|mini|fold|flip)\b/.test(part)) {
+      return true;
+    }
+
+    if (/\b\d{1,2}\s*gb\s*\/\s*\d{2,4}\s*(gb|tb)\b/.test(part)) {
+      return true;
+    }
+
+    if (/\b\d{2,4}\s*(gb|tb)\b/.test(part)) {
+      return true;
+    }
+
+    return /\b\d{2,3}\s*hz\b/.test(part) || /\b\d{3,5}\s*mah\b/.test(part);
+  };
+
+  return parts.length >= 2 && parts.slice(0, 2).every((part) => isProductLikePart(part));
 }
 
 function escapeRegExp(value) {
@@ -395,6 +433,10 @@ function extractSpecsLocally(text) {
 }
 
 function getRedisClient() {
+  if (redisUnavailable) {
+    return null;
+  }
+
   if (redisClient) {
     return redisClient;
   }
@@ -422,7 +464,7 @@ function getRedisClient() {
   }
 
   redisClient.on("error", (error) => {
-    console.error("Redis chatbot history error:", error.message);
+    redisUnavailable = true;
   });
 
   return redisClient;
@@ -434,12 +476,20 @@ async function readHistoryFromRedis(sessionId) {
     return [];
   }
 
+  if (redisUnavailable) {
+    return Array.isArray(memoryHistoryStore.get(id)) ? memoryHistoryStore.get(id) : [];
+  }
+
   try {
     const client = getRedisClient();
+    if (!client) {
+      return Array.isArray(memoryHistoryStore.get(id)) ? memoryHistoryStore.get(id) : [];
+    }
+
     const raw = await client.get(`${REDIS_KEY_PREFIX}${id}`);
     const parsed = safeJsonParse(raw);
     if (!Array.isArray(parsed)) {
-      return [];
+      return Array.isArray(memoryHistoryStore.get(id)) ? memoryHistoryStore.get(id) : [];
     }
 
     return parsed
@@ -451,7 +501,8 @@ async function readHistoryFromRedis(sessionId) {
       }))
       .filter((item) => item.content);
   } catch (error) {
-    return [];
+    redisUnavailable = true;
+    return Array.isArray(memoryHistoryStore.get(id)) ? memoryHistoryStore.get(id) : [];
   }
 }
 
@@ -461,12 +512,34 @@ async function writeHistoryToRedis(sessionId, history) {
     return;
   }
 
+  const payloadHistory = Array.isArray(history)
+    ? history
+        .slice(-HISTORY_WINDOW)
+        .map((item) => ({
+          role: item?.role === "assistant" ? "assistant" : "user",
+          content: String(item?.content || item?.text || "").trim(),
+          at: String(item?.at || new Date().toISOString()),
+        }))
+        .filter((item) => item.content)
+    : [];
+
+  if (redisUnavailable) {
+    memoryHistoryStore.set(id, payloadHistory);
+    return;
+  }
+
   try {
     const client = getRedisClient();
-    const payload = JSON.stringify(Array.isArray(history) ? history.slice(-HISTORY_WINDOW) : []);
+    if (!client) {
+      memoryHistoryStore.set(id, payloadHistory);
+      return;
+    }
+
+    const payload = JSON.stringify(payloadHistory);
     await client.set(`${REDIS_KEY_PREFIX}${id}`, payload, "EX", HISTORY_TTL_SECONDS);
   } catch (error) {
-    console.error("Failed to persist chatbot history:", error.message);
+    redisUnavailable = true;
+    memoryHistoryStore.set(id, payloadHistory);
   }
 }
 
@@ -838,6 +911,21 @@ async function searchProductByFullDescription(req, res) {
 
     if (!descriptionText) {
       return res.status(400).json({ success: false, message: "Thiếu văn bản mô tả." });
+    }
+
+    if (looksLikeCompareQuery(descriptionText)) {
+      const result = await processChatMessage({
+        message: descriptionText,
+        sessionId,
+        context: req.body?.context || {},
+        history: [],
+      });
+
+      return res.json({
+        success: true,
+        routedTo: "compare",
+        ...result,
+      });
     }
 
     const history = await readHistoryFromRedis(sessionId);

@@ -1,24 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import "../css/chatbot.css";
 
 const SESSION_STORAGE_KEY = "chatbot_session_id";
 const BEHAVIOR_STORAGE_KEY = "chatbot_behavior";
-const BLOCKED_QUICK_REPLIES = new Set(["so sanh 2 san pham"]);
-
-function normalizeQuickReply(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
-function isBlockedQuickReply(value) {
-  return BLOCKED_QUICK_REPLIES.has(normalizeQuickReply(value));
-}
 
 function normalizeSearchText(value) {
   return String(value || "")
@@ -35,6 +24,50 @@ function looksLikeSpecSearchQuery(value) {
   }
 
   return /\b(\d+(?:[.,]\d+)?\s*(gb|tb|mp|hz|mah|inch|")|camera|ram|rom|dung luong|bo nho|man hinh|tan so quet|pin|battery|screen|display|chip)\b/.test(text);
+}
+
+function looksLikeCompareQuery(value) {
+  const text = normalizeSearchText(value);
+  if (!text) {
+    return false;
+  }
+
+  const compareSeparators = /\s+(?:và|va|vs\.?|v\.s\.?|with|and|so voi|so sanh|giua|\/|vs\s+|vs\.\s+)/i;
+  const parts = text
+    .split(compareSeparators)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const isProductLikePart = (part) => {
+    if (!part) {
+      return false;
+    }
+
+    if (
+      /\b(iphone|samsung|galaxy|xiaomi|oppo|vivo|realme|ipad|macbook|pro|max|ultra|plus|mini|fold|flip)\b/.test(part)
+    ) {
+      return true;
+    }
+
+    if (/\b\d{1,2}\s*gb\s*\/\s*\d{2,4}\s*(gb|tb)\b/.test(part)) {
+      return true;
+    }
+
+    if (/\b\d{2,4}\s*(gb|tb)\b/.test(part)) {
+      return true;
+    }
+
+    return /\b\d{2,3}\s*hz\b/.test(part) || /\b\d{3,5}\s*mah\b/.test(part);
+  };
+
+  if (parts.length >= 2) {
+    const hasTwoProductLikeParts = parts.slice(0, 2).every((part) => isProductLikePart(part));
+    if (hasTwoProductLikeParts) {
+      return true;
+    }
+  }
+
+  return /\b(so sanh|compare|vs\.?|v\.s\.?|doi chieu|doi sach|di chung voi|giua)\b/.test(text) && parts.length >= 2;
 }
 
 function getProductImageSrc(product) {
@@ -68,6 +101,24 @@ function createMessage(role, text, extra = {}) {
 function formatVnd(value) {
   const rounded = Math.round(Number(value || 0));
   return `${rounded.toLocaleString("vi-VN")} đ`;
+}
+
+function renderAssistantMarkdown(text) {
+  return (
+    <div className="chatbot-markdown">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          table: ({ node, ...props }) => <table className="chatbot-markdown-table" {...props} />,
+          th: ({ node, ...props }) => <th {...props} />,
+          td: ({ node, ...props }) => <td {...props} />,
+          p: ({ node, ...props }) => <p {...props} />,
+        }}
+      >
+        {String(text || "")}
+      </ReactMarkdown>
+    </div>
+  );
 }
 
 function getOrCreateSessionId() {
@@ -128,7 +179,8 @@ function ChatbotWidget() {
   const [messages, setMessages] = useState(() => [
     createMessage(
       "assistant",
-      "Xin chào, mình là AI Assistant. Bạn cần gợi ý sản phẩm theo nhu cầu hay ngân sách nào?"
+      "Xin chào, mình là AI Assistant. Bạn cần gợi ý sản phẩm theo nhu cầu hay ngân sách nào?",
+      { quickReplies: [] }
     ),
   ]);
 
@@ -187,7 +239,7 @@ function ChatbotWidget() {
   const quickReplies = useMemo(() => {
     const lastAssistant = [...messages].reverse().find((item) => item.role === "assistant");
     const rawReplies = Array.isArray(lastAssistant?.quickReplies) ? lastAssistant.quickReplies : [];
-    return rawReplies.filter((item) => !isBlockedQuickReply(item));
+    return rawReplies;
   }, [messages]);
 
   const trackEvent = async ({ eventType, productId = "", category = "", queryText = "", metadata = {} }) => {
@@ -227,10 +279,14 @@ function ChatbotWidget() {
       return;
     }
 
-    if (looksLikeSpecSearchQuery(text)) {
-      return sendDescriptionSearch(text);
+    if (looksLikeCompareQuery(text)) {
+      return sendMessageThroughMainChat(text);
     }
 
+    return sendMessageThroughMainChat(text);
+  };
+
+  const sendMessageThroughMainChat = async (text) => {
     const userMsg = createMessage("user", text);
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
@@ -315,6 +371,10 @@ function ChatbotWidget() {
     const text = String(descriptionText || input || "").trim();
     if (!text || pending) return;
 
+    if (looksLikeCompareQuery(text)) {
+      return sendMessageThroughMainChat(text);
+    }
+
     const userMsg = createMessage("user", text);
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
@@ -398,7 +458,7 @@ function ChatbotWidget() {
                     </div>
                   ) : null}
                   <div className="chatbot-bubble">
-                    <p>{msg.text}</p>
+                    {msg.role === "assistant" ? renderAssistantMarkdown(msg.text) : <p>{msg.text}</p>}
                     {msg.products.length > 0 ? (
                       <div className="chatbot-product-list">
                         {msg.products.map((product, index) => (
@@ -431,9 +491,9 @@ function ChatbotWidget() {
                               />
                               <div>
                                 <h4>{product.name}</h4>
-                                <p className="price">{formatVnd(product.price)}</p>
-                                {Number(product.originalPrice || 0) > Number(product.price || 0) ? (
-                                  <p className="old-price">{formatVnd(product.originalPrice)}</p>
+                                <p className="price">{formatVnd(product.finalPrice || product.price)}</p>
+                                {Number(product.price || 0) > Number(product.finalPrice || product.price || 0) ? (
+                                  <p className="old-price">{formatVnd(product.price)}</p>
                                 ) : null}
                                 <p className="reason">{product.reason}</p>
                               </div>
@@ -510,35 +570,23 @@ function ChatbotWidget() {
               placeholder="Nhập nhu cầu của bạn..."
               disabled={pending}
             />
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <button
-                type="button"
-                disabled={pending || !String(input).trim()}
-                onClick={() => sendDescriptionSearch(input)}
-                title="Gợi ý theo mô tả"
-                aria-label="Gợi ý theo mô tả"
-              >
-                Gợi ý theo mô tả
-              </button>
-
-              <button
-                type="submit"
-                disabled={pending || !String(input).trim()}
-                aria-label="Gửi"
-                title="Gửi"
-              >
-                {pending ? (
-                  "..."
-                ) : (
-                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                    <path
-                      d="M3.4 11.2a1 1 0 0 0 0 1.6l16.6 8.4a1 1 0 0 0 1.4-1.1l-3.1-7.1-15-1.8Zm0 1.6 16.6-8.4a1 1 0 0 1 1.4 1.1l-3.1 7.1-15 1.8Z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                )}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={pending || !String(input).trim()}
+              aria-label="Gửi"
+              title="Gửi"
+            >
+              {pending ? (
+                "..."
+              ) : (
+                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                  <path
+                    d="M3.4 11.2a1 1 0 0 0 0 1.6l16.6 8.4a1 1 0 0 0 1.4-1.1l-3.1-7.1-15-1.8Zm0 1.6 16.6-8.4a1 1 0 0 1 1.4 1.1l-3.1 7.1-15 1.8Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              )}
+            </button>
           </form>
         </section>
       ) : null}
