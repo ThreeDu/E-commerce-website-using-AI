@@ -166,27 +166,6 @@ function CartPage() {
 
                   <div className="cart-item__info">
                     <h4 className="cart-item__name">{item.name}</h4>
-                    <div className="cart-item__price-section">
-                      {originalPrice && originalPrice !== effectivePrice ? (
-                        <>
-                          <span className="cart-item__original-price">
-                            {formatPrice(originalPrice)}
-                          </span>
-                          <span className="cart-item__price">
-                            {formatPrice(effectivePrice)}
-                          </span>
-                          {discountPercent > 0 && (
-                            <span className="cart-item__discount">
-                              -{discountPercent}%
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <span className="cart-item__price">
-                          {formatPrice(effectivePrice)}
-                        </span>
-                      )}
-                    </div>
                   </div>
 
                   {/* Nút cộng trừ số lượng */}
@@ -202,7 +181,25 @@ function CartPage() {
 
                   {/* Tổng tiền của 1 sản phẩm */}
                   <div className="cart-item__total">
-                    {formatPrice(effectivePrice * item.quantity)}
+                    {originalPrice && originalPrice !== effectivePrice ? (
+                      <>
+                        <div className="cart-item__total-original">
+                          {formatPrice(originalPrice * item.quantity)}
+                        </div>
+                        <div className="cart-item__total-final">
+                          {formatPrice(effectivePrice * item.quantity)}
+                        </div>
+                        {discountPercent > 0 && (
+                          <span className="cart-item__total-discount">
+                            -{discountPercent}%
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <div className="cart-item__total-final">
+                        {formatPrice(effectivePrice * item.quantity)}
+                      </div>
+                    )}
                   </div>
 
                   {/* Nút Xóa */}
