@@ -72,7 +72,7 @@ function App() {
       <NotificationProvider>
         <CartProvider>
           <UserNotificationProvider>
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <StatusNotificationCenter />
             <div className="app-shell">
               <Header />

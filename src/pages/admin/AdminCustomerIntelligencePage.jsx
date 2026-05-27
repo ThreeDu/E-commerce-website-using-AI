@@ -98,15 +98,15 @@ function AdminCustomerIntelligencePage() {
       const data = await res.json();
 
       if (res.ok) {
-        success("Model đã được train lại thành công!", { title: "Customer Intelligence" });
+        success("Model đã được train lại thành công!", { title: "AI phân tích khách hàng" });
         await fetchOverview();
         await fetchCustomers();
       } else {
-        notifyError(data.message || "Training thất bại.", { title: "Customer Intelligence" });
+        notifyError(data.message || "Training thất bại.", { title: "AI phân tích khách hàng" });
       }
     } catch (err) {
       notifyError("Không thể kết nối ML service. Đảm bảo Python service đang chạy.", {
-        title: "Customer Intelligence",
+        title: "AI phân tích khách hàng",
       });
     } finally {
       setTraining(false);
@@ -153,7 +153,7 @@ function AdminCustomerIntelligencePage() {
       <div className="intel-header">
         <h1 className="intel-header__title">
           <FontAwesomeIcon icon={faBrain} style={{ marginRight: "10px", color: "var(--primary-color, #4f46e5)" }} />
-          Customer Intelligence
+          Dự đoán tỷ lệ rời bỏ và đánh giá tiềm năng khách hàng
         </h1>
         <div className="intel-header__actions">
           {overview?.last_training?.trained_at ? (

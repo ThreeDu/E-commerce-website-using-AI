@@ -55,7 +55,7 @@ function AdminSidebar({ isSidebarOpen, onToggleSidebar, onLogout }) {
 
           <NavLink to="/admin/intelligence" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
             <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faBrain} /></span>
-            <span className="admin-sidebar-link-title">Customer Intelligence</span>
+            <span className="admin-sidebar-link-title">AI phân tích dự đoán</span>
           </NavLink>
           <NavLink to="/admin/categories" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
             <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faTableCellsLarge} /></span>

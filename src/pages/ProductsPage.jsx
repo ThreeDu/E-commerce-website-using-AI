@@ -33,6 +33,8 @@ function ProductsPage() {
   const [pendingWishlistIds, setPendingWishlistIds] = useState([]);
   const [categories, setCategories] = useState([{ _id: "all", name: "Tất cả", path: "Tất cả" }]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 12;
 
   const productNameById = useMemo(
     () => new Map(allProducts.map((item) => [String(item._id), String(item.name || "sản phẩm")])),
@@ -312,7 +314,15 @@ function ProductsPage() {
     });
 
     setFilteredProducts(sortedResults);
+    setCurrentPage(1);
   }, [searchTerm, selectedCategoryScope, maxPrice, allProducts, sortBy]);
+
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const currentProducts = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    return filteredProducts.slice(start, end);
+  }, [filteredProducts, currentPage]);
 
   const handleAddToCart = (product) => {
     if (!auth?.token) {
@@ -484,69 +494,117 @@ function ProductsPage() {
 
             {loading ? (
               <div className="shopx-empty">Đang tải danh sách sản phẩm...</div>
-            ) : filteredProducts.length > 0 ? (
-              <div className="shopx-grid">
-                {filteredProducts.map((product) => {
-                  const productId = String(product._id);
-                  const isWishlisted = wishlistIds.includes(productId);
-                  const isPending = pendingWishlistIds.includes(productId);
-                  const outOfStock = isOutOfStock(product);
-                  const pricing = getProductPricing(product);
+            ) : currentProducts.length > 0 ? (
+              <>
+                <div className="shopx-grid">
+                  {currentProducts.map((product) => {
+                    const productId = String(product._id);
+                    const isWishlisted = wishlistIds.includes(productId);
+                    const isPending = pendingWishlistIds.includes(productId);
+                    const outOfStock = isOutOfStock(product);
+                    const pricing = getProductPricing(product);
 
-                  return (
-                    <article key={productId} className="shopx-card">
-                      <Link to={`/products/${product._id}`} style={{ textDecoration: "none" }}>
-                        <div className={`shopx-card-image-wrap ${outOfStock ? "is-out-of-stock" : ""}`}>
+                    return (
+                      <article key={productId} className="shopx-card">
+                        <Link to={`/products/${product._id}`} style={{ textDecoration: "none" }}>
+                          <div className={`shopx-card-image-wrap ${outOfStock ? "is-out-of-stock" : ""}`}>
+                            {pricing.hasDiscount ? (
+                              <span className="shopx-sale-badge">-{pricing.discountPercent}%</span>
+                            ) : null}
+                            {outOfStock ? <span className="shopx-stock-badge">Hết hàng</span> : null}
+                            <img
+                              src={getProductImageSrc(product)}
+                              alt={product.name}
+                              className="shopx-card-image"
+                              onError={(event) => {
+                                event.currentTarget.onerror = null;
+                                event.currentTarget.src = "/placeholder.svg";
+                              }}
+                            />
+                          </div>
+                          <h3 className="shopx-card-name">{product.name}</h3>
+                          <div className="shopx-meta-row">
+                            <span className="shopx-chip shopx-chip--rating">
+                              {Number(product.averageRating || 0).toFixed(1)} sao ({Number(product.totalRatings || 0)})
+                            </span>
+                            <span className="shopx-chip shopx-chip--views">{Number(product.totalViews || 0)} lượt xem</span>
+                            <span className="shopx-chip shopx-chip--sold">{Number(product.totalPurchases || 0)} lượt mua</span>
+                          </div>
+                          <p className="shopx-price">{pricing.finalPrice.toLocaleString("vi-VN")} đ</p>
                           {pricing.hasDiscount ? (
-                            <span className="shopx-sale-badge">-{pricing.discountPercent}%</span>
+                            <p className="shopx-old-price">{pricing.basePrice.toLocaleString("vi-VN")} đ</p>
                           ) : null}
-                          {outOfStock ? <span className="shopx-stock-badge">Hết hàng</span> : null}
-                          <img
-                            src={getProductImageSrc(product)}
-                            alt={product.name}
-                            className="shopx-card-image"
-                            onError={(event) => {
-                              event.currentTarget.onerror = null;
-                              event.currentTarget.src = "/placeholder.svg";
-                            }}
-                          />
-                        </div>
-                        <h3 className="shopx-card-name">{product.name}</h3>
-                        <div className="shopx-meta-row">
-                          <span className="shopx-chip shopx-chip--rating">
-                            {Number(product.averageRating || 0).toFixed(1)} sao ({Number(product.totalRatings || 0)})
-                          </span>
-                          <span className="shopx-chip shopx-chip--views">{Number(product.totalViews || 0)} lượt xem</span>
-                          <span className="shopx-chip shopx-chip--sold">{Number(product.totalPurchases || 0)} lượt mua</span>
-                        </div>
-                        <p className="shopx-price">{pricing.finalPrice.toLocaleString("vi-VN")} đ</p>
-                        {pricing.hasDiscount ? (
-                          <p className="shopx-old-price">{pricing.basePrice.toLocaleString("vi-VN")} đ</p>
-                        ) : null}
-                      </Link>
+                        </Link>
 
-                      <div className="shopx-card-actions">
+                        <div className="shopx-card-actions">
+                          <button
+                            type="button"
+                            disabled={isPending}
+                            className={`shopx-btn shopx-btn--ghost shopx-btn--wishlist ${isWishlisted ? "shopx-btn--active" : ""}`}
+                            onClick={() => handleToggleWishlist(productId)}
+                          >
+                            {isPending ? "Đang xử lý..." : isWishlisted ? "Đã yêu thích" : "Thêm yêu thích"}
+                          </button>
+                          <button
+                            type="button"
+                            className={`shopx-btn shopx-btn--primary shopx-btn--cart ${outOfStock ? "shopx-btn--out-of-stock" : ""}`}
+                            disabled={outOfStock}
+                            onClick={() => handleAddToCart(product)}
+                          >
+                            {outOfStock ? "Hết hàng" : "Thêm vào giỏ"}
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="shopx-pagination">
+                    <button
+                      type="button"
+                      className="shopx-pagination__btn"
+                      disabled={currentPage === 1}
+                      onClick={() => {
+                        setCurrentPage((prev) => Math.max(1, prev - 1));
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    >
+                      Trước
+                    </button>
+                    {[...Array(totalPages)].map((_, i) => {
+                      const pageNum = i + 1;
+                      return (
                         <button
+                          key={pageNum}
                           type="button"
-                          disabled={isPending}
-                          className={`shopx-btn shopx-btn--ghost shopx-btn--wishlist ${isWishlisted ? "shopx-btn--active" : ""}`}
-                          onClick={() => handleToggleWishlist(productId)}
+                          className={`shopx-pagination__btn ${currentPage === pageNum ? "shopx-pagination__btn--active" : ""}`}
+                          onClick={() => {
+                            setCurrentPage(pageNum);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
                         >
-                          {isPending ? "Đang xử lý..." : isWishlisted ? "Đã yêu thích" : "Thêm yêu thích"}
+                          {pageNum}
                         </button>
-                        <button
-                          type="button"
-                          className={`shopx-btn shopx-btn--primary shopx-btn--cart ${outOfStock ? "shopx-btn--out-of-stock" : ""}`}
-                          disabled={outOfStock}
-                          onClick={() => handleAddToCart(product)}
-                        >
-                          {outOfStock ? "Hết hàng" : "Thêm vào giỏ"}
-                        </button>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      className="shopx-pagination__btn"
+                      disabled={currentPage === totalPages}
+                      onClick={() => {
+                        setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    >
+                      Sau
+                    </button>
+                    <span className="shopx-pagination__info">
+                      Trang {currentPage} / {totalPages} (Tổng {filteredProducts.length} sản phẩm)
+                    </span>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="shopx-empty">Không tìm thấy sản phẩm phù hợp.</div>
             )}
