@@ -11,6 +11,7 @@ Endpoints:
 import os
 import sys
 import json
+import numpy as np
 from datetime import datetime, timezone
 
 from flask import Flask, jsonify, request
