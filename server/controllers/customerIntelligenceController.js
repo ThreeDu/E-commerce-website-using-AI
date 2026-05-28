@@ -59,8 +59,54 @@ const triggerTraining = async (req, res) => {
   }
 };
 
+const getCustomerSegments = async (req, res) => {
+  try {
+    const params = new URLSearchParams(req.query).toString();
+    const path = `/api/intelligence/segments${params ? `?${params}` : ""}`;
+    const { status, data } = await proxyToMlService(path);
+    return res.status(status).json(data);
+  } catch (error) {
+    return res.status(503).json({
+      message: "ML service is not available.",
+      error: error.message,
+    });
+  }
+};
+
+const getCustomerCLV = async (req, res) => {
+  try {
+    const params = new URLSearchParams(req.query).toString();
+    const path = `/api/intelligence/clv${params ? `?${params}` : ""}`;
+    const { status, data } = await proxyToMlService(path);
+    return res.status(status).json(data);
+  } catch (error) {
+    return res.status(503).json({
+      message: "ML service is not available.",
+      error: error.message,
+    });
+  }
+};
+
+const getAbandonedCarts = async (req, res) => {
+  try {
+    const params = new URLSearchParams(req.query).toString();
+    const path = `/api/intelligence/abandoned-carts${params ? `?${params}` : ""}`;
+    const { status, data } = await proxyToMlService(path);
+    return res.status(status).json(data);
+  } catch (error) {
+    return res.status(503).json({
+      message: "ML service is not available.",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getIntelligenceOverview,
   getIntelligenceCustomers,
   triggerTraining,
+  getCustomerSegments,
+  getCustomerCLV,
+  getAbandonedCarts,
 };
+

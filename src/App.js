@@ -48,9 +48,11 @@ const AdminSystemLogsPage = lazy(() => import("./pages/admin/AdminSystemLogsPage
 const AdminNotificationsPage = lazy(() => import("./pages/admin/AdminNotificationsPage"));
 
 const AdminCustomerIntelligencePage = lazy(() => import("./pages/admin/AdminCustomerIntelligencePage"));
+const AdminRetentionCampaignPage = lazy(() => import("./pages/admin/AdminRetentionCampaignPage"));
 const AdminRewardTiersPage = lazy(() => import("./pages/admin/reward/AdminRewardTiersPage"));
 const AdminAddRewardTierPage = lazy(() => import("./pages/admin/reward/AdminAddRewardTierPage"));
 const AdminEditRewardTierPage = lazy(() => import("./pages/admin/reward/AdminEditRewardTierPage"));
+
 
 function GuestRoute({ children }) {
   const { auth } = useAuth();
@@ -252,6 +254,15 @@ function App() {
                         </ProtectedRoute>
                       }
                     />
+                    <Route
+                      path="/admin/retention"
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminRetentionCampaignPage />
+                        </ProtectedRoute>
+                      }
+                    />
+
                     <Route
                       path="/admin/orders/:id"
                       element={
