@@ -1333,6 +1333,73 @@ async function fetchMlCustomerSignal(userId) {
   }
 }
 
+async function fetchAutomatedMlOffers(userId, limit = 4) {
+  const fallbackFilter = {
+    stock: { $gt: 0 },
+  };
+  const projection = "_id name brand price finalPrice discountPercent description category image averageRating totalPurchases totalViews reason";
+
+  const queryProducts = async (filter, sort) => Product.find(filter)
+    .select(projection)
+    .sort(sort)
+    .limit(limit)
+    .lean();
+
+  if (!userId) {
+    const products = await queryProducts(fallbackFilter, { averageRating: -1, totalViews: -1, totalPurchases: -1 });
+    return { products, mlSignal: null, strategy: "anonymous_welcome" };
+  }
+
+  const mlSignal = await fetchMlCustomerSignal(userId);
+  const churnScore = Number(mlSignal?.churn_score ?? 0);
+  const potentialScore = Number(mlSignal?.potential_score ?? 0);
+
+  let filter = { ...fallbackFilter };
+  let sort = { totalViews: -1, averageRating: -1, totalPurchases: -1 };
+  let strategy = "welcome_default";
+
+  if (churnScore >= 61 || String(mlSignal?.churn_level || "") === "high") {
+    filter = {
+      ...fallbackFilter,
+      discountPercent: { $gt: 10 },
+    };
+    sort = { discountPercent: -1, averageRating: -1, totalViews: -1 };
+    strategy = "churn_recovery";
+  } else if (potentialScore > 75 || String(mlSignal?.potential_level || "") === "high") {
+    filter = {
+      ...fallbackFilter,
+      finalPrice: { $gte: 15000000 },
+    };
+    sort = { averageRating: -1, totalViews: -1, totalPurchases: -1 };
+    strategy = "vip_premium";
+  }
+
+  let products = await queryProducts(filter, sort);
+
+  if (products.length < limit) {
+    const seenIds = new Set(products.map((item) => String(item._id)));
+    const paddingFilter = {
+      ...fallbackFilter,
+      ...(seenIds.size > 0
+        ? { _id: { $nin: [...seenIds].map((item) => safeObjectId(item)).filter(Boolean) } }
+        : {}),
+    };
+    const padding = await queryProducts(paddingFilter, { averageRating: -1, totalViews: -1, totalPurchases: -1 });
+
+    for (const item of padding) {
+      if (products.length >= limit) {
+        break;
+      }
+
+      if (!seenIds.has(String(item._id))) {
+        products.push(item);
+      }
+    }
+  }
+
+  return { products: products.slice(0, limit), mlSignal, strategy };
+}
+
 async function findRecommendedProducts(message, context = {}, options = {}) {
   const queryTokens = tokenize(message);
   const QUERY_STOPWORDS = new Set([
@@ -1807,8 +1874,38 @@ function buildRuleReply(intent, recommendedProducts, options = {}) {
   const colorHint = String(conversationFocus?.colorHint || "").trim();
 
   if (intent === "greeting") {
+    // Tailor greeting follow-up based on ML signal (churn / vip)
+    const churn = options?.mlSignal?.churn === true || Number(options?.mlSignal?.churn_score || 0) >= 61 || String(options?.mlSignal?.churn_level || "").toLowerCase() === "high";
+    const vip = Number(options?.mlSignal?.potential_score || 0) > 75 || String(options?.mlSignal?.potential_level || "").toLowerCase() === "high";
+
+    if (recommendedProducts.length > 0) {
+      if (churn) {
+        return {
+          title: "Chào bạn, mình là AI Shopping Assistant",
+          followUp:
+            "Chào mừng quay trở lại! Hệ thống vừa mở các deal giảm giá cực sâu chỉ dành riêng cho bạn trong hôm nay — mình đã chuẩn bị sẵn các ưu đãi ở bên dưới, bạn xem nhanh nhé.",
+          items: [],
+        };
+      }
+
+      if (vip) {
+        return {
+          title: "Xin chào thành viên cao cấp",
+          followUp:
+            "Rất vinh hạnh được phục vụ bạn — mình đã tuyển chọn sẵn những sản phẩm Flagship hàng đầu dành riêng cho bạn ở phía dưới, mời bạn xem qua.",
+          items: [],
+        };
+      }
+
+      return {
+        title: "Chào bạn, mình là AI Shopping Assistant",
+        followUp: "Mình đã chuẩn bị sẵn các deal hời cá nhân hóa ngay bên dưới, bạn xem nhanh nhé.",
+        items: [],
+      };
+    }
+
     return {
-      title: "Chào bạn, tôi là AI Shopping Assistant",
+      title: "Chào bạn, mình là AI Shopping Assistant",
       followUp: "Bạn đang quan tâm nhóm sản phẩm nào?",
       items: [],
     };
@@ -1917,8 +2014,25 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
     reason: item.reason,
   }));
 
-  const systemPrompt =
-    "Bạn là trợ lý bán hàng e-commerce. Trả lời ngắn gọn bằng tiếng Việt, ưu tiên đề xuất hành động mua hàng, không bịa thông tin ngoài danh sách sản phẩm được cung cấp, và khi liệt kê sản phẩm thì mỗi sản phẩm một dòng, không dùng ký hiệu bullet.";
+  const systemPrompt = intent === "greeting"
+    ? (() => {
+        const variants = [
+          "Chào mừng bạn quay trở lại! Mình đã chuẩn bị sẵn các ưu đãi đặc biệt dành riêng cho bạn — mời bạn xem các thẻ bên dưới.",
+          "Rất vui được gặp lại bạn! Hôm nay có một số deal giảm sâu mình đã lọc sẵn, bạn xem nhanh ở phía dưới nhé.",
+          "Chào bạn! Để tri ân sự quay lại, Tech Shop có một loạt ưu đãi giới hạn dành riêng cho bạn; mình đã sắp xếp chúng ở bên dưới.",
+          "Xin chào! Mình đã chọn giúp bạn một số chương trình giảm giá đặc biệt trong hôm nay — bạn có thể xem các thẻ sản phẩm bên dưới.",
+          "Chào bạn, hôm nay mình có một vài ưu đãi cực hời dành riêng cho bạn, mời bạn tham khảo các thẻ bên dưới.",
+        ];
+
+        return [
+          "Bạn là trợ lý bán hàng e-commerce. Trả lời ngắn gọn, tự nhiên, ấm áp bằng tiếng Việt.",
+          "Nhiệm vụ là chào người dùng và dẫn họ nhìn xuống các thẻ sản phẩm bên dưới.",
+          "KHÔNG liệt kê tên sản phẩm hoặc nêu giá. Không dùng bullet. Không dài hơn 3 câu.",
+          "Dưới đây là vài ví dụ phong cách (chỉ để cảm hứng, đừng sao chép y nguyên):",
+          ...variants.map((v) => `- ${v}`),
+        ].join(" ");
+      })()
+    : "Bạn là trợ lý bán hàng e-commerce. Trả lời ngắn gọn bằng tiếng Việt, ưu tiên đề xuất hành động mua hàng, không bịa thông tin ngoài danh sách sản phẩm được cung cấp, và khi liệt kê sản phẩm thì mỗi sản phẩm một dòng, không dùng ký hiệu bullet.";
 
   const userPrompt = JSON.stringify(
     {
@@ -1926,8 +2040,9 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
       message,
       products: contextProducts,
       recentHistory: history.slice(-4),
-      requirements:
-        "Trả lời tối đa 5 câu. Nếu cần, hỏi thêm 1 câu để làm rõ nhu cầu. Khi liệt kê sản phẩm: mỗi sản phẩm một dòng, không dùng ký hiệu bullet.",
+      requirements: intent === "greeting"
+        ? "Trả lời tối đa 3 câu. Chỉ chào hỏi và mời xem phần sản phẩm bên dưới. Không lặp lại tên sản phẩm hoặc giá sản phẩm trong câu trả lời."
+        : "Trả lời tối đa 5 câu. Nếu cần, hỏi thêm 1 câu để làm rõ nhu cầu. Khi liệt kê sản phẩm: mỗi sản phẩm một dòng, không dùng ký hiệu bullet.",
     },
     null,
     2
@@ -2913,11 +3028,21 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
     selectedProductVariant: conversationFocus.anchorProductVariant || null,
   });
 
-  const mlSignal = userId ? await fetchMlCustomerSignal(userId) : null;
+  let mlSignal = null;
+  let recommendedProducts = [];
 
-  const recommendedProducts =
-    intent === "policy"
-      ? []
+  if (intent === "greeting") {
+    const greetingOffers = await fetchAutomatedMlOffers(userId, 4);
+    recommendedProducts = greetingOffers.products;
+    mlSignal = greetingOffers.mlSignal;
+  } else {
+    mlSignal = userId ? await fetchMlCustomerSignal(userId) : null;
+  }
+
+  if (intent !== "greeting") {
+    recommendedProducts =
+      intent === "policy"
+        ? []
         : await findRecommendedProducts(enrichedMessage, context, {
           sessionId: session.id,
           userId,
@@ -2926,6 +3051,7 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
           mlSignal,
           conversationFocus,
         });
+  }
 
   const shouldUseLlm = recommendedProducts.length > 0;
 
@@ -2955,6 +3081,7 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
     priceConstraint,
     categoryConstraint: inferredCategory || memory?.category || "",
     conversationFocus,
+    mlSignal,
   });
   const replyText = llmReply || formatStructuredReply(ruleReplyStructured);
   const quickReplies = buildQuickReplies(intent);
@@ -2992,7 +3119,71 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
   };
 }
 
+// exports are declared at end of file (including debugGreeting)
+
+// Debug helper: generate a greeting response for QA without requiring real ML user
+async function debugGreeting({ mode = "anonymous", sessionId = null, limit = 4 } = {}) {
+  const session = getOrCreateSession(sessionId);
+  const fallbackFilter = { stock: { $gt: 0 } };
+  const projection = "_id name brand price finalPrice discountPercent description category image averageRating totalPurchases totalViews reason";
+
+  const queryProducts = async (filter, sort) =>
+    Product.find(filter)
+      .select(projection)
+      .sort(sort)
+      .limit(limit)
+      .lean();
+
+  let filter = { ...fallbackFilter };
+  let sort = { totalViews: -1, averageRating: -1, totalPurchases: -1 };
+  let mlSignal = null;
+
+  if (mode === "churn") {
+    mlSignal = { churn: true, churn_score: 85, churn_level: "high" };
+    filter = { ...fallbackFilter, discountPercent: { $gt: 10 } };
+    sort = { discountPercent: -1, averageRating: -1, totalViews: -1 };
+  } else if (mode === "vip") {
+    mlSignal = { potential_score: 90, potential_level: "high" };
+    filter = { ...fallbackFilter, finalPrice: { $gte: 15000000 } };
+    sort = { averageRating: -1, totalViews: -1, totalPurchases: -1 };
+  }
+
+  const products = await queryProducts(filter, sort);
+
+  const recommendedProducts = products.slice(0, limit);
+
+  const ruleReplyStructured = buildRuleReply("greeting", recommendedProducts, { mlSignal });
+
+  // Attempt to generate an LLM reply (optional) using existing helper
+  let llmText = null;
+  try {
+    const raw = await maybeGenerateLlmReply({ message: "Xin chào", intent: "greeting", recommendedProducts, history: session.history });
+    if (raw) llmText = String(raw).trim();
+  } catch (e) {
+    llmText = null;
+  }
+
+  const replyText = llmText || formatStructuredReply(ruleReplyStructured);
+
+  // push to session history similar to processChatMessage
+  session.history.push({ role: "user", content: "Xin chào", at: new Date().toISOString() });
+  session.history.push({ role: "assistant", content: replyText, products: recommendedProducts, at: new Date().toISOString() });
+  session.history = session.history.slice(-MAX_HISTORY);
+  session.updatedAt = Date.now();
+
+  return {
+    sessionId: session.id,
+    intent: "greeting",
+    reply: replyText,
+    replyStructured: ruleReplyStructured,
+    products: recommendedProducts,
+    quickReplies: buildQuickReplies("greeting"),
+    metadata: { debug: true, mode, mlSignal },
+  };
+}
+
 module.exports = {
   trackChatbotEvent,
   processChatMessage,
+  debugGreeting,
 };

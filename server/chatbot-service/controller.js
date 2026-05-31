@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
-const { processChatMessage, trackChatbotEvent } = require("./service");
+const { processChatMessage, trackChatbotEvent, debugGreeting } = require("./service");
 const { getTokenFromHeader } = require("../routes/helpers/authHelpers");
 
 function getOptionalUserId(req) {
@@ -79,7 +79,26 @@ const trackEvent = async (req, res) => {
   }
 };
 
+// exports are declared at end (including debugGreeting)
+
+const debugGreetingController = async (req, res) => {
+  try {
+    const mode = String(req.body?.mode || req.query?.mode || "anonymous").trim().toLowerCase();
+    const sessionId = String(req.body?.sessionId || "").trim() || null;
+
+    if (!["anonymous", "churn", "vip"].includes(mode)) {
+      return res.status(400).json({ message: "mode phải là one of: anonymous|churn|vip" });
+    }
+
+    const result = await debugGreeting({ mode, sessionId });
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({ message: "Không thể tạo debug greeting." });
+  }
+};
+
 module.exports = {
   chatWithAssistant,
   trackEvent,
+  debugGreeting: debugGreetingController,
 };

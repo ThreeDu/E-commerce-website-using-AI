@@ -8,6 +8,7 @@ import "../css/chatbot.css";
 
 const SESSION_STORAGE_KEY = "chatbot_session_id";
 const BEHAVIOR_STORAGE_KEY = "chatbot_behavior";
+const AUTO_GREETING_PREFIX = "chatbot_auto_greeting_sent";
 
 function normalizeSearchText(value) {
   return String(value || "")
@@ -168,6 +169,14 @@ function writeBehavior(nextBehavior) {
   localStorage.setItem(BEHAVIOR_STORAGE_KEY, JSON.stringify(nextBehavior));
 }
 
+function hasAutoGreetingBeenSent(sessionId) {
+  return localStorage.getItem(`${AUTO_GREETING_PREFIX}:${sessionId}`) === "1";
+}
+
+function markAutoGreetingAsSent(sessionId) {
+  localStorage.setItem(`${AUTO_GREETING_PREFIX}:${sessionId}`, "1");
+}
+
 function ChatbotWidget() {
   const location = useLocation();
   const { cart, addToCart } = useCart();
@@ -176,13 +185,7 @@ function ChatbotWidget() {
   const [pending, setPending] = useState(false);
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState("");
-  const [messages, setMessages] = useState(() => [
-    createMessage(
-      "assistant",
-      "Xin chào, mình là AI Assistant. Bạn cần gợi ý sản phẩm theo nhu cầu hay ngân sách nào?",
-      { quickReplies: [] }
-    ),
-  ]);
+  const [messages, setMessages] = useState([]);
 
   const isAdminArea = location.pathname.startsWith("/admin");
 
@@ -286,23 +289,31 @@ function ChatbotWidget() {
     return sendMessageThroughMainChat(text);
   };
 
-  const sendMessageThroughMainChat = async (text) => {
+  const submitChatMessage = async (text, options = {}) => {
+    const showUserMessage = options.showUserMessage !== false;
     const userMsg = createMessage("user", text);
-    setMessages((prev) => [...prev, userMsg]);
+    const nextMessages = showUserMessage ? [...messages, userMsg] : [...messages];
+
+    if (showUserMessage) {
+      setMessages((prev) => [...prev, userMsg]);
+    }
+
     setInput("");
     setPending(true);
 
-    trackEvent({
-      eventType: "message",
-      queryText: text,
-      metadata: {
-        page: location.pathname,
-      },
-    });
+    if (showUserMessage) {
+      trackEvent({
+        eventType: "message",
+        queryText: text,
+        metadata: {
+          page: location.pathname,
+        },
+      });
+    }
 
     try {
       const behavior = readBehavior();
-      const recentHistory = [...messages, userMsg].slice(-8).map((item) => ({
+      const recentHistory = nextMessages.slice(-8).map((item) => ({
         role: item.role,
         content: item.text,
         products: Array.isArray(item.products) ? item.products : [],
@@ -367,6 +378,8 @@ function ChatbotWidget() {
     }
   };
 
+  const sendMessageThroughMainChat = async (text) => submitChatMessage(text, { showUserMessage: true });
+
   const sendDescriptionSearch = async (descriptionText) => {
     const text = String(descriptionText || input || "").trim();
     if (!text || pending) return;
@@ -415,6 +428,19 @@ function ChatbotWidget() {
     }
   };
 
+  useEffect(() => {
+    if (isAdminArea || !open || !sessionId || messages.length > 0 || pending) {
+      return;
+    }
+
+    if (hasAutoGreetingBeenSent(sessionId)) {
+      return;
+    }
+
+    markAutoGreetingAsSent(sessionId);
+    void submitChatMessage("Xin chào", { showUserMessage: false });
+  }, [open, isAdminArea, sessionId, messages.length, pending]);
+
   if (isAdminArea) {
     return null;
   }
@@ -438,6 +464,99 @@ function ChatbotWidget() {
                 <p>Gợi ý nhanh theo nhu cầu của bạn</p>
               </div>
             </div>
+            <button
+              type="button"
+              className="chatbot-debug-btn"
+              onClick={() => {
+                void submitChatMessage("Xin chào", { showUserMessage: false });
+              }}
+              aria-label="Gọi lại chào"
+              title="Gọi lại chào"
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" focusable="false" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M12 6a6 6 0 0 1 5.2 3h-2.1l3.1 3.1 3.1-3.1h-2A8 8 0 1 0 20 12h-2a6 6 0 1 1-6-6z"
+                />
+              </svg>
+            </button>
+
+            <div className="chatbot-debug-mini-group" aria-hidden={isAdminArea}>
+              <button
+                type="button"
+                className="chatbot-debug-mini"
+                onClick={async () => {
+                  if (pending) return;
+                  setPending(true);
+                  try {
+                    const resp = await fetch('/api/chatbot/debug-greeting', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ mode: 'churn', sessionId }),
+                    });
+                    const data = await resp.json();
+                    if (!resp.ok) {
+                      setMessages((prev) => [...prev, createMessage('assistant', data?.message || 'Lỗi khi gọi debug greeting')]);
+                    } else {
+                      setMessages((prev) => [
+                        ...prev,
+                        createMessage('assistant', data.reply || 'Đã trả về kết quả debug', { products: Array.isArray(data.products) ? data.products : [] }),
+                      ]);
+
+                      const products = Array.isArray(data.products) ? data.products : [];
+                      products.forEach((item) => {
+                        trackEvent({ eventType: 'impression', productId: item._id, category: item.category, metadata: { source: 'chatbot_debug' } });
+                      });
+                    }
+                  } catch (error) {
+                    setMessages((prev) => [...prev, createMessage('assistant', 'Lỗi mạng khi gọi debug greeting')]);
+                  } finally {
+                    setPending(false);
+                  }
+                }}
+                title="Debug churn"
+              >
+                Churn
+              </button>
+
+              <button
+                type="button"
+                className="chatbot-debug-mini"
+                onClick={async () => {
+                  if (pending) return;
+                  setPending(true);
+                  try {
+                    const resp = await fetch('/api/chatbot/debug-greeting', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ mode: 'vip', sessionId }),
+                    });
+                    const data = await resp.json();
+                    if (!resp.ok) {
+                      setMessages((prev) => [...prev, createMessage('assistant', data?.message || 'Lỗi khi gọi debug greeting')]);
+                    } else {
+                      setMessages((prev) => [
+                        ...prev,
+                        createMessage('assistant', data.reply || 'Đã trả về kết quả debug', { products: Array.isArray(data.products) ? data.products : [] }),
+                      ]);
+
+                      const products = Array.isArray(data.products) ? data.products : [];
+                      products.forEach((item) => {
+                        trackEvent({ eventType: 'impression', productId: item._id, category: item.category, metadata: { source: 'chatbot_debug' } });
+                      });
+                    }
+                  } catch (error) {
+                    setMessages((prev) => [...prev, createMessage('assistant', 'Lỗi mạng khi gọi debug greeting')]);
+                  } finally {
+                    setPending(false);
+                  }
+                }}
+                title="Debug VIP"
+              >
+                VIP
+              </button>
+            </div>
+
             <button type="button" onClick={() => setOpen(false)} aria-label="Dong chatbot">
               ×
             </button>
@@ -514,7 +633,7 @@ function ChatbotWidget() {
                                 });
                               }}
                             >
-                              Them vao gio
+                              Thêm vào giỏ
                             </button>
                           </article>
                         ))}
