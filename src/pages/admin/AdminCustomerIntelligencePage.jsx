@@ -64,6 +64,8 @@ function AdminCustomerIntelligencePage() {
   const [selectedSegment, setSelectedSegment] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [editingEllipsis, setEditingEllipsis] = useState(null); // 'left' or 'right' or null
+  const [inputPageValue, setInputPageValue] = useState("");
 
   const fetchOverview = useCallback(async () => {
     try {
@@ -257,9 +259,11 @@ function AdminCustomerIntelligencePage() {
     const maxVisible = 5;
 
     if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push({ type: "page", value: i });
+      }
     } else {
-      pages.push(1);
+      pages.push({ type: "page", value: 1 });
 
       let start = Math.max(2, activePage - 1);
       let end = Math.min(totalPages - 1, activePage + 1);
@@ -271,18 +275,18 @@ function AdminCustomerIntelligencePage() {
       }
 
       if (start > 2) {
-        pages.push("...");
+        pages.push({ type: "ellipsis", id: "left" });
       }
 
       for (let i = start; i <= end; i++) {
-        pages.push(i);
+        pages.push({ type: "page", value: i });
       }
 
       if (end < totalPages - 1) {
-        pages.push("...");
+        pages.push({ type: "ellipsis", id: "right" });
       }
 
-      pages.push(totalPages);
+      pages.push({ type: "page", value: totalPages });
     }
     return pages;
   };
@@ -740,23 +744,78 @@ function AdminCustomerIntelligencePage() {
                     </button>
 
                     {/* Page Numbers */}
-                    {getPageNumbers().map((page, index) => {
-                      if (page === "...") {
+                    {getPageNumbers().map((item, index) => {
+                      if (item.type === "ellipsis") {
+                        const isEditing = editingEllipsis === item.id;
+                        if (isEditing) {
+                          return (
+                            <input
+                              key={`ellipsis-input-${item.id}-${index}`}
+                              type="number"
+                              min="1"
+                              max={totalPages}
+                              value={inputPageValue}
+                              onChange={(e) => setInputPageValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  const pageNum = parseInt(inputPageValue, 10);
+                                  if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+                                    setCurrentPage(pageNum);
+                                  }
+                                  setEditingEllipsis(null);
+                                } else if (e.key === "Escape") {
+                                  setEditingEllipsis(null);
+                                }
+                              }}
+                              onBlur={() => {
+                                const pageNum = parseInt(inputPageValue, 10);
+                                if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+                                  setCurrentPage(pageNum);
+                                }
+                                setEditingEllipsis(null);
+                              }}
+                              autoFocus
+                              className="intel-pagination-btn"
+                              style={{
+                                width: "50px",
+                                height: "36px",
+                                padding: "0",
+                                textAlign: "center",
+                                border: "1px solid var(--primary-color, #4f46e5)",
+                                background: "#fff",
+                                color: "#1d1d1f",
+                                outline: "none",
+                                borderRadius: "8px"
+                              }}
+                            />
+                          );
+                        }
+
                         return (
-                          <span key={`dots-${index}`} className="intel-pagination-ellipsis">
+                          <button
+                            key={`dots-${item.id}-${index}`}
+                            type="button"
+                            className="intel-pagination-btn"
+                            onClick={() => {
+                              setEditingEllipsis(item.id);
+                              setInputPageValue("");
+                            }}
+                            title="Nhấp để nhập trang trực tiếp"
+                            style={{ cursor: "pointer", color: "#94a3b8", fontWeight: "bold" }}
+                          >
                             ...
-                          </span>
+                          </button>
                         );
                       }
                       return (
                         <button
-                          key={page}
+                          key={`page-${item.value}`}
                           className={`intel-pagination-btn ${
-                            activePage === page ? "intel-pagination-btn--active" : ""
+                            activePage === item.value ? "intel-pagination-btn--active" : ""
                           }`}
-                          onClick={() => setCurrentPage(page)}
+                          onClick={() => setCurrentPage(item.value)}
                         >
-                          {page}
+                          {item.value}
                         </button>
                       );
                     })}

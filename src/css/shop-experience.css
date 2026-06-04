@@ -945,3 +945,15 @@
   color: var(--shopx-muted);
   font-weight: 500;
 }
+
+.shopx-pagination__ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  color: var(--shopx-muted);
+  font-weight: 700;
+  font-size: 15px;
+}
+

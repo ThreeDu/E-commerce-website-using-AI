@@ -51,9 +51,9 @@ _potential_loaded = potential_scorer.load()
 _clv_loaded = clv_predictor.load()
 
 if _churn_loaded and _potential_loaded and _clv_loaded:
-    print("✓ Loaded saved models from disk (Churn, Potential, CLV).")
+    print("[OK] Loaded saved models from disk (Churn, Potential, CLV).")
 else:
-    print("⚠ No saved models found or incomplete models. Run training first (POST /api/intelligence/train).")
+    print("[WARN] No saved models found or incomplete models. Run training first (POST /api/intelligence/train).")
 
 
 

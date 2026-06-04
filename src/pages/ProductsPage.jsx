@@ -34,6 +34,8 @@ function ProductsPage() {
   const [categories, setCategories] = useState([{ _id: "all", name: "Tất cả", path: "Tất cả" }]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [editingEllipsis, setEditingEllipsis] = useState(null); // 'left' or 'right' or null
+  const [inputPageValue, setInputPageValue] = useState("");
   const ITEMS_PER_PAGE = 12;
 
   const productNameById = useMemo(
@@ -318,6 +320,41 @@ function ProductsPage() {
   }, [searchTerm, selectedCategoryScope, maxPrice, allProducts, sortBy]);
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 7;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push({ type: "page", value: i });
+      }
+    } else {
+      if (currentPage <= 4) {
+        for (let i = 1; i <= 5; i++) {
+          pages.push({ type: "page", value: i });
+        }
+        pages.push({ type: "ellipsis", id: "right" });
+        pages.push({ type: "page", value: totalPages });
+      } else if (currentPage >= totalPages - 3) {
+        pages.push({ type: "page", value: 1 });
+        pages.push({ type: "ellipsis", id: "left" });
+        for (let i = totalPages - 4; i <= totalPages; i++) {
+          pages.push({ type: "page", value: i });
+        }
+      } else {
+        pages.push({ type: "page", value: 1 });
+        pages.push({ type: "ellipsis", id: "left" });
+        pages.push({ type: "page", value: currentPage - 1 });
+        pages.push({ type: "page", value: currentPage });
+        pages.push({ type: "page", value: currentPage + 1 });
+        pages.push({ type: "ellipsis", id: "right" });
+        pages.push({ type: "page", value: totalPages });
+      }
+    }
+    return pages;
+  };
+
   const currentProducts = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
@@ -572,19 +609,83 @@ function ProductsPage() {
                     >
                       Trước
                     </button>
-                    {[...Array(totalPages)].map((_, i) => {
-                      const pageNum = i + 1;
+                    {getPageNumbers().map((item, index) => {
+                      if (item.type === "ellipsis") {
+                        const isEditing = editingEllipsis === item.id;
+                        if (isEditing) {
+                          return (
+                            <input
+                              key={`ellipsis-input-${item.id}-${index}`}
+                              type="number"
+                              min="1"
+                              max={totalPages}
+                              value={inputPageValue}
+                              onChange={(e) => setInputPageValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  const pageNum = parseInt(inputPageValue, 10);
+                                  if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+                                    setCurrentPage(pageNum);
+                                    window.scrollTo({ top: 0, behavior: "smooth" });
+                                  }
+                                  setEditingEllipsis(null);
+                                } else if (e.key === "Escape") {
+                                  setEditingEllipsis(null);
+                                }
+                              }}
+                              onBlur={() => {
+                                const pageNum = parseInt(inputPageValue, 10);
+                                if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+                                  setCurrentPage(pageNum);
+                                  window.scrollTo({ top: 0, behavior: "smooth" });
+                                }
+                                setEditingEllipsis(null);
+                              }}
+                              autoFocus
+                              className="shopx-pagination__btn"
+                              style={{
+                                width: "60px",
+                                height: "40px",
+                                padding: "0",
+                                textAlign: "center",
+                                border: "1px solid var(--shopx-primary)",
+                                background: "#fff",
+                                color: "var(--shopx-ink)",
+                                outline: "none",
+                                borderRadius: "var(--shopx-radius-md)"
+                              }}
+                            />
+                          );
+                        }
+
+                        return (
+                          <button
+                            key={`dots-${item.id}-${index}`}
+                            type="button"
+                            className="shopx-pagination__btn"
+                            onClick={() => {
+                              setEditingEllipsis(item.id);
+                              setInputPageValue("");
+                            }}
+                            title="Nhấp để nhập trang trực tiếp"
+                            style={{ cursor: "pointer", color: "var(--shopx-muted)", fontWeight: "bold" }}
+                          >
+                            ...
+                          </button>
+                        );
+                      }
+
                       return (
                         <button
-                          key={pageNum}
+                          key={`page-${item.value}`}
                           type="button"
-                          className={`shopx-pagination__btn ${currentPage === pageNum ? "shopx-pagination__btn--active" : ""}`}
+                          className={`shopx-pagination__btn ${currentPage === item.value ? "shopx-pagination__btn--active" : ""}`}
                           onClick={() => {
-                            setCurrentPage(pageNum);
+                            setCurrentPage(item.value);
                             window.scrollTo({ top: 0, behavior: "smooth" });
                           }}
                         >
-                          {pageNum}
+                          {item.value}
                         </button>
                       );
                     })}
@@ -599,9 +700,6 @@ function ProductsPage() {
                     >
                       Sau
                     </button>
-                    <span className="shopx-pagination__info">
-                      Trang {currentPage} / {totalPages} (Tổng {filteredProducts.length} sản phẩm)
-                    </span>
                   </div>
                 )}
               </>

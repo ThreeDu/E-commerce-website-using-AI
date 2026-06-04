@@ -216,11 +216,23 @@ function UserHeader() {
                 aria-haspopup="menu"
                 onClick={() => setIsAccountMenuOpen((prev) => !prev)}
               >
-                <span className="header-layered-avatar" aria-hidden="true">
-                  <span className="layer layer-back" />
-                  <span className="layer layer-middle" />
-                  <span className="layer layer-front">{String(auth?.user?.name || "T").slice(0, 1).toUpperCase()}</span>
-                </span>
+                {auth?.user?.avatar ? (
+                  <img
+                    src={auth.user.avatar}
+                    alt={auth.user.name || "Avatar"}
+                    className="header-avatar-img"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = "/placeholder-avatar.svg";
+                    }}
+                  />
+                ) : (
+                  <span className="header-layered-avatar" aria-hidden="true">
+                    <span className="layer layer-back" />
+                    <span className="layer layer-middle" />
+                    <span className="layer layer-front">{String(auth?.user?.name || "T").slice(0, 1).toUpperCase()}</span>
+                  </span>
+                )}
                 <span className="account-label">Tài khoản</span>
                 <span className="caret">▾</span>
               </button>

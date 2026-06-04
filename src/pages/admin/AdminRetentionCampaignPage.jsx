@@ -13,6 +13,10 @@ import {
   faExclamationTriangle,
   faUserTag,
   faClock,
+  faChevronLeft,
+  faChevronRight,
+  faAngleDoubleLeft,
+  faAngleDoubleRight,
 } from "@fortawesome/free-solid-svg-icons";
 import "../../css/admin/retention-campaign.css";
 
@@ -40,6 +44,52 @@ function AdminRetentionCampaignPage() {
   // Data states
   const [campaignResult, setCampaignResult] = useState(null);
   const [history, setHistory] = useState([]);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [editingEllipsis, setEditingEllipsis] = useState(null); // 'left' or 'right' or null
+  const [inputPageValue, setInputPageValue] = useState("");
+
+  const totalPages = Math.ceil(history.length / itemsPerPage) || 1;
+  const activePage = Math.min(currentPage, totalPages);
+  const indexOfLastItem = activePage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentHistory = history.slice(indexOfFirstItem, indexOfLastItem);
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 7;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push({ type: "page", value: i });
+      }
+    } else {
+      if (activePage <= 4) {
+        for (let i = 1; i <= 5; i++) {
+          pages.push({ type: "page", value: i });
+        }
+        pages.push({ type: "ellipsis", id: "right" });
+        pages.push({ type: "page", value: totalPages });
+      } else if (activePage >= totalPages - 3) {
+        pages.push({ type: "page", value: 1 });
+        pages.push({ type: "ellipsis", id: "left" });
+        for (let i = totalPages - 4; i <= totalPages; i++) {
+          pages.push({ type: "page", value: i });
+        }
+      } else {
+        pages.push({ type: "page", value: 1 });
+        pages.push({ type: "ellipsis", id: "left" });
+        pages.push({ type: "page", value: activePage - 1 });
+        pages.push({ type: "page", value: activePage });
+        pages.push({ type: "page", value: activePage + 1 });
+        pages.push({ type: "ellipsis", id: "right" });
+        pages.push({ type: "page", value: totalPages });
+      }
+    }
+    return pages;
+  };
 
   // Fetch History
   const fetchHistory = useCallback(async () => {
@@ -90,6 +140,7 @@ function AdminRetentionCampaignPage() {
         );
         setCampaignResult(data);
         await fetchHistory();
+        setCurrentPage(1);
       } else {
         notifyError(data.message || "Chạy chiến dịch can thiệp thất bại.", {
           title: "Can thiệp Churn AI",
@@ -132,6 +183,7 @@ function AdminRetentionCampaignPage() {
         );
         setCampaignResult(data);
         await fetchHistory();
+        setCurrentPage(1);
       } else {
         notifyError(data.message || "Gửi nhắc nhở giỏ hàng thất bại.", {
           title: "Khôi phục giỏ hàng",
@@ -424,7 +476,7 @@ function AdminRetentionCampaignPage() {
                 </tr>
               </thead>
               <tbody>
-                {history.map((item) => (
+                {currentHistory.map((item) => (
                   <tr key={item._id}>
                     <td style={{ whiteSpace: "nowrap" }}>
                       <FontAwesomeIcon icon={faClock} style={{ marginRight: "6px", color: "#94a3b8" }} />
@@ -467,6 +519,152 @@ function AdminRetentionCampaignPage() {
                 ) : null}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {totalPages > 0 && history.length > 0 && (
+              <div className="retention-pagination-container">
+                <div className="retention-pagination-info">
+                  Hiển thị {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, history.length)} trong tổng số {history.length} bản ghi
+                </div>
+
+                <div className="retention-pagination-right">
+                  {/* Page Size Selector */}
+                  <div className="retention-page-size-selector">
+                    <span>Số hàng:</span>
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        setItemsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+
+                  {/* Page Navigation Buttons */}
+                  <div className="retention-pagination-pages">
+                    {/* First Page */}
+                    <button
+                      className="retention-pagination-btn"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={activePage === 1}
+                      title="Trang đầu"
+                    >
+                      <FontAwesomeIcon icon={faAngleDoubleLeft} />
+                    </button>
+
+                    {/* Previous Page */}
+                    <button
+                      className="retention-pagination-btn"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={activePage === 1}
+                      title="Trang trước"
+                    >
+                      <FontAwesomeIcon icon={faChevronLeft} />
+                    </button>
+
+                    {/* Page Numbers */}
+                    {getPageNumbers().map((item, index) => {
+                      if (item.type === "ellipsis") {
+                        if (editingEllipsis === item.id) {
+                          return (
+                            <input
+                              key={`ellipsis-input-${item.id}-${index}`}
+                              type="number"
+                              min="1"
+                              max={totalPages}
+                              value={inputPageValue}
+                              onChange={(e) => setInputPageValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  const pageNum = parseInt(inputPageValue, 10);
+                                  if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+                                    setCurrentPage(pageNum);
+                                  }
+                                  setEditingEllipsis(null);
+                                } else if (e.key === "Escape") {
+                                  setEditingEllipsis(null);
+                                }
+                              }}
+                              onBlur={() => {
+                                const pageNum = parseInt(inputPageValue, 10);
+                                if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+                                  setCurrentPage(pageNum);
+                                }
+                                setEditingEllipsis(null);
+                              }}
+                              autoFocus
+                              className="retention-pagination-btn"
+                              style={{
+                                width: "50px",
+                                height: "36px",
+                                padding: "0",
+                                textAlign: "center",
+                                border: "1px solid var(--retention-primary, #6366f1)",
+                                background: "#fff",
+                                color: "#1d1d1f",
+                                outline: "none",
+                                borderRadius: "8px"
+                              }}
+                            />
+                          );
+                        }
+                        return (
+                          <button
+                            key={`dots-${index}`}
+                            type="button"
+                            className="retention-pagination-btn"
+                            onClick={() => {
+                              setEditingEllipsis(item.id);
+                              setInputPageValue("");
+                            }}
+                            title="Nhấp để nhập số trang mong muốn"
+                            style={{ cursor: "pointer", color: "#94a3b8", fontWeight: "bold" }}
+                          >
+                            ...
+                          </button>
+                        );
+                      }
+                      return (
+                        <button
+                          key={item.value}
+                          className={`retention-pagination-btn ${
+                            activePage === item.value ? "retention-pagination-btn--active" : ""
+                          }`}
+                          onClick={() => setCurrentPage(item.value)}
+                        >
+                          {item.value}
+                        </button>
+                      );
+                    })}
+
+                    {/* Next Page */}
+                    <button
+                      className="retention-pagination-btn"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={activePage === totalPages}
+                      title="Trang sau"
+                    >
+                      <FontAwesomeIcon icon={faChevronRight} />
+                    </button>
+
+                    {/* Last Page */}
+                    <button
+                      className="retention-pagination-btn"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={activePage === totalPages}
+                      title="Trang cuối"
+                    >
+                      <FontAwesomeIcon icon={faAngleDoubleRight} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
