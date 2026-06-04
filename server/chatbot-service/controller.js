@@ -3,6 +3,11 @@ const mongoose = require("mongoose");
 const { processChatMessage, trackChatbotEvent, debugGreeting } = require("./service");
 const { getTokenFromHeader } = require("../routes/helpers/authHelpers");
 
+function isDebugGreetingEnabled() {
+  const value = String(process.env.CHATBOT_DEBUG_GREETING_ENABLED || "").trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
+
 function getOptionalUserId(req) {
   const token = getTokenFromHeader(req);
   if (!token) {
@@ -83,6 +88,10 @@ const trackEvent = async (req, res) => {
 
 const debugGreetingController = async (req, res) => {
   try {
+    if (!isDebugGreetingEnabled()) {
+      return res.status(404).json({ message: "Debug greeting is disabled." });
+    }
+
     const mode = String(req.body?.mode || req.query?.mode || "anonymous").trim().toLowerCase();
     const sessionId = String(req.body?.sessionId || "").trim() || null;
 

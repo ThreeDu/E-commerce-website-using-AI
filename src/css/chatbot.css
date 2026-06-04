@@ -539,29 +539,7 @@
   display: block;
 }
 
-.chatbot-debug-mini-group {
-  display: inline-flex;
-  gap: 6px;
-  margin-left: 6px;
-  align-items: center;
-}
 
-.chatbot-debug-mini {
-  border: 1px solid rgba(15,49,79,0.08);
-  background: #ffffff;
-  color: #0f314f;
-  padding: 4px 6px;
-  font-size: 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  min-width: 40px;
-}
-
-.chatbot-debug-mini:hover {
-  background: #f1f7ff;
-  box-shadow: 0 6px 12px rgba(15,49,79,0.08);
-  transform: translateY(-1px);
-}
 
 /* Thin scrollbar for messages */
 .chatbot-messages::-webkit-scrollbar {
