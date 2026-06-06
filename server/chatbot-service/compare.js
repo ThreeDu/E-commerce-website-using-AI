@@ -147,6 +147,67 @@ function buildScreenTechRegex(value) {
   return new RegExp(escapeRegExp(value), "i");
 }
 
+function extractChip(rawText) {
+  const chipRegex = /(?:chip\s+xử\s+lý|chip\s+vi\s+xử\s+lý|vi\s+xử\s+lý|vi\s+xu\s+ly|chipset|chip|cpu)\s*:?\s*([^.,\n()]+)/i;
+  const match = rawText.match(chipRegex);
+  
+  if (match) {
+    let chip = match[1].trim();
+    chip = chip.split(/\(|của|cua|công|cong|mạnh|manh|siêu|sieu|mang|giúp|giup|tối|toi|cho|được|duoc|\n|\.|\,/i)[0].trim();
+    if (chip.length > 1) {
+      return chip;
+    }
+  }
+  
+  const knownChipMatch = rawText.match(/\b(A\d{2}\s*Pro|A\d{2}\s*Bionic|A\d{2}|Apple\s*M\d\s*(?:Pro|Max|Ultra)?|Snapdragon\s*\d+\s*Gen\s*\d+|Snapdragon\s*\d+|Dimensity\s*\d+|Exynos\s*\d+|Intel\s*Core\s*i\d|Ryzen\s*\d)\b/i);
+  if (knownChipMatch) {
+    return knownChipMatch[1].trim();
+  }
+  
+  return "Theo hãng công bố";
+}
+
+function extractCamera(rawText) {
+  const rearRegex = /(?:camera\s+sau|camera\s+chinh|camera\s+chính|cụm\s+\d+\s+camera|camera\s+sau\s+chính|camera\s+sau\s+phụ)\s*:?\s*([^.\n]+)/i;
+  const frontRegex = /(?:camera\s+truoc|camera\s+trước|camera\s+selfie|selfie)\s*:?\s*([^.\n]+)/i;
+  
+  const rearMatch = rawText.match(rearRegex);
+  const frontMatch = rawText.match(frontRegex);
+  
+  let rearMp = [];
+  let frontMp = [];
+  
+  if (rearMatch) {
+    rearMp = Array.from(rearMatch[1].matchAll(/\b(\d{1,3})\s*(?:MP|megapixel)\b/gi)).map(m => `${m[1]}MP`);
+  }
+  if (frontMatch) {
+    frontMp = Array.from(frontMatch[1].matchAll(/\b(\d{1,3})\s*(?:MP|megapixel)\b/gi)).map(m => `${m[1]}MP`);
+  }
+  
+  if (rearMp.length === 0 && frontMp.length === 0) {
+    const globalMp = Array.from(rawText.matchAll(/\b(\d{1,3})\s*(?:MP|megapixel)\b/gi)).map(m => `${m[1]}MP`);
+    if (globalMp.length > 0) {
+      return globalMp.join(" + ");
+    }
+    return "Theo hãng công bố";
+  }
+  
+  const parts = [];
+  if (rearMp.length > 0) {
+    parts.push(`Sau: ${rearMp.join(" + ")}`);
+  } else if (rearMatch) {
+    parts.push(`Sau: ${rearMatch[1].split(/[(),:]/)[0].trim()}`);
+  }
+  
+  if (frontMp.length > 0) {
+    parts.push(`Trước: ${frontMp.join(" + ")}`);
+  } else if (frontMatch) {
+    parts.push(`Trước: ${frontMatch[1].split(/[(),:]/)[0].trim()}`);
+  }
+  
+  return parts.join(" | ");
+}
+
 function extractComparisonSpecSummary(product) {
   const rawText = [product?.name, product?.variant, product?.model, product?.series, product?.description]
     .filter(Boolean)
@@ -195,25 +256,45 @@ function extractComparisonSpecSummary(product) {
 
   return {
     finalPrice: formatVnd(priceValue),
+    chip: formatFriendlyValue(extractChip(rawText), "Theo hãng công bố"),
     ram: formatFriendlyValue(ram, "Theo hãng công bố"),
     rom: formatFriendlyValue(rom, "Đang cập nhật"),
     screen: formatFriendlyValue(screenParts.length > 0 ? screenParts.join(" ") : "", "Đang cập nhật"),
+    camera: formatFriendlyValue(extractCamera(rawText), "Theo hãng công bố"),
     battery: formatFriendlyValue(batteryMatch ? `${Number(batteryMatch[1])} mAh` : "", "Theo hãng công bố"),
   };
 }
 
 function buildCompareMarkdownTable(products) {
   const rows = Array.isArray(products) ? products : [];
-  const lines = [
-    "| Sản phẩm | Giá bán | RAM | ROM | Màn hình | Pin |",
-    "| --- | --- | --- | --- | --- | --- |",
+  if (rows.length === 0) return "";
+
+  const headers = ["| Đặc tính", ...rows.map(p => String(p?.name || "-").replace(/\|/g, "\\|"))];
+  const alignments = ["| ---", ...rows.map(() => "---")];
+
+  const specRows = [
+    { label: "**Giá bán**", key: "finalPrice" },
+    { label: "**Chip**", key: "chip" },
+    { label: "**RAM**", key: "ram" },
+    { label: "**ROM**", key: "rom" },
+    { label: "**Màn hình**", key: "screen" },
+    { label: "**Camera**", key: "camera" },
+    { label: "**Pin**", key: "battery" }
   ];
 
-  rows.forEach((product) => {
-    const summary = extractComparisonSpecSummary(product);
-    lines.push(
-      `| ${String(product?.name || "-").replace(/\|/g, "\\|")} | ${summary.finalPrice} | ${summary.ram} | ${summary.rom} | ${summary.screen} | ${summary.battery} |`
-    );
+  const summaries = rows.map(p => extractComparisonSpecSummary(p));
+
+  const lines = [
+    headers.join(" | ") + " |",
+    alignments.join(" | ") + " |"
+  ];
+
+  specRows.forEach(spec => {
+    const cells = [spec.label];
+    summaries.forEach(summary => {
+      cells.push(summary[spec.key] || "-");
+    });
+    lines.push("| " + cells.join(" | ") + " |");
   });
 
   return lines.join("\n");
@@ -251,7 +332,7 @@ function buildCompareFallbackComment(product1, product2) {
 }
 
 function buildCompareReply(product1, product2) {
-  return `${buildCompareMarkdownTable([product1, product2])}\n\n${buildCompareFallbackComment(product1, product2)}`;
+  return buildCompareMarkdownTable([product1, product2]);
 }
 
 function parseCompareIntentFromText(message, history = []) {
@@ -697,17 +778,16 @@ async function maybeGenerateCompareReply({ message, product1, product2, history 
     product_2: product2,
     recentHistory: history ? history.slice(-4) : [],
     instructions:
-      "Chỉ dùng dữ liệu JSON đã cung cấp. Không bịa spec thiếu. Trả về đúng một bảng Markdown với các cột: Sản phẩm, finalPrice, RAM, ROM, Screen, Battery. Dùng '-' nếu không có dữ liệu. Sau bảng, viết 1-2 câu nhận xét ngắn gọn về nên chọn sản phẩm nào theo nhu cầu.",
+      "Chỉ dùng dữ liệu JSON đã cung cấp. Không tự bịa thông số. Trả về đúng một bảng Markdown so sánh theo chiều dọc: cột 1 là 'Đặc tính', các cột tiếp theo là tên của các sản phẩm. Các dòng hiển thị đặc tính gồm: Giá bán, Chip, RAM, ROM, Màn hình, Camera, Pin. Dùng '-' nếu không có dữ liệu. Tuyệt đối KHÔNG viết thêm bất kỳ đoạn mô tả, nhận xét hay kết luận nào phía dưới bảng.",
   };
 
   const systemPrompt = [
-    "Bạn là trợ lý so sánh sản phẩm thương mại điện tử.",
-    "Luôn ưu tiên tính chính xác hơn độ văn vẻ.",
-    "Không được suy đoán thông số ngoài dữ liệu được cung cấp.",
-    "Nếu trường nào thiếu, hãy hiển thị '-'.",
-    "Không dùng bullet list; chỉ xuất Markdown table và 1-2 câu kết luận ngắn.",
-    "Dựa đúng vào bảng đối chiếu, hãy nêu rõ bên nào rẻ hơn, chênh lệch bao nhiêu tiền, và điểm khác biệt đáng chú ý nhất ở RAM, ROM, màn hình hoặc pin.",
-    "Nếu một thông số không có trong dữ liệu, đừng tự bịa; chỉ nhận xét dựa trên các cột đang hiển thị.",
+    "Bạn là trợ lý so sánh sản phẩm thương mại điện tử chuyên nghiệp.",
+    "Nhiệm vụ duy nhất của bạn là xuất ra một bảng Markdown so sánh các sản phẩm theo chiều dọc.",
+    "Cột đầu tiên phải có tiêu đề là 'Đặc tính'. Các cột tiếp theo lần lượt là tên của từng sản phẩm được so sánh.",
+    "Các dòng (tiêu đề ở cột 'Đặc tính') bắt buộc phải gồm các thông tin: Giá bán, Chip, RAM, ROM, Màn hình, Camera, Pin.",
+    "Hãy điền thông số chính xác từ dữ liệu JSON được cung cấp vào các cột sản phẩm tương ứng. Dùng '-' nếu không có thông tin.",
+    "Tuyệt đối KHÔNG được viết thêm bất kỳ văn bản, lời thoại, mô tả, nhận xét, so sánh hay kết luận nào ở phía dưới hoặc xung quanh bảng. Chỉ trả về duy nhất bảng Markdown.",
   ].join(" ");
 
   try {
@@ -785,7 +865,120 @@ async function maybeGenerateCompareReply({ message, product1, product2, history 
   }
 }
 
+async function handleCompareIntent({ message, session, historyContext }) {
+  const MAX_HISTORY = 10;
+
+  // Step 1: Parse which two products the user wants to compare
+  let parsed = parseCompareIntentFromText(message, historyContext);
+  if (!parsed) {
+    parsed = await maybeParseCompareIntentWithLlm(message, historyContext);
+  }
+
+  if (!parsed || !parsed.product_1?.name || !parsed.product_2?.name) {
+    return null;
+  }
+
+  // Step 2: Find the best matching product in DB for each side
+  const [product1, product2] = await Promise.all([
+    findBestCompareProduct(parsed.product_1.name, {
+      brand: parsed.product_1.brand || "",
+    }),
+    findBestCompareProduct(parsed.product_2.name, {
+      brand: parsed.product_2.brand || "",
+    }),
+  ]);
+
+  if (!product1 || !product2) {
+    const missing = [];
+    if (!product1) missing.push(parsed.product_1.name);
+    if (!product2) missing.push(parsed.product_2.name);
+
+    const replyText = `Mình chưa tìm thấy sản phẩm "${missing.join('" và "')}" trong hệ thống. Bạn thử nhập lại tên chính xác hơn nhé.`;
+
+    session.history.push({ role: "user", content: message, at: new Date().toISOString() });
+    session.history.push({ role: "assistant", content: replyText, products: [], at: new Date().toISOString() });
+    session.history = session.history.slice(-MAX_HISTORY);
+    session.updatedAt = Date.now();
+
+    return {
+      sessionId: session.id,
+      intent: "compare",
+      reply: replyText,
+      replyStructured: {
+        title: "Không tìm thấy sản phẩm để so sánh",
+        followUp: "Bạn thử nhập lại tên chính xác hơn nhé.",
+        items: [],
+      },
+      products: [],
+      quickReplies: ["So sánh iPhone vs Samsung", "Gợi ý điện thoại", "Laptop bán chạy"],
+      metadata: { llmUsed: false, productCount: 0, compare: true },
+    };
+  }
+
+  // Step 3: Build compare reply — try LLM first, fall back to rule-based
+  const spec1 = extractComparisonSpecSummary(product1);
+  const spec2 = extractComparisonSpecSummary(product2);
+
+  let llmReplyText = null;
+  try {
+    llmReplyText = await maybeGenerateCompareReply({
+      message,
+      product1: { ...product1, specs: spec1 },
+      product2: { ...product2, specs: spec2 },
+      history: historyContext,
+    });
+  } catch (_) {
+    llmReplyText = null;
+  }
+
+  const replyText = llmReplyText || buildCompareReply(product1, product2);
+
+  // Step 4: Push to session history
+  const compareProducts = [product1, product2];
+  session.history.push({ role: "user", content: message, at: new Date().toISOString() });
+  session.history.push({
+    role: "assistant",
+    content: replyText,
+    products: compareProducts.map((item) => ({
+      _id: item._id,
+      name: item.name,
+      category: item.category,
+      price: getEffectivePrice(item),
+      brand: item.brand,
+      model: item.model,
+      variant: item.variant,
+      stock: item.stock,
+    })),
+    at: new Date().toISOString(),
+  });
+  session.history = session.history.slice(-MAX_HISTORY);
+  session.updatedAt = Date.now();
+
+  // Step 5: Return structured response
+  return {
+    sessionId: session.id,
+    intent: "compare",
+    reply: replyText,
+    replyStructured: {
+      title: `So sánh ${product1.name} và ${product2.name}`,
+      followUp: "Bạn muốn xem chi tiết sản phẩm nào hoặc cần so sánh thêm?",
+      items: compareProducts.map((item) => ({
+        name: item.name,
+        price: formatVnd(getEffectivePrice(item)),
+      })),
+    },
+    products: compareProducts,
+    quickReplies: [`Chi tiết ${product1.name}`, `Chi tiết ${product2.name}`, "So sánh khác"],
+    metadata: {
+      llmUsed: Boolean(llmReplyText),
+      productCount: 2,
+      compare: true,
+    },
+  };
+}
+
 module.exports = {
+  handleCompareIntent,
   parseCompareIntentFromText,
   maybeParseCompareIntentWithLlm,
   buildCompareProductFilter,

@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const ChatbotEvent = require("./models/ChatbotEvent");
@@ -342,7 +343,7 @@ async function fetchAutomatedMlOffers(userId, limit = 4) {
     const seenIds = new Set(products.map((item) => String(item._id)));
     const paddingFilter = {
       ...fallbackFilter,
-      ...(seenIds.size > 0 ? { _id: { $nin: [...seenIds].map((item) => item).filter(Boolean) } } : {}),
+      ...(seenIds.size > 0 ? { _id: { $nin: [...seenIds].map((item) => mongoose.Types.ObjectId.isValid(item) ? new mongoose.Types.ObjectId(item) : null).filter(Boolean) } } : {}),
     };
     const padding = await queryProducts(paddingFilter, { averageRating: -1, totalViews: -1, totalPurchases: -1 });
 
