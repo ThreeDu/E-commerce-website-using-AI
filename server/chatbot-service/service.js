@@ -294,9 +294,9 @@ function buildRuleReply(intent, recommendedProducts, options = {}) {
 
       if (vip) {
         return {
-          title: "Xin chào thành viên cao cấp",
+          title: "Chào bạn, mình là AI Shopping Assistant",
           followUp:
-            "Rất vinh hạnh được phục vụ bạn — mình đã tuyển chọn sẵn những sản phẩm Flagship hàng đầu dành riêng cho bạn ở phía dưới, mời bạn xem qua.",
+            "Dựa trên sở thích của bạn, mình đã chuẩn bị sẵn các sản phẩm Flagship phù hợp với phong cách của bạn — xem ngay bên dưới nhé",
           items: [],
         };
       }

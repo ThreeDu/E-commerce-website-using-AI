@@ -8,7 +8,7 @@ import "../css/chatbot.css";
 
 const SESSION_STORAGE_KEY = "chatbot_session_id";
 const BEHAVIOR_STORAGE_KEY = "chatbot_behavior";
-const AUTO_GREETING_PREFIX = "chatbot_auto_greeting_sent";
+
 
 function normalizeSearchText(value) {
   return String(value || "")
@@ -169,13 +169,7 @@ function writeBehavior(nextBehavior) {
   localStorage.setItem(BEHAVIOR_STORAGE_KEY, JSON.stringify(nextBehavior));
 }
 
-function hasAutoGreetingBeenSent(sessionId) {
-  return localStorage.getItem(`${AUTO_GREETING_PREFIX}:${sessionId}`) === "1";
-}
 
-function markAutoGreetingAsSent(sessionId) {
-  localStorage.setItem(`${AUTO_GREETING_PREFIX}:${sessionId}`, "1");
-}
 
 function ChatbotWidget() {
   const location = useLocation();
@@ -318,11 +312,17 @@ function ChatbotWidget() {
         content: item.text,
         products: Array.isArray(item.products) ? item.products : [],
       }));
+      const headers = {
+          "Content-Type": "application/json",
+      };
+
+      if (auth?.token) {
+        headers.Authorization = `Bearer ${auth.token}`;
+      }
+
       const response = await fetch("/api/chatbot/message", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           message: text,
           sessionId,
@@ -433,11 +433,6 @@ function ChatbotWidget() {
       return;
     }
 
-    if (hasAutoGreetingBeenSent(sessionId)) {
-      return;
-    }
-
-    markAutoGreetingAsSent(sessionId);
     void submitChatMessage("Xin chào", { showUserMessage: false });
   }, [open, isAdminArea, sessionId, messages.length, pending]);
 
@@ -464,22 +459,7 @@ function ChatbotWidget() {
                 <p>Gợi ý nhanh theo nhu cầu của bạn</p>
               </div>
             </div>
-            <button
-              type="button"
-              className="chatbot-debug-btn"
-              onClick={() => {
-                void submitChatMessage("Xin chào", { showUserMessage: false });
-              }}
-              aria-label="Gọi lại chào"
-              title="Gọi lại chào"
-            >
-              <svg viewBox="0 0 24 24" width="16" height="16" focusable="false" aria-hidden="true">
-                <path
-                  fill="currentColor"
-                  d="M12 6a6 6 0 0 1 5.2 3h-2.1l3.1 3.1 3.1-3.1h-2A8 8 0 1 0 20 12h-2a6 6 0 1 1-6-6z"
-                />
-              </svg>
-            </button>
+
 
             
 

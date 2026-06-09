@@ -506,38 +506,8 @@
   }
 }
 
-/* Debug button style (compact pill / icon) */
-.chatbot-debug-btn {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #e0f2ff, #f5f7ff);
-  color: #0f314f;
-  border: 1px solid rgba(15, 49, 79, 0.14);
-  box-shadow: 0 4px 10px rgba(15, 49, 79, 0.12);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
-}
 
-.chatbot-debug-btn:hover {
-  background: linear-gradient(135deg, #d7efff, #eef4ff);
-  box-shadow: 0 8px 16px rgba(15, 49, 79, 0.16);
-  transform: translateY(-1px) rotate(-5deg);
-}
 
-.chatbot-debug-btn:active {
-  transform: translateY(0) scale(0.96);
-}
-
-.chatbot-debug-btn svg {
-  width: 15px;
-  height: 15px;
-  display: block;
-}
 
 
 
