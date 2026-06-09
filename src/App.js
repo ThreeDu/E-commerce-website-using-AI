@@ -12,6 +12,7 @@ import LoadingFallback from "./components/common/LoadingFallback";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import { UserNotificationProvider } from "./context/UserNotificationContext";
 
 // ── Eager-loaded pages (critical path, always needed) ──
 import HomePage from "./pages/HomePage";
@@ -47,6 +48,11 @@ const AdminSystemLogsPage = lazy(() => import("./pages/admin/AdminSystemLogsPage
 const AdminNotificationsPage = lazy(() => import("./pages/admin/AdminNotificationsPage"));
 
 const AdminCustomerIntelligencePage = lazy(() => import("./pages/admin/AdminCustomerIntelligencePage"));
+const AdminRetentionCampaignPage = lazy(() => import("./pages/admin/AdminRetentionCampaignPage"));
+const AdminRewardTiersPage = lazy(() => import("./pages/admin/reward/AdminRewardTiersPage"));
+const AdminAddRewardTierPage = lazy(() => import("./pages/admin/reward/AdminAddRewardTierPage"));
+const AdminEditRewardTierPage = lazy(() => import("./pages/admin/reward/AdminEditRewardTierPage"));
+
 
 function GuestRoute({ children }) {
   const { auth } = useAuth();
@@ -67,7 +73,8 @@ function App() {
     <AuthProvider>
       <NotificationProvider>
         <CartProvider>
-          <BrowserRouter>
+          <UserNotificationProvider>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <StatusNotificationCenter />
             <div className="app-shell">
               <Header />
@@ -248,6 +255,15 @@ function App() {
                       }
                     />
                     <Route
+                      path="/admin/retention"
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminRetentionCampaignPage />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
                       path="/admin/orders/:id"
                       element={
                         <ProtectedRoute requiredRole="admin">
@@ -263,6 +279,30 @@ function App() {
                         </ProtectedRoute>
                       }
                     />
+                    <Route
+                      path="/admin/rewards"
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminRewardTiersPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/rewards/create"
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminAddRewardTierPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/rewards/edit/:id"
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminEditRewardTierPage />
+                        </ProtectedRoute>
+                      }
+                    />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Suspense>
@@ -271,6 +311,7 @@ function App() {
               <Footer />
             </div>
           </BrowserRouter>
+          </UserNotificationProvider>
         </CartProvider>
       </NotificationProvider>
     </AuthProvider>

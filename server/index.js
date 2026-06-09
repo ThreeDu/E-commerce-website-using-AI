@@ -7,6 +7,8 @@ const productRoutes = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
+const chatbotRoutes = require("./routes/chatbotRoutes");
+const pointRoutes = require("./routes/pointRoutes");
 const chatbotRoutes = require("./chatbot-service/routes");
 
 dotenv.config();
@@ -30,6 +32,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/chatbot", chatbotRoutes);
+app.use("/api/points", pointRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({ message: "API is running" });

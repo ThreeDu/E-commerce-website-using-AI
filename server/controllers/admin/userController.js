@@ -1,4 +1,6 @@
 const User = require("../../models/User");
+const PointHistory = require("../../models/PointHistory");
+const bcrypt = require("bcryptjs");
 const { logAdminAction } = require("../../utils/adminAuditLogger");
 
 const listUsers = async (req, res) => {
@@ -15,7 +17,7 @@ const listUsers = async (req, res) => {
     }
 
     const users = await User.find(query)
-      .select("_id name email role createdAt")
+      .select("_id name email role loyaltyPoints createdAt")
       .sort({ createdAt: -1 })
       .limit(search ? 20 : 100);
 
@@ -57,7 +59,7 @@ const updateUser = async (req, res) => {
       id,
       { name, email },
       { new: true, runValidators: true }
-    ).select("_id name email role createdAt");
+    ).select("_id name email role loyaltyPoints createdAt");
 
     logAdminAction({
       req,
@@ -124,8 +126,101 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const updateUserPoints = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { points, reason } = req.body;
+
+    if (points === undefined || points === null || isNaN(Number(points)) || Number(points) < 0) {
+      return res.status(400).json({ message: "Số điểm không hợp lệ (phải >= 0)." });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy người dùng." });
+    }
+
+    const oldPoints = user.loyaltyPoints || 0;
+    const newPoints = Number(points);
+    const diff = newPoints - oldPoints;
+
+    if (diff !== 0) {
+      user.loyaltyPoints = newPoints;
+      await user.save();
+
+      await PointHistory.create({
+        user: user._id,
+        amount: diff,
+        type: diff > 0 ? "earn" : "redeem",
+        reason: reason ? String(reason).trim() : "Quản trị viên điều chỉnh điểm tích lũy",
+        balanceAfter: newPoints,
+      });
+
+      logAdminAction({
+        req,
+        adminUser: req.adminUser,
+        action: "update_points",
+        resource: "user",
+        resourceId: user._id,
+        details: {
+          email: user.email,
+          oldPoints,
+          newPoints,
+          reason: reason || "Quản trị viên điều chỉnh điểm tích lũy",
+        },
+      });
+    }
+
+    return res.json({
+      message: "Cập nhật điểm thành công.",
+      loyaltyPoints: newPoints,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+const updateUserPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    if (!password || String(password).length < 6) {
+      return res.status(400).json({ message: "Mật khẩu phải có tối thiểu 6 ký tự." });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy người dùng." });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    logAdminAction({
+      req,
+      adminUser: req.adminUser,
+      action: "reset_password",
+      resource: "user",
+      resourceId: user._id,
+      details: {
+        email: user.email,
+      },
+    });
+
+    return res.json({
+      message: "Cập nhật mật khẩu thành công.",
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   listUsers,
   updateUser,
   deleteUser,
+  updateUserPoints,
+  updateUserPassword,
 };

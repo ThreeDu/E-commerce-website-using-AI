@@ -4,6 +4,8 @@ const {
   listUsers,
   updateUser,
   deleteUser,
+  updateUserPoints,
+  updateUserPassword,
 } = require("../../controllers/admin/userController");
 
 const router = express.Router();
@@ -21,5 +23,7 @@ const requireAdmin = async (req, res, next) => {
 router.get("/", requireAdmin, listUsers);
 router.put("/:id", requireAdmin, updateUser);
 router.delete("/:id", requireAdmin, deleteUser);
+router.put("/:id/points", requireAdmin, updateUserPoints);
+router.put("/:id/password", requireAdmin, updateUserPassword);
 
 module.exports = router;

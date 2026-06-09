@@ -8,6 +8,18 @@ import {
   updateAdminDiscount,
 } from "../../../services/admin/discountService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faPlus,
+  faPen,
+  faTrash,
+  faChevronLeft,
+  faChevronRight,
+  faToggleOn,
+  faToggleOff,
+  faRotateLeft,
+  faTicketSimple,
+} from "@fortawesome/free-solid-svg-icons";
 import "../../../css/admin/discounts.css";
 
 const ITEMS_PER_PAGE = 8;
@@ -383,11 +395,15 @@ function AdminListDiscountsPage() {
       <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading || deleting || bulkProcessing}>
         <div className="dashboard-header-row">
           <div>
-            <h2>Quản lý mã giảm giá</h2>
+            <h2>
+              <FontAwesomeIcon icon={faTicketSimple} style={{ marginRight: "10px", color: "var(--primary-color, #4f46e5)" }} />
+              Quản lý mã giảm giá
+            </h2>
             <p className="dashboard-subtitle">Theo dõi trạng thái hiệu lực và số lượng mã giảm giá theo thời gian thực.</p>
           </div>
           <Link to="/admin/discounts/add" className="primary-link-btn">
-            + Thêm mã giảm giá
+            <FontAwesomeIcon icon={faPlus} style={{ marginRight: "6px" }} />
+            Thêm mã giảm giá
           </Link>
         </div>
 
@@ -489,7 +505,9 @@ function AdminListDiscountsPage() {
               className="secondary-btn"
               disabled={selectedDiscounts.length === 0 || bulkProcessing}
               onClick={() => handleBulkActiveChange(true)}
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
             >
+              <FontAwesomeIcon icon={faToggleOn} style={{ color: "var(--success-color, #22c55e)" }} />
               Bật đã chọn
             </button>
             <button
@@ -497,7 +515,9 @@ function AdminListDiscountsPage() {
               className="secondary-btn"
               disabled={selectedDiscounts.length === 0 || bulkProcessing}
               onClick={() => handleBulkActiveChange(false)}
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
             >
+              <FontAwesomeIcon icon={faToggleOff} style={{ color: "var(--text-secondary, #6b7280)" }} />
               Tắt đã chọn
             </button>
             <button
@@ -510,7 +530,9 @@ function AdminListDiscountsPage() {
                   code: `${selectedDiscounts.length} mã đã chọn`,
                 })
               }
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
             >
+              <FontAwesomeIcon icon={faTrash} />
               Xóa đã chọn
             </button>
             <button
@@ -518,7 +540,9 @@ function AdminListDiscountsPage() {
               className="secondary-btn"
               disabled={selectedDiscounts.length === 0}
               onClick={() => setSelectedDiscountIds([])}
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
             >
+              <FontAwesomeIcon icon={faRotateLeft} />
               Bỏ chọn
             </button>
           </div>
@@ -584,8 +608,15 @@ function AdminListDiscountsPage() {
                             </div>
                           </td>
                           <td>
-                            <div className="truncate-text" title={`${formatDateTime(discount.startDate)} - ${formatDateTime(discount.endDate)}`}>
-                              {formatDateTime(discount.startDate)} - {formatDateTime(discount.endDate)}
+                            <div className="date-range-stack" title={`${formatDateTime(discount.startDate)} - ${formatDateTime(discount.endDate)}`}>
+                              <div className="date-item start-date">
+                                <span className="date-label">Từ:</span>
+                                <span className="date-val">{formatDateTime(discount.startDate)}</span>
+                              </div>
+                              <div className="date-item end-date">
+                                <span className="date-label">Đến:</span>
+                                <span className="date-val">{formatDateTime(discount.endDate)}</span>
+                              </div>
                             </div>
                           </td>
                           <td>
@@ -607,15 +638,24 @@ function AdminListDiscountsPage() {
                           </td>
                           <td>
                             <div className="table-actions">
-                              <Link to={`/admin/discounts/edit/${discount._id}`} className="table-link-btn">
-                                <span aria-hidden="true">✎</span> Sửa
+                              <Link
+                                to={`/admin/discounts/edit/${discount._id}`}
+                                className="table-link-btn"
+                                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                                title="Chỉnh sửa mã giảm giá"
+                              >
+                                <FontAwesomeIcon icon={faPen} />
+                                Sửa
                               </Link>
                               <button
                                 type="button"
                                 className="danger-btn"
                                 onClick={() => setDiscountPendingDelete(discount)}
+                                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                                title="Xóa mã giảm giá"
                               >
-                                <span aria-hidden="true">🗑</span> Xóa
+                                <FontAwesomeIcon icon={faTrash} />
+                                Xóa
                               </button>
                             </div>
                           </td>
@@ -644,8 +684,10 @@ function AdminListDiscountsPage() {
                   className="secondary-btn pager-btn"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
-                  ← Trước
+                  <FontAwesomeIcon icon={faChevronLeft} />
+                  Trước
                 </button>
                 <span className="page-indicator">
                   Trang {currentPage}/{totalPages}
@@ -655,8 +697,10 @@ function AdminListDiscountsPage() {
                   className="secondary-btn pager-btn"
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
-                  Sau →
+                  Sau
+                  <FontAwesomeIcon icon={faChevronRight} />
                 </button>
               </div>
             </div>

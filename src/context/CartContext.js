@@ -42,14 +42,36 @@ export function CartProvider({ children }) {
 
   // Reload cart when user changes (login / logout)
   useEffect(() => {
+    const token = auth?.token;
     isLoadingRef.current = true;
-    try {
-      const saved = localStorage.getItem(storageKey);
-      setCart(saved ? JSON.parse(saved) : []);
-    } catch (error) {
+
+    if (token) {
+      // User is logged in, fetch from DB
+      fetch("/api/auth/cart", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Không thể lấy giỏ hàng từ server");
+          return res.json();
+        })
+        .then((data) => {
+          const items = data.items || [];
+          setCart(items);
+          localStorage.setItem(storageKey, JSON.stringify(items));
+        })
+        .catch((err) => {
+          console.error("Lỗi lấy giỏ hàng từ server, sử dụng local cache:", err);
+          // Fallback to local storage if server fetch fails
+          const saved = localStorage.getItem(storageKey);
+          setCart(saved ? JSON.parse(saved) : []);
+        });
+    } else {
+      // User is logged out, clear cart
       setCart([]);
     }
-  }, [storageKey]);
+  }, [storageKey, auth?.token]);
 
   // Persist cart to localStorage
   // Guard: skip writing when the reload effect just triggered setCart,
@@ -63,6 +85,34 @@ export function CartProvider({ children }) {
     localStorage.setItem(storageKey, JSON.stringify(cart));
     cartRef.current = cart;
   }, [storageKey, cart]);
+
+  // Đồng bộ giỏ hàng lên server với debounce 2 giây
+  useEffect(() => {
+    const token = auth?.token;
+    if (!token) return;
+
+    const delayDebounce = setTimeout(() => {
+      const syncItems = cart.map((item) => ({
+        productId: item._id || item.id,
+        quantity: item.quantity,
+      }));
+
+      fetch("/api/auth/cart/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ items: syncItems }),
+      })
+        .then((res) => {
+          if (!res.ok) console.error("Lỗi đồng bộ giỏ hàng:", res.statusText);
+        })
+        .catch((err) => console.error("Lỗi đồng bộ giỏ hàng:", err));
+    }, 2000);
+
+    return () => clearTimeout(delayDebounce);
+  }, [cart, auth?.token]);
 
   // ── Stable callbacks (never re-created) ──
 

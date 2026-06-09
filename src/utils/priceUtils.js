@@ -22,5 +22,6 @@ export function parsePrice(price) {
  * @example formatPrice(1500000) → "1.500.000 đ"
  */
 export function formatPrice(priceNum) {
-  return priceNum.toLocaleString("vi-VN") + " đ";
+  const rounded = Math.round(Number(priceNum) || 0);
+  return rounded.toLocaleString("vi-VN") + " đ";
 }

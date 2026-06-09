@@ -4,6 +4,13 @@ import { useAuth } from "../../context/AuthContext";
 import { useStatusMessageBridge } from "../../hooks/useStatusMessageBridge";
 import { getAdminSystemLogs } from "../../services/admin/systemLogService";
 import { getErrorMessage } from "../../utils/adminErrorUtils";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faChevronDown,
+  faChevronUp,
+  faChevronLeft,
+  faChevronRight,
+} from "@fortawesome/free-solid-svg-icons";
 import "../../css/admin/discounts.css";
 import "../../css/admin/systemLogs.css";
 
@@ -31,6 +38,8 @@ function AdminSystemLogsPage() {
   const [actionFilter, setActionFilter] = useState(searchParams.get("action") || "all");
   const [resourceFilter, setResourceFilter] = useState(searchParams.get("resource") || "all");
   const [page, setPage] = useState(Math.max(1, Number(searchParams.get("page") || 1) || 1));
+
+  const [expandedLogs, setExpandedLogs] = useState({});
 
   useStatusMessageBridge(message, { title: "Log hệ thống" });
 
@@ -121,6 +130,13 @@ function AdminSystemLogsPage() {
     return ACTION_TONE_CLASS[key] || "other";
   }, []);
 
+  const toggleLogExpand = (logId) => {
+    setExpandedLogs((prev) => ({
+      ...prev,
+      [logId]: !prev[logId],
+    }));
+  };
+
   return (
     <main className="container page-content">
       <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading}>
@@ -192,37 +208,59 @@ function AdminSystemLogsPage() {
                 </tr>
               </thead>
               <tbody>
-                {logs.map((item) => (
-                  <tr key={item._id}>
-                    <td>{formatDateTime(item.timestamp)}</td>
-                    <td>
-                      <div className="cell-title truncate-text" title={item.adminEmail || "-"}>
-                        {item.adminEmail || "-"}
-                      </div>
-                      <div className="cell-subtext">IP: {item.ip || "-"}</div>
-                    </td>
-                    <td>
-                      <span className={`pill system-log-action ${getActionToneClass(item.action)}`}>
-                        {item.action || "-"}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="cell-title">{item.resource || "-"}</div>
-                      <div className="cell-subtext">ID: {item.resourceId || "-"}</div>
-                    </td>
-                    <td>
-                      <div className="system-log-path truncate-text" title={item.path || "-"}>
-                        {item.method || "-"} {item.path || "-"}
-                      </div>
-                      <div
-                        className="system-log-detail truncate-text"
-                        title={JSON.stringify(item.details || {})}
-                      >
-                        {JSON.stringify(item.details || {})}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {logs.map((item) => {
+                  const isExpanded = !!expandedLogs[item._id];
+                  const detailsStr = JSON.stringify(item.details || {});
+
+                  return (
+                    <tr key={item._id}>
+                      <td>{formatDateTime(item.timestamp)}</td>
+                      <td>
+                        <div className="cell-title truncate-text" title={item.adminEmail || "-"}>
+                          {item.adminEmail || "-"}
+                        </div>
+                        <div className="cell-subtext">IP: {item.ip || "-"}</div>
+                      </td>
+                      <td>
+                        <span className={`pill system-log-action ${getActionToneClass(item.action)}`}>
+                          {item.action || "-"}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="cell-title">{item.resource || "-"}</div>
+                        <div className="cell-subtext">ID: {item.resourceId || "-"}</div>
+                      </td>
+                      <td className="system-log-details-cell">
+                        <div className="system-log-path">
+                          <span className={`method-badge ${String(item.method || "OTHER").toLowerCase()}`}>
+                            {item.method || "OTHER"}
+                          </span>
+                          <code className="path-code">{item.path || "-"}</code>
+                        </div>
+                        <div className="system-log-detail-section">
+                          {isExpanded ? (
+                            <pre className="system-log-json-block">
+                              {JSON.stringify(item.details || {}, null, 2)}
+                            </pre>
+                          ) : (
+                            <div className="system-log-detail-preview" title={detailsStr}>
+                              {detailsStr}
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            className="btn-toggle-log-detail"
+                            onClick={() => toggleLogExpand(item._id)}
+                            title={isExpanded ? "Thu gọn chi tiết" : "Xem chi tiết đầy đủ"}
+                          >
+                            <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} />
+                            <span>{isExpanded ? " Thu gọn" : " Xem chi tiết"}</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {logs.length === 0 && (
                   <tr>
                     <td colSpan="5" className="table-empty-cell">
@@ -246,7 +284,7 @@ function AdminSystemLogsPage() {
               disabled={page <= 1 || loading}
               onClick={() => setPage((prev) => Math.max(1, prev - 1))}
             >
-              ← Trước
+              <FontAwesomeIcon icon={faChevronLeft} /> Trước
             </button>
             <button
               type="button"
@@ -254,7 +292,7 @@ function AdminSystemLogsPage() {
               disabled={page >= totalPages || loading}
               onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
             >
-              Sau →
+              Sau <FontAwesomeIcon icon={faChevronRight} />
             </button>
           </div>
         </div>

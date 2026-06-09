@@ -373,3 +373,33 @@ def generate_potential_labels(df):
         scores += normalized * weight
 
     return np.clip(scores, 0, 100).round(2)
+
+
+def generate_clv_labels(df):
+    """
+    Auto-label CLV score (0-100) based on weighted combination of RFM and engagement indicators.
+    """
+    scores = np.zeros(len(df))
+
+    weights = {
+        "monetary": 35,
+        "frequency": 25,
+        "avg_order_value": 15,
+        "order_trend": 10,
+        "engagement_trend": 10,
+        "account_age_days": 5
+    }
+
+    for col, weight in weights.items():
+        if col in df.columns:
+            values = df[col].values.astype(float)
+            min_val = values.min()
+            max_val = values.max()
+            if max_val - min_val > 0:
+                normalized = (values - min_val) / (max_val - min_val)
+            else:
+                normalized = np.zeros_like(values)
+            scores += normalized * weight
+
+    return np.clip(scores, 0, 100).round(2)
+
