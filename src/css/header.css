@@ -300,6 +300,16 @@
   font-weight: 800;
 }
 
+.header-avatar-img {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  display: block;
+}
+
+
 .icon-wrap {
   display: inline-flex;
   align-items: center;

@@ -1,7 +1,12 @@
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
-const { processChatMessage, trackChatbotEvent } = require("../services/chatbotService");
+const { processChatMessage, trackChatbotEvent, debugGreeting } = require("./service");
 const { getTokenFromHeader } = require("../routes/helpers/authHelpers");
+
+function isDebugGreetingEnabled() {
+  const value = String(process.env.CHATBOT_DEBUG_GREETING_ENABLED || "").trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
 
 function getOptionalUserId(req) {
   const token = getTokenFromHeader(req);
@@ -28,6 +33,7 @@ const chatWithAssistant = async (req, res) => {
     const message = String(req.body?.message || "").trim();
     const sessionId = String(req.body?.sessionId || "").trim();
     const context = req.body?.context || {};
+    const history = Array.isArray(req.body?.history) ? req.body.history : [];
 
     if (!message) {
       return res.status(400).json({ message: "Tin nhắn không được để trống." });
@@ -37,6 +43,7 @@ const chatWithAssistant = async (req, res) => {
       message,
       sessionId,
       context,
+      history,
       userId: getOptionalUserId(req),
     });
 
@@ -77,7 +84,30 @@ const trackEvent = async (req, res) => {
   }
 };
 
+// exports are declared at end (including debugGreeting)
+
+const debugGreetingController = async (req, res) => {
+  try {
+    if (!isDebugGreetingEnabled()) {
+      return res.status(404).json({ message: "Debug greeting is disabled." });
+    }
+
+    const mode = String(req.body?.mode || req.query?.mode || "anonymous").trim().toLowerCase();
+    const sessionId = String(req.body?.sessionId || "").trim() || null;
+
+    if (!["anonymous", "churn", "vip"].includes(mode)) {
+      return res.status(400).json({ message: "mode phải là one of: anonymous|churn|vip" });
+    }
+
+    const result = await debugGreeting({ mode, sessionId });
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({ message: "Không thể tạo debug greeting." });
+  }
+};
+
 module.exports = {
   chatWithAssistant,
   trackEvent,
+  debugGreeting: debugGreetingController,
 };

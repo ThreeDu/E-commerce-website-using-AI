@@ -26,10 +26,13 @@ from features.feature_engineering import (
     extract_features_for_all_users,
     generate_churn_labels,
     generate_potential_labels,
+    generate_clv_labels,
 )
 from models.churn_model import ChurnPredictor
 from models.potential_model import PotentialScorer
+from models.clv_model import CLVPredictor
 from config import MODEL_DIR
+
 
 
 def run_training():
@@ -57,10 +60,12 @@ def run_training():
     print("[2/5] Generating auto-labels...")
     churn_labels = generate_churn_labels(df)
     potential_labels = generate_potential_labels(df)
+    clv_labels = generate_clv_labels(df)
 
     churn_positive = int(churn_labels.sum())
     print(f"  Churn: {churn_positive} churned / {len(churn_labels)} total ({100 * churn_positive / len(churn_labels):.1f}%)")
     print(f"  Potential: min={potential_labels.min():.1f}, max={potential_labels.max():.1f}, mean={potential_labels.mean():.1f}")
+    print(f"  CLV: min={clv_labels.min():.1f}, max={clv_labels.max():.1f}, mean={clv_labels.mean():.1f}")
     print()
 
     # Step 3: Train churn model
@@ -77,16 +82,25 @@ def run_training():
     print(f"  ✓ Potential metrics: {json.dumps(potential_metrics, indent=2)}")
     print()
 
+    # Step 4b: Train CLV model
+    print("[4b/5] Training CLV Predictor (Gradient Boosting)...")
+    clv_model = CLVPredictor()
+    clv_metrics = clv_model.train(X, clv_labels)
+    print(f"  ✓ CLV metrics: {json.dumps(clv_metrics, indent=2)}")
+    print()
+
     # Step 5: Save models
     print("[5/5] Saving models...")
     churn_model.save()
     potential_model.save()
+    clv_model.save()
     print(f"  ✓ Models saved to {MODEL_DIR}")
     print()
 
     # Feature importance
     churn_importance = churn_model.feature_importance(FEATURE_NAMES)
     potential_importance = potential_model.feature_importance(FEATURE_NAMES)
+    clv_importance = clv_model.feature_importance(FEATURE_NAMES)
 
     print("── Churn Feature Importance (top 5) ──")
     for name, score in sorted(churn_importance.items(), key=lambda x: x[1], reverse=True)[:5]:
@@ -98,6 +112,11 @@ def run_training():
         print(f"  {name:.<30} {score:.4f}")
 
     print()
+    print("── CLV Feature Importance (top 5) ──")
+    for name, score in sorted(clv_importance.items(), key=lambda x: x[1], reverse=True)[:5]:
+        print(f"  {name:.<30} {score:.4f}")
+
+    print()
     print("✅ Training completed successfully!")
 
     results = {
@@ -105,9 +124,12 @@ def run_training():
         "customer_count": len(df),
         "churn_metrics": churn_metrics,
         "potential_metrics": potential_metrics,
+        "clv_metrics": clv_metrics,
         "churn_feature_importance": churn_importance,
         "potential_feature_importance": potential_importance,
+        "clv_feature_importance": clv_importance,
     }
+
 
     # Save metrics to file
     metrics_path = os.path.join(MODEL_DIR, "last_training_metrics.json")

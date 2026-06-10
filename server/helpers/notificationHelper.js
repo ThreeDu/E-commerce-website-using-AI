@@ -150,10 +150,79 @@ const notifyNewCoupon = async (discount) => {
   }
 };
 
+// Trigger 4: Churn Intervention
+const notifyChurnIntervention = async (userId, voucherData) => {
+  try {
+    const title = "Chúng tôi nhớ bạn! 🎁";
+    let message = "Đã lâu rồi bạn chưa quay lại mua sắm cùng chúng tôi.";
+    
+    const data = {};
+    let link = "/profile";
+
+    if (voucherData && voucherData.code) {
+      const discountValStr =
+        voucherData.type === "percent"
+          ? `${voucherData.value}%`
+          : `${voucherData.value.toLocaleString("vi-VN")}đ`;
+      const minOrderStr = voucherData.minOrderValue.toLocaleString("vi-VN");
+      message += ` Đặc biệt dành riêng cho bạn mã giảm giá ${voucherData.code} giảm ${discountValStr} cho đơn từ ${minOrderStr}đ!`;
+      
+      data.voucherCode = voucherData.code;
+      link = "/profile?openVoucher=true";
+    } else {
+      message += " Hãy ghé thăm cửa hàng ngay để nhận nhiều ưu đãi hấp dẫn!";
+    }
+
+    await createNotification(userId, {
+      type: "churn_intervention",
+      title,
+      message,
+      data,
+      link,
+    });
+  } catch (error) {
+    console.error("Error sending churn intervention notification:", error);
+  }
+};
+
+// Trigger 5: Abandoned Cart Reminder
+const notifyAbandonedCart = async (userId, cartData) => {
+  try {
+    const title = "Giỏ hàng đang chờ bạn! 🛒";
+    let message = `Bạn có ${cartData.itemsCount} sản phẩm trong giỏ hàng trị giá ${cartData.estimatedValue.toLocaleString("vi-VN")}đ.`;
+    
+    const data = {
+      cartItemsCount: cartData.itemsCount,
+      cartEstimatedValue: cartData.estimatedValue,
+    };
+    let link = "/cart";
+
+    if (cartData.voucherCode) {
+      message += ` Đừng bỏ lỡ, tặng bạn mã giảm giá ${cartData.voucherCode} đặc biệt để hoàn tất đơn hàng ngay!`;
+      data.voucherCode = cartData.voucherCode;
+    } else {
+      message += " Hãy hoàn tất đơn hàng ngay trước khi sản phẩm hết hàng!";
+    }
+
+    await createNotification(userId, {
+      type: "abandoned_cart",
+      title,
+      message,
+      data,
+      link,
+    });
+  } catch (error) {
+    console.error("Error sending abandoned cart notification:", error);
+  }
+};
+
 module.exports = {
   createNotification,
   createBulkNotifications,
   notifyOrderStatusChange,
   notifyProductDiscount,
   notifyNewCoupon,
+  notifyChurnIntervention,
+  notifyAbandonedCart,
 };
+

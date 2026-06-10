@@ -225,6 +225,17 @@
   color: #22c55e;
 }
 
+.notification-item-icon.icon-gift {
+  background-color: #fee2e2;
+  color: #ef4444;
+}
+
+.notification-item-icon.icon-cart {
+  background-color: #fff7ed;
+  color: #f97316;
+}
+
+
 .notification-item-content {
   flex: 1;
   min-width: 0;

@@ -7,8 +7,8 @@ const productRoutes = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
-const chatbotRoutes = require("./routes/chatbotRoutes");
 const pointRoutes = require("./routes/pointRoutes");
+const chatbotRoutes = require("./chatbot-service/routes");
 
 dotenv.config();
 

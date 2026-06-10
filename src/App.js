@@ -4,7 +4,7 @@ import "./css/admin/forms.css";
 import "./css/admin/theme.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-import ChatbotWidget from "./components/ChatbotWidget";
+import ChatbotWidget from "./features/chatbot-service/ChatbotWidget";
 import StatusNotificationCenter from "./components/StatusNotificationCenter";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/common/ErrorBoundary";
@@ -48,9 +48,11 @@ const AdminSystemLogsPage = lazy(() => import("./pages/admin/AdminSystemLogsPage
 const AdminNotificationsPage = lazy(() => import("./pages/admin/AdminNotificationsPage"));
 
 const AdminCustomerIntelligencePage = lazy(() => import("./pages/admin/AdminCustomerIntelligencePage"));
+const AdminRetentionCampaignPage = lazy(() => import("./pages/admin/AdminRetentionCampaignPage"));
 const AdminRewardTiersPage = lazy(() => import("./pages/admin/reward/AdminRewardTiersPage"));
 const AdminAddRewardTierPage = lazy(() => import("./pages/admin/reward/AdminAddRewardTierPage"));
 const AdminEditRewardTierPage = lazy(() => import("./pages/admin/reward/AdminEditRewardTierPage"));
+
 
 function GuestRoute({ children }) {
   const { auth } = useAuth();
@@ -72,7 +74,7 @@ function App() {
       <NotificationProvider>
         <CartProvider>
           <UserNotificationProvider>
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <StatusNotificationCenter />
             <div className="app-shell">
               <Header />
@@ -252,6 +254,15 @@ function App() {
                         </ProtectedRoute>
                       }
                     />
+                    <Route
+                      path="/admin/retention"
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminRetentionCampaignPage />
+                        </ProtectedRoute>
+                      }
+                    />
+
                     <Route
                       path="/admin/orders/:id"
                       element={

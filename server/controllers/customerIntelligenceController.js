@@ -5,6 +5,7 @@
  * All endpoints require admin authentication.
  */
 
+const { logAdminAction } = require("../utils/adminAuditLogger");
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:5001";
 
 const proxyToMlService = async (path, options = {}) => {
@@ -50,6 +51,63 @@ const triggerTraining = async (req, res) => {
     const { status, data } = await proxyToMlService("/api/intelligence/train", {
       method: "POST",
     });
+
+    if (status === 200 || status === 201) {
+      logAdminAction({
+        req,
+        adminUser: req.adminUser,
+        action: "train_model",
+        resource: "ai_model",
+        resourceId: "churn_potential_clv",
+        details: {
+          success: true,
+          message: data.message || "Huấn luyện lại các mô hình ML (Churn, Potential, CLV) thành công",
+        },
+      });
+    }
+
+    return res.status(status).json(data);
+  } catch (error) {
+    return res.status(503).json({
+      message: "ML service is not available.",
+      error: error.message,
+    });
+  }
+};
+
+const getCustomerSegments = async (req, res) => {
+  try {
+    const params = new URLSearchParams(req.query).toString();
+    const path = `/api/intelligence/segments${params ? `?${params}` : ""}`;
+    const { status, data } = await proxyToMlService(path);
+    return res.status(status).json(data);
+  } catch (error) {
+    return res.status(503).json({
+      message: "ML service is not available.",
+      error: error.message,
+    });
+  }
+};
+
+const getCustomerCLV = async (req, res) => {
+  try {
+    const params = new URLSearchParams(req.query).toString();
+    const path = `/api/intelligence/clv${params ? `?${params}` : ""}`;
+    const { status, data } = await proxyToMlService(path);
+    return res.status(status).json(data);
+  } catch (error) {
+    return res.status(503).json({
+      message: "ML service is not available.",
+      error: error.message,
+    });
+  }
+};
+
+const getAbandonedCarts = async (req, res) => {
+  try {
+    const params = new URLSearchParams(req.query).toString();
+    const path = `/api/intelligence/abandoned-carts${params ? `?${params}` : ""}`;
+    const { status, data } = await proxyToMlService(path);
     return res.status(status).json(data);
   } catch (error) {
     return res.status(503).json({
@@ -63,4 +121,8 @@ module.exports = {
   getIntelligenceOverview,
   getIntelligenceCustomers,
   triggerTraining,
+  getCustomerSegments,
+  getCustomerCLV,
+  getAbandonedCarts,
 };
+

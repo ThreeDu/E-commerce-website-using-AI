@@ -16,7 +16,9 @@ import {
   faTags,
   faTableCellsLarge,
   faUsers,
+  faBullhorn,
 } from "@fortawesome/free-solid-svg-icons";
+
 
 function AdminSidebar({ isSidebarOpen, onToggleSidebar, onLogout }) {
   return (
@@ -55,8 +57,13 @@ function AdminSidebar({ isSidebarOpen, onToggleSidebar, onLogout }) {
 
           <NavLink to="/admin/intelligence" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
             <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faBrain} /></span>
-            <span className="admin-sidebar-link-title">Customer Intelligence</span>
+            <span className="admin-sidebar-link-title">AI phân tích dự đoán</span>
           </NavLink>
+          <NavLink to="/admin/retention" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
+            <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faBullhorn} /></span>
+            <span className="admin-sidebar-link-title">Chiến dịch giữ chân</span>
+          </NavLink>
+
           <NavLink to="/admin/categories" className={({ isActive }) => `admin-sidebar-link ${isActive ? "active" : ""}`}>
             <span className="admin-sidebar-link-icon" aria-hidden="true"><FontAwesomeIcon icon={faTableCellsLarge} /></span>
             <span className="admin-sidebar-link-title">Quản lý danh mục</span>

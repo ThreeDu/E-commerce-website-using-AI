@@ -6,6 +6,9 @@ import { getProductImageSrc, getProductPricing, isOutOfStock } from "../utils/pr
 import { fetchProducts } from "../services/productService";
 import { fetchCategories } from "../services/categoryService";
 import { fetchRecommendations } from "../services/recommendationService";
+import { useNotification } from "../context/NotificationContext";
+import { trackEvent } from "../services/analyticsService";
+import { fetchWishlist, addToWishlist, removeFromWishlist } from "../services/wishlistService";
 import "../css/home-neo.css";
 import "../css/shop-experience.css";
 
@@ -17,6 +20,104 @@ function HomePage() {
   const [categories, setCategories] = useState([]);
   const [recommendedProducts, setRecommendedProducts] = useState([]);
   const [recommendReady, setRecommendReady] = useState(false);
+  const { success, error: notifyError, warning } = useNotification();
+  const [wishlistIds, setWishlistIds] = useState([]);
+  const [pendingWishlistIds, setPendingWishlistIds] = useState([]);
+
+  // Load wishlist
+  useEffect(() => {
+    const loadWishlist = async () => {
+      if (!auth?.token) {
+        setWishlistIds([]);
+        return;
+      }
+
+      try {
+        const data = await fetchWishlist(auth.token);
+        const ids = Array.isArray(data?.wishlist)
+          ? data.wishlist.map((item) => String(item._id))
+          : [];
+        setWishlistIds(ids);
+      } catch (error) {
+        setWishlistIds([]);
+      }
+    };
+
+    loadWishlist();
+  }, [auth?.token]);
+
+  const handleAddToCart = (product) => {
+    if (!auth?.token) {
+      navigate("/login", { state: { from: "/" } });
+      return;
+    }
+
+    addToCart({ ...product, id: product._id });
+    success(`Đã thêm ${product.name} vào giỏ hàng!`, {
+      title: "Giỏ hàng",
+      duration: 3000,
+    });
+
+    trackEvent({
+      eventName: "add_to_cart",
+      token: auth?.token,
+      metadata: {
+        productId: String(product._id),
+        productName: String(product.name || ""),
+        category: String(product.category || ""),
+        quantity: 1,
+        price: Number(product.finalPrice || product.price || 0),
+      },
+    });
+  };
+
+  const handleToggleWishlist = async (productId, productName) => {
+    if (!auth?.token) {
+      warning("Vui lòng đăng nhập để sử dụng danh sách yêu thích.", { title: "Yêu thích" });
+      navigate("/login", { state: { from: "/" } });
+      return;
+    }
+
+    if (pendingWishlistIds.includes(productId)) {
+      return;
+    }
+
+    const isWishlisted = wishlistIds.includes(productId);
+    setPendingWishlistIds((prev) => [...prev, productId]);
+
+    try {
+      const data = isWishlisted
+        ? await removeFromWishlist(productId, auth.token)
+        : await addToWishlist(productId, auth.token);
+
+      const ids = Array.isArray(data?.wishlist)
+        ? data.wishlist.map((item) => String(item._id))
+        : [];
+      setWishlistIds(ids);
+
+      const isNowWishlisted = ids.includes(String(productId));
+      success(
+        isNowWishlisted
+          ? `Đã thêm ${productName} vào danh sách yêu thích.`
+          : `Đã xóa ${productName} khỏi danh sách yêu thích.`,
+        { title: "Yêu thích" }
+      );
+
+      trackEvent({
+        eventName: isNowWishlisted ? "wishlist_add" : "wishlist_remove",
+        token: auth?.token,
+        metadata: {
+          productId: String(productId),
+          productName: String(productName),
+        },
+      });
+    } catch (error) {
+      console.error("Lỗi cập nhật wishlist:", error);
+      notifyError(error?.message || "Không thể kết nối đến máy chủ.", { title: "Yêu thích" });
+    } finally {
+      setPendingWishlistIds((prev) => prev.filter((id) => id !== productId));
+    }
+  };
 
   const level2Categories = useMemo(() => {
     if (!Array.isArray(categories) || categories.length === 0) {
@@ -120,15 +221,6 @@ function HomePage() {
     });
   };
 
-  const handleBuyNow = (product) => {
-    if (!auth?.token) {
-      navigate("/login", { state: { from: "/checkout" } });
-      return;
-    }
-
-    addToCart({ ...product, id: product._id });
-    navigate("/checkout");
-  };
 
   return (
     <main className="container page-content neo-home-page">
@@ -187,6 +279,7 @@ function HomePage() {
                       <span className="shopx-chip shopx-chip--rating">
                         {Number(product.averageRating || 0).toFixed(1)} sao ({Number(product.totalRatings || 0)})
                       </span>
+                      <span className="shopx-chip shopx-chip--views">{Number(product.totalViews || 0)} lượt xem</span>
                       <span className="shopx-chip shopx-chip--sold">{Number(product.totalPurchases || 0)} lượt mua</span>
                     </div>
                     <p className="shopx-price">{pricing.finalPrice.toLocaleString("vi-VN")} đ</p>
@@ -196,11 +289,28 @@ function HomePage() {
                   </Link>
                   <div className="shopx-card-actions">
                     <button
-                      className={`shopx-btn shopx-btn--buy-now ${outOfStock ? "shopx-btn--out-of-stock" : ""}`}
-                      disabled={outOfStock}
-                      onClick={() => handleBuyNow(product)}
+                      type="button"
+                      disabled={pendingWishlistIds.includes(product._id)}
+                      className={`shopx-btn shopx-btn--ghost shopx-btn--wishlist ${
+                        wishlistIds.includes(product._id) ? "shopx-btn--active" : ""
+                      }`}
+                      onClick={() => handleToggleWishlist(product._id, product.name)}
                     >
-                      {outOfStock ? "Hết hàng" : "Mua ngay"}
+                      {pendingWishlistIds.includes(product._id)
+                        ? "Đang xử lý..."
+                        : wishlistIds.includes(product._id)
+                        ? "Đã yêu thích"
+                        : "Thêm yêu thích"}
+                    </button>
+                    <button
+                      type="button"
+                      className={`shopx-btn shopx-btn--primary shopx-btn--cart ${
+                        outOfStock ? "shopx-btn--out-of-stock" : ""
+                      }`}
+                      disabled={outOfStock}
+                      onClick={() => handleAddToCart(product)}
+                    >
+                      {outOfStock ? "Hết hàng" : "Thêm vào giỏ"}
                     </button>
                   </div>
                 </article>
@@ -271,11 +381,28 @@ function HomePage() {
               </Link>
               <div className="shopx-card-actions">
                 <button
-                  className={`shopx-btn shopx-btn--buy-now ${outOfStock ? "shopx-btn--out-of-stock" : ""}`}
-                  disabled={outOfStock}
-                  onClick={() => handleBuyNow(product)}
+                  type="button"
+                  disabled={pendingWishlistIds.includes(product._id)}
+                  className={`shopx-btn shopx-btn--ghost shopx-btn--wishlist ${
+                    wishlistIds.includes(product._id) ? "shopx-btn--active" : ""
+                  }`}
+                  onClick={() => handleToggleWishlist(product._id, product.name)}
                 >
-                  {outOfStock ? "Hết hàng" : "Mua ngay"}
+                  {pendingWishlistIds.includes(product._id)
+                    ? "Đang xử lý..."
+                    : wishlistIds.includes(product._id)
+                    ? "Đã yêu thích"
+                    : "Thêm yêu thích"}
+                </button>
+                <button
+                  type="button"
+                  className={`shopx-btn shopx-btn--primary shopx-btn--cart ${
+                    outOfStock ? "shopx-btn--out-of-stock" : ""
+                  }`}
+                  disabled={outOfStock}
+                  onClick={() => handleAddToCart(product)}
+                >
+                  {outOfStock ? "Hết hàng" : "Thêm vào giỏ"}
                 </button>
               </div>
             </article>

@@ -10,7 +10,7 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["order_status", "product_discount", "new_coupon", "system"],
+      enum: ["order_status", "product_discount", "new_coupon", "system", "churn_intervention", "abandoned_cart"],
       required: true,
     },
     title: {
@@ -28,7 +28,11 @@ const notificationSchema = new mongoose.Schema(
       discountPercent: Number,
       discountCode: String,
       orderStatus: String,
+      voucherCode: String,
+      cartItemsCount: Number,
+      cartEstimatedValue: Number,
     },
+
     link: {
       type: String,
     },

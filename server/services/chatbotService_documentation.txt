@@ -1,0 +1,197 @@
+Tài liệu: chatbotService — Mô tả thuật toán và luồng hoạt động
+
+Mục tiêu
+- Tài liệu này mô tả đầy đủ các thuật toán, hàm, và luồng vận hành của file server/chatbot-service/service.js.
+- Nội dung bao gồm: vai trò từng hàm, cách xử lý truy vấn, pipeline tìm & xếp hạng sản phẩm, tích hợp LLM, KNN dựa trên event, các biến môi trường quan trọng, ngưỡng/threshold, và đề xuất cải tiến.
+
+Tổng quan hệ thống
+- Loại hệ thống: hybrid chatbot cho e-commerce (rule-based + retrieval + heuristic LTR + lightweight collaborative KNN + optional LLM assistance).
+- Entry points export: `trackChatbotEvent`, `processChatMessage`.
+- Dữ liệu dùng: MongoDB models `Product`, `Order`, `ChatbotEvent`.
+
+Biến môi trường quan trọng
+- CHATBOT_LLM_ENABLED: bật/tắt toàn bộ tích hợp LLM.
+- CHATBOT_LLM_QUERY_PARSER_ENABLED: bật/tắt parser LLM cho structured hints.
+- CHATBOT_LLM_API_URL, CHATBOT_LLM_API_KEY, CHATBOT_LLM_MODEL: cấu hình endpoint/khóa/model cho LLM (OpenAI-style hoặc Google Gemini).
+- CHATBOT_LLM_TIMEOUT_MS: timeout gọi LLM (ms), mặc định 2500.
+- CHATBOT_PRICE_EXPLICIT_TERMS, CHATBOT_PRICE_TERMS: mở rộng từ khóa liên quan giá/nhóm từ để parse ngân sách.
+- ML_SERVICE_URL: base URL của ML service (mặc định http://localhost:5001).
+
+Các hằng số chính
+- MAX_HISTORY = 10: số lượt chat lưu trong session.
+- MAX_SESSION_IDLE_MS = 30 phút: session idle sẽ bị cleanup.
+- DEFAULT_EXPLICIT_PRICE_TERMS, DEFAULT_PRICE_TERMS: từ khóa liên quan giá (VN & en).
+- KNOWN_BRAND_HINTS, MODEL_HINT_TERMS, GENERIC_QUERY_TOKENS: từ khóa hỗ trợ phân loại query và strict match.
+
+Các hàm nền tảng (utilities)
+- cleanupOldSessions(): dọn sessionStore (Map) khi quá idle.
+- getOrCreateSession(sessionId): lấy hoặc tạo mới session, cập nhật updatedAt.
+- safeObjectId(id): validate và trả mongoose ObjectId hoặc null.
+- normalizeText(value): chuẩn hóa text (lowercase, bỏ dấu tiếng Việt, loại ký tự lạ, collapse spaces) → dùng cho toàn bộ matching.
+- tokenize(value): split normalizeText thành token, lọc token ngắn.
+- getConfiguredTerms(envKey, defaultTerms): lấy từ env nếu có, merge normalize với default.
+- getEffectivePrice(product): chọn finalPrice nếu có, nếu không thì price, nếu cả hai không có trả 0.
+- toNumberOrNull(value): parse number > 0 hoặc null.
+- normalizeHintValue(value): wrapper normalizeText.
+- extractJsonObjectFromText(text): cố parse JSON từ output LLM, tolerant với text thừa.
+- includesAny(text, keywords): tiện ích kiểm tra substring chứa keyword.
+- formatVnd(value), formatBudgetVn(value): format giá và ngân sách theo VND.
+- formatStructuredReply(structured): render reply dạng nhiều dòng (title + items + followUp).
+- getSessionMemory/updateSessionMemory: lưu bộ nhớ ngắn hạn (budget/category/brand/model).
+
+LLM Query Parser
+- maybeParseQueryWithLlm(message)
+  - Chỉ chạy nếu env LLM bật và có API URL + KEY.
+  - Gửi prompt yêu cầu LLM trả về strict JSON: { intent, brand, series, model, product_line, storage, ram, price_min, price_max, confidence }.
+  - Hỗ trợ hai kiểu endpoint: Gemini (generativelanguage.googleapis.com) hoặc OpenAI chat completions.
+  - Timeout theo CHATBOT_LLM_TIMEOUT_MS (mặc định 2500ms), nếu lỗi/trả không đúng JSON thì trả null.
+  - Trả object normalized (brand/series/model giá trị đã normalize) và priceMin/priceMax/ confidence là số hoặc null.
+
+Parsing và constraint giá
+- parseBudgetFromText(message)
+  - Nhận mọi dạng số phổ biến trong tiếng Việt: "5 trieu", "32.000.000", "20 370 000", "15k", "500 nghin".
+  - Kiểm tra dấu hiệu explicit price terms (từ env hoặc default) hoặc symbol tiền (đ, ₫, vnd).
+  - Tránh nhầm model code thành số tiền: nếu số nhỏ (<1000) và không có tín hiệu giá rõ ràng thì bỏ qua.
+  - Tránh nhầm "k" = "không".
+  - Trả tiền dạng VND (số nguyên) hoặc null.
+- isAskingForPrice(text)
+  - Detect câu hỏi kiểu hỏi giá ("gia bao nhieu") để không nhầm thành budget search.
+- parsePriceConstraint(message)
+  - Dựa vào parseBudgetFromText, trả constraint { minPrice, maxPrice, source, strictUpperBound }.
+  - Nếu có từ "duoi", "toi da" thì source="max" và strictUpperBound=true.
+  - Nếu có "tren", "toi thieu" thì source="min".
+  - Nếu chỉ số đơn, mặc định là implicit-max (source="implicit-max") và strictUpperBound=false.
+
+Category & Intent
+- buildCategoryConstraint(message): map một vài alias ("dien thoai", "laptop", "phu kien") sang category chuẩn.
+- detectIntent(message): rule-based: greeting, policy, product_consult, product_search (mặc định product_search).
+- classifyQueryType({ normalizedMessage, informativeQueryTokens, hasNumericToken, priceConstraint })
+  - budget_search: priceConstraint && ít token thông tin.
+  - exact_product_search: >=2 informative tokens và (hasNumericToken || alphaNumeric model token || brand+model hints).
+  - broad_search: ngược lại.
+
+Behavior profile
+- buildBehaviorProfile(behavior): normalize viewedProductIds, cartProductIds → Sets, preferredCategories normalized list.
+- buildActorKey({ userId, sessionId }): tạo khoá actor dạng 'u:<id>' hoặc 's:<sessionId>' để dùng cho KNN.
+
+Event weighting và KNN cache
+- getEventWeight(eventType): cart=3, click=2, view=1.3, impression=0.5, message=0.4.
+- refreshKnnCache():
+  - Lấy ChatbotEvent 7 ngày gần nhất (eventType in view,click,cart,impression) limit 10000.
+  - Build two maps: productActorWeights (product -> actor -> weight) và actorProductWeights (actor -> product -> weight).
+  - Cache thời hạn 3 phút.
+- computeKnnScores(seedProductIds):
+  - Với mỗi seed product, lấy actors tương tác, cộng dot product giữa seed và candidate qua actors chung.
+  - Chuẩn hóa bằng cosine-like (dot / sqrt(norm_seed * norm_candidate)).
+  - Trả map productId -> max similarity từ mọi seed.
+
+Session seed products
+- getSessionSeedProducts({ sessionId, userId, behaviorProfile })
+  - Gom cart + viewed từ behaviorProfile.
+  - Nếu có sessionId hoặc valid userId, aggregate ChatbotEvent recent (limit 300) theo session/user, group by product, tỉ lệ điểm theo eventType (cart>click>view).
+  - Return up to 20 seed product ids.
+
+Semantic signal
+- buildSemanticSignal(product, queryTokens)
+  - Token match trong name: +4 mỗi token
+  - Token match trong category: +3
+  - Token match trong description: +1.2
+  - Prefix matching (token>=3) trong name/category (sam→samsung, iph→iphone) cũng cộng điểm (2.5 hoặc 1.8)
+  - Trả { semanticRaw, matched } (matched top tokens list)
+
+Learning-to-Rank (rankWithLtr)
+- Dữ liệu đầu vào: product, queryTokens, behaviorProfile, knnScore, budget, totalPurchases.
+- Tính các feature:
+  - semanticFeature = min(1, semanticRaw / 8)
+  - behaviorFeature = preferredCategory?0.45 + viewed?0.25 + cart?0.35
+  - popularityFeature = log10(totalPurchases+1)/3 *0.65 + log10(totalViews+1)/4 *0.35 (cả 2 min 1)
+  - ratingFeature = min(1, averageRating/5)
+  - priceFitFeature = 0.45 by default; nếu budget>0: priceFit = max(0, 1 - abs(price - budget)/budget)
+- Chế độ tính LTR:
+  - Nếu isBudgetDriven (budget && semanticFeature < 0.15):
+    LTR = semantic*0.2 + knn*0.1 + behavior*0.1 + popularity*0.1 + rating*0.05 + priceFit*0.45
+  - Else (bình thường):
+    LTR = semantic*0.38 + knn*0.22 + behavior*0.16 + popularity*0.14 + rating*0.06 + priceFit*0.04
+- Ý nghĩa: khi tìm theo giá, priceFit chiếm ưu thế; khi tìm theo model, semantic và knn quan trọng.
+
+Track events
+- trackChatbotEvent({...}): lưu ChatbotEvent với sessionId, eventType, category, queryText, metadata, product(ObjectId), user(ObjectId) nếu hợp lệ. Sau lưu set knnCache.expiresAt=0 để invalidate cache.
+
+Purchase map
+- getPurchaseMapByProductIds(productIds): aggregate Orders (bỏ cancelled), unwind orderItems, group by product, sum quantity → trả Map(productId -> totalPurchases) để dùng cho popularity feature.
+
+Recommendation reason
+- buildRecommendationReason(item): xây string lý do dựa trên exactMatch/fullModelMatch, matched tokens, knnScore, totalPurchases, averageRating. Nếu không có lý do cụ thể trả một thông điệp mặc định.
+
+Pipeline chi tiết: findRecommendedProducts(message, context, options)
+1. Tokenize message, loại stopword (QUERY_STOPWORDS) → informativeQueryTokens, detect hasNumericToken.
+2. Build behaviorProfile từ context.userBehavior.
+3. Lấy llmQueryHints từ options nếu có.
+4. Parse priceConstraint từ text; combine với llmPriceConstraint nếu LLM gợi ý.
+5. Build categoryConstraint từ message.
+6. Query Product.find({ stock: { $gt: 0 } }).select(...) limit 400.
+7. Nếu categoryConstraint có -> lọc theo normalized category.
+8. Classify queryType (budget/exact/broad) và quyết định shouldUseStrictNameFilter.
+9. Nếu shouldUseStrictNameFilter -> hardNameMatches: kiểm tra token overlap, modelTokenHits, anchorTokenHits, numericMatched; nếu có hardNameMatches thì gán products=hardNameMatches.
+10. Nếu có llmQueryHints -> constrainedByHints; nếu confidence >=0.75 -> apply full constraint; nếu >=0.5 -> brand-only.
+11. Áp priceConstraint: minPrice / effectiveMax (implicit max có thể allow 5% over).
+12. Nếu products empty -> trả [].
+13. Lấy purchaseMap, refreshKnnCache, getSessionSeedProducts, computeKnnScores.
+14. Với mỗi product: tính semantic, nameOverlap, exact/fullModelMatch, allNumericMatched, queryCoverage, totalPurchases, knnScore, ltr = rankWithLtr(...).
+15. hardMatchOverride (chỉ exact_product_search): exactMatch +=1000, fullModelMatch +=800, queryCoverage thresholds +500/+200.
+16. Tính ltrScore cuối = ltr.ltrScore + (strictNameFilter adjustments) + hardMatchOverride.
+17. Sort candidates theo ltrScore, nameOverlap, priceDelta.
+18. Tính maxNameOverlap, quyết định shouldPrioritizeNameMatch và overlapThreshold, lọc theo nameOverlap nếu cần.
+19. Dedupe theo normalizedName|price.
+20. Chọn pickedCandidates = dedupedCandidates.filter(ltrScore>0.06) hoặc fallback all dedupedCandidates, slice(0,5), map fields output.
+
+LLM reply generation
+- maybeGenerateLlmReply({ message, intent, recommendedProducts, history })
+  - Nếu LLM bật và API cấu hình, tạo system prompt tiếng Việt (trợ lý bán hàng), user prompt JSON gồm intent, message, products (4 sản phẩm đầu), recentHistory.
+  - Gọi Gemini hoặc OpenAI-style với timeout theo CHATBOT_LLM_TIMEOUT_MS (mặc định 2500ms).
+  - Nếu success trả text; nếu lỗi/trả null thì gọi fallback rule-based.
+- Sau khi nhận rawLlmReply, hệ thống validate reply: nếu reply dài (>80) nhưng không chứa token (>=4 chars) từ bất kỳ product nào trong recommendedProducts thì loại bỏ LLM reply (set null) và fallback.
+
+Fallback rule replies
+- buildRuleReply(intent, recommendedProducts) trả structured reply: title + items (mỗi sản phẩm một dòng) + followUp.
+- buildQuickReplies(intent): trả list quick replies cho UI.
+
+ML personalization (churn/potential)
+- fetchMlCustomerSignal(userId): gọi ML service /api/intelligence/customer/<id> để lấy churn/potential.
+- LTR ranking có thêm mlBoost nhẹ (discount/priceFit cho churn, rating/premium cho potential).
+
+Bộ nhớ ngắn hạn
+- Nếu user trả lời ngắn ("dưới 20 triệu"), hệ thống dùng memory để bổ sung budget/category khi tìm sản phẩm.
+
+Edge cases, ngưỡng và hành vi an toàn
+- LLM timeouts/returns null → fallback rule-based.
+- LLM hints confidence threshold: >=0.75 (apply full), >=0.5 (brand-only), else ignore.
+- Price implicit max cho phép vượt 5% khi strict=false.
+- pickedCandidates threshold ltrScore > 0.06; nếu không có candidate vượt threshold thì vẫn trả top dedupedCandidates.
+- hardMatchOverride có magnitude lớn (1000, 800...) để đảm bảo exact model query lên top.
+- KNN cache expires 3 phút, refresh lấy event 7 ngày gần nhất.
+
+Hiệu năng & scalability notes
+- Product.find(...).limit(400) tải 400 products vào memory rồi lọc JS-side. Nếu catalog lớn, nên push filters (brand, category, price range) vào DB query để giảm I/O.
+- refreshKnnCache đọc 10k events; nếu event count lớn hơn, cân nhắc pre-aggregation hoặc dịch vụ offline để build similarity matrix.
+- rankWithLtr là CPU-light; bottleneck chính thường là DB queries và KNN aggregation.
+
+Đề xuất cải tiến (quick wins)
+- Move more filters to DB: nếu detect brand/price/category sớm, add to Mongo query to reduce 400 limit.
+- Thêm logging & metrics cho: avg LLM latency, % fallback to rule, knn coverage, top features distribution.
+- Tách weights của LTR vào config / feature flags để dễ tuning A/B.
+- Viết unit tests cho: parseBudgetFromText, parsePriceConstraint, classifyQueryType, isModelAnchorToken, buildSemanticSignal.
+- Nếu muốn LTR trainable: export features và labels (CTR, purchase) để train một model nhẹ (xgboost hoặc logistic) offline.
+
+Tóm tắt ngắn gọn
+- Hệ thống là sự kết hợp giữa rule-based parsing, retrieval từ DB, lightweight KNN collaborative filtering, và ranking bằng công thức LTR. LLM chỉ hỗ trợ hai vai: parse structured hints và tạo reply tự nhiên; mọi quyết định về sản phẩm dựa trên dữ liệu/heuristics trong code.
+
+File tham chiếu
+- Mã nguồn: server/chatbot-service/service.js
+
+Nếu bạn muốn, tôi có thể:
+- Commit file này vào repo (đã tạo tại server/services/chatbotService_documentation.txt).
+- Tạo một bản "cheat-sheet" 1-trang (short) chỉ gồm công thức trọng số và các threshold để dễ đọc.
+- Viết unit tests cho các hàm parse giá và classify.
+
+Hết.
