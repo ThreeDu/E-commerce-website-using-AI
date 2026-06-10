@@ -51,13 +51,32 @@ const updateUser = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy người dùng." });
     }
 
+    const updateFields = { name, email };
+
     if (role !== undefined && role !== currentUser.role) {
-      return res.status(403).json({ message: "Không thể chỉnh sửa vai trò người dùng." });
+      if (role === "admin") {
+        const { adminPassword } = req.body;
+        if (!adminPassword) {
+          return res.status(400).json({ message: "Mật khẩu xác nhận của admin là bắt buộc để nâng quyền." });
+        }
+
+        const currentAdmin = await User.findById(req.adminUser._id);
+        const isMatch = await bcrypt.compare(adminPassword, currentAdmin.password);
+        if (!isMatch) {
+          return res.status(401).json({ message: "Mật khẩu xác nhận admin không chính xác." });
+        }
+      }
+
+      if (currentUser.role === "admin" && String(currentUser._id) === String(req.adminUser._id)) {
+        return res.status(400).json({ message: "Không thể tự hạ vai trò admin của chính mình." });
+      }
+
+      updateFields.role = role;
     }
 
     const updatedUser = await User.findByIdAndUpdate(
       id,
-      { name, email },
+      updateFields,
       { new: true, runValidators: true }
     ).select("_id name email role loyaltyPoints createdAt");
 

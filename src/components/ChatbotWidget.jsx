@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -18,14 +18,6 @@ function normalizeSearchText(value) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-function looksLikeSpecSearchQuery(value) {
-  const text = normalizeSearchText(value);
-  if (!text) {
-    return false;
-  }
-
-  return /\b(\d+(?:[.,]\d+)?\s*(gb|tb|mp|hz|mah|inch|")|camera|ram|rom|dung luong|bo nho|man hinh|tan so quet|pin|battery|screen|display|chip)\b/.test(text);
-}
 
 function looksLikeCompareQuery(value) {
   const text = normalizeSearchText(value);
@@ -239,7 +231,7 @@ function ChatbotWidget() {
     return rawReplies;
   }, [messages]);
 
-  const trackEvent = async ({ eventType, productId = "", category = "", queryText = "", metadata = {} }) => {
+  const trackEvent = useCallback(async ({ eventType, productId = "", category = "", queryText = "", metadata = {} }) => {
     if (!sessionId || !eventType) {
       return;
     }
@@ -268,22 +260,9 @@ function ChatbotWidget() {
     } catch (error) {
       // Không chặn UX nếu tracking lỗi.
     }
-  };
+  }, [sessionId, auth?.token]);
 
-  const sendMessage = async (content) => {
-    const text = String(content || "").trim();
-    if (!text || pending) {
-      return;
-    }
-
-    if (looksLikeCompareQuery(text)) {
-      return sendMessageThroughMainChat(text);
-    }
-
-    return sendMessageThroughMainChat(text);
-  };
-
-  const submitChatMessage = async (text, options = {}) => {
+  const submitChatMessage = useCallback(async (text, options = {}) => {
     const showUserMessage = options.showUserMessage !== false;
     const userMsg = createMessage("user", text);
     const nextMessages = showUserMessage ? [...messages, userMsg] : [...messages];
@@ -376,57 +355,22 @@ function ChatbotWidget() {
     } finally {
       setPending(false);
     }
-  };
+  }, [messages, location.pathname, auth?.token, sessionId, trackEvent]);
 
-  const sendMessageThroughMainChat = async (text) => submitChatMessage(text, { showUserMessage: true });
+  const sendMessageThroughMainChat = useCallback(async (text) => submitChatMessage(text, { showUserMessage: true }), [submitChatMessage]);
 
-  const sendDescriptionSearch = async (descriptionText) => {
-    const text = String(descriptionText || input || "").trim();
-    if (!text || pending) return;
+  const sendMessage = useCallback(async (content) => {
+    const text = String(content || "").trim();
+    if (!text || pending) {
+      return;
+    }
 
     if (looksLikeCompareQuery(text)) {
       return sendMessageThroughMainChat(text);
     }
 
-    const userMsg = createMessage("user", text);
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setPending(true);
-
-    trackEvent({ eventType: "description_search", queryText: text });
-
-    try {
-      const behavior = readBehavior();
-      const response = await fetch("/api/chatbot/description-search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, descriptionText: text, context: { page: location.pathname, userBehavior: behavior } }),
-      });
-
-      const data = await response.json();
-      if (!response.ok || !data) {
-        setMessages((prev) => [...prev, createMessage("assistant", data?.message || "Không tìm được gợi ý theo mô tả.")]);
-        return;
-      }
-
-      const products = Array.isArray(data?.products) ? data.products : [];
-
-      setMessages((prev) => [
-        ...prev,
-        createMessage("assistant", products.length ? `Tìm thấy ${products.length} sản phẩm phù hợp.` : "Không tìm thấy sản phẩm phù hợp.", {
-          products,
-        }),
-      ]);
-
-      products.forEach((item) => {
-        trackEvent({ eventType: "impression", productId: item._id, category: item.category, metadata: { source: "chatbot_description_search" } });
-      });
-    } catch (error) {
-      setMessages((prev) => [...prev, createMessage("assistant", "Lỗi khi tìm gợi ý theo mô tả.")]);
-    } finally {
-      setPending(false);
-    }
-  };
+    return sendMessageThroughMainChat(text);
+  }, [pending, sendMessageThroughMainChat]);
 
   useEffect(() => {
     if (isAdminArea || !open || !sessionId || messages.length > 0 || pending) {
@@ -434,7 +378,7 @@ function ChatbotWidget() {
     }
 
     void submitChatMessage("Xin chào", { showUserMessage: false });
-  }, [open, isAdminArea, sessionId, messages.length, pending]);
+  }, [open, isAdminArea, sessionId, messages.length, pending, submitChatMessage]);
 
   if (isAdminArea) {
     return null;

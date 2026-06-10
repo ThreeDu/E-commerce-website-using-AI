@@ -378,27 +378,6 @@ function AdminCustomerIntelligencePage() {
                 </>
               )}
             </button>
-            <button
-              className="intel-guide-btn"
-              onClick={() => setShowGuideModal(true)}
-              style={{
-                padding: "10px 16px",
-                borderRadius: "8px",
-                border: "1px solid #cbd5e1",
-                background: "#fff",
-                color: "#475569",
-                fontWeight: "600",
-                fontSize: "14px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                transition: "all 0.2s"
-              }}
-            >
-              <FontAwesomeIcon icon={faInfoCircle} />
-              Chú thích thuật ngữ
-            </button>
           </div>
         </div>
       ) : (

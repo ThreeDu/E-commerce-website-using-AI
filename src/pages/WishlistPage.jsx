@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
@@ -15,11 +15,7 @@ function WishlistPage() {
   const [wishlist, setWishlist] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadWishlist();
-  }, [auth?.token]);
-
-  const loadWishlist = async () => {
+  const loadWishlist = useCallback(async () => {
     if (!auth?.token) {
       setWishlist([]);
       setIsLoading(false);
@@ -36,7 +32,11 @@ function WishlistPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [auth?.token, error]);
+
+  useEffect(() => {
+    loadWishlist();
+  }, [loadWishlist]);
 
   const handleRemove = async (productId) => {
     if (!auth?.token) return;

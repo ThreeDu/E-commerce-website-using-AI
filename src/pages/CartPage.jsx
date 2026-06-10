@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrashCan } from "@fortawesome/free-solid-svg-icons";
 import { useCart } from "../context/CartContext";
-import { useNotification } from "../context/NotificationContext";
 import { getProductImageSrc } from "../utils/productUtils";
 import { parsePrice, formatPrice } from "../utils/priceUtils";
 import "../css/cart.css";
@@ -17,7 +16,6 @@ function CartPage() {
     selectAllItems,
     deselectAllItems,
   } = useCart();
-  const { error } = useNotification();
   const [productPrices, setProductPrices] = useState({});
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
 

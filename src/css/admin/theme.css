@@ -174,16 +174,24 @@ body.admin-sidebar-active .system-log-pagination {
   border: 1px solid #dce5f0;
   border-radius: 12px;
   background: #f8fbff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 body.admin-sidebar-active .dashboard-pagination p,
 body.admin-sidebar-active .system-log-pagination p,
 body.admin-sidebar-active .page-indicator {
+  margin: 0;
   color: #4f6078;
   font-weight: 600;
 }
 
 body.admin-sidebar-active .pagination-actions {
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
 

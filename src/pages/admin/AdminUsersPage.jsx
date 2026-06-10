@@ -66,6 +66,56 @@ function AdminUsersPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [updatingPassword, setUpdatingPassword] = useState(false);
 
+  const [userPendingRoleChange, setUserPendingRoleChange] = useState(null);
+  const [newRolePending, setNewRolePending] = useState("");
+  const [adminPasswordForRole, setAdminPasswordForRole] = useState("");
+  const [updatingRole, setUpdatingRole] = useState(false);
+
+  const handleToggleRole = (user) => {
+    if (String(user._id) === String(currentUserId)) {
+      setMessage("Không thể tự thay đổi vai trò của chính mình.");
+      return;
+    }
+    const targetRole = user.role === "admin" ? "user" : "admin";
+    setUserPendingRoleChange(user);
+    setNewRolePending(targetRole);
+    setAdminPasswordForRole("");
+    setMessage("");
+  };
+
+  const handleSaveRoleChange = async () => {
+    if (!userPendingRoleChange) return;
+
+    if (newRolePending === "admin" && !adminPasswordForRole) {
+      setMessage("Mật khẩu xác nhận của admin là bắt buộc.");
+      return;
+    }
+
+    try {
+      setUpdatingRole(true);
+      const payload = {
+        name: userPendingRoleChange.name,
+        email: userPendingRoleChange.email,
+        role: newRolePending,
+      };
+
+      if (newRolePending === "admin") {
+        payload.adminPassword = adminPasswordForRole;
+      }
+
+      const data = await updateAdminUser(auth.token, userPendingRoleChange._id, payload);
+      setUsers((prev) =>
+        prev.map((u) => (u._id === userPendingRoleChange._id ? data.user : u))
+      );
+      setMessage(`Thay đổi vai trò thành công sang ${newRolePending}.`);
+      setUserPendingRoleChange(null);
+    } catch (error) {
+      setMessage(getErrorMessage(error, "Không thể thay đổi vai trò."));
+    } finally {
+      setUpdatingRole(false);
+    }
+  };
+
   const handleStartEditPoints = (user) => {
     setUserPendingPoints(user);
     setNewPoints(user.loyaltyPoints || 0);
@@ -349,7 +399,13 @@ function AdminUsersPage() {
                   {(user.loyaltyPoints || 0).toLocaleString("vi-VN")}
                 </td>
                 <td>
-                  <span className={`role-badge ${user.role === "admin" ? "admin" : "user"}`}>{user.role}</span>
+                  <span
+                    className={`role-badge ${user.role === "admin" ? "admin" : "user"} ${String(user._id) === String(currentUserId) ? "disabled" : ""}`}
+                    onClick={() => String(user._id) !== String(currentUserId) && handleToggleRole(user)}
+                    title={String(user._id) === String(currentUserId) ? "Không thể tự thay đổi vai trò của chính mình" : "Click để thay đổi vai trò"}
+                  >
+                    {user.role}
+                  </span>
                 </td>
                 <td>{formatDateTime(user.createdAt)}</td>
                 <td>
@@ -670,6 +726,78 @@ function AdminUsersPage() {
                 disabled={updatingPassword}
               >
                 {updatingPassword ? "Đang lưu..." : "Đổi mật khẩu"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Thay Đổi Vai Trò */}
+      {userPendingRoleChange && (
+        <div className="confirm-modal-backdrop" role="presentation">
+          <div className="confirm-modal password-modal" role="dialog" aria-modal="true" aria-labelledby="role-modal-title">
+            <h3 id="role-modal-title" className="modal-title">
+              {newRolePending === "admin" ? "Nâng quyền lên Quản trị viên" : "Hạ quyền thành Khách hàng"}
+            </h3>
+            <p className="modal-subtitle">
+              Thay đổi vai trò cho tài khoản: <strong>{userPendingRoleChange.email}</strong>
+            </p>
+
+            <div className="modal-form-grid">
+              <div className="modal-form-group row-group">
+                <span className="modal-label">Vai trò hiện tại</span>
+                <span className="modal-value" style={{ textTransform: "capitalize" }}>
+                  {userPendingRoleChange.role}
+                </span>
+              </div>
+
+              <div className="modal-form-group row-group">
+                <span className="modal-label">Vai trò mới</span>
+                <span className="modal-value" style={{ textTransform: "capitalize", color: newRolePending === "admin" ? "#1d4ed8" : "#166534" }}>
+                  {newRolePending}
+                </span>
+              </div>
+
+              {newRolePending === "admin" && (
+                <div className="modal-form-group">
+                  <label htmlFor="admin-pass-role-input" className="modal-label">
+                    Xác nhận mật khẩu của bạn (Admin)
+                  </label>
+                  <input
+                    id="admin-pass-role-input"
+                    type="password"
+                    className="table-input modal-input"
+                    placeholder="Nhập mật khẩu của bạn để xác nhận..."
+                    value={adminPasswordForRole}
+                    onChange={(e) => setAdminPasswordForRole(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+
+            <p style={{ fontSize: "13px", color: "#64748b", marginTop: "-6px", marginBottom: "16px" }}>
+              {newRolePending === "admin"
+                ? "Lưu ý: Tài khoản Quản trị viên sẽ có đầy đủ quyền thay đổi cấu hình hệ thống."
+                : "Bạn có chắc chắn muốn hạ quyền của tài khoản quản trị viên này?"
+              }
+            </p>
+
+            <div className="confirm-modal-actions">
+              <button
+                type="button"
+                className="secondary-btn modal-btn"
+                onClick={() => setUserPendingRoleChange(null)}
+                disabled={updatingRole}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className={`modal-btn ${newRolePending === "admin" ? "modal-btn-save-password" : "secondary-btn"}`}
+                onClick={handleSaveRoleChange}
+                disabled={updatingRole}
+                style={newRolePending === "user" ? { backgroundColor: "#b91c1c", color: "#fff", borderColor: "#b91c1c" } : {}}
+              >
+                {updatingRole ? "Đang xử lý..." : "Xác nhận"}
               </button>
             </div>
           </div>
