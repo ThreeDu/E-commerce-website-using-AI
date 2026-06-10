@@ -35,6 +35,8 @@ import {
   faChevronRight,
   faAngleDoubleLeft,
   faAngleDoubleRight,
+  faInfoCircle,
+  faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 
 import "../../css/admin/intelligence.css";
@@ -53,6 +55,7 @@ function AdminCustomerIntelligencePage() {
   const [training, setTraining] = useState(false);
   const [sortBy, setSortBy] = useState("churn_score");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [showGuideModal, setShowGuideModal] = useState(false);
 
   // New retention states
   const [segments, setSegments] = useState(null);
@@ -306,6 +309,27 @@ function AdminCustomerIntelligencePage() {
             </span>
           ) : null}
           <button
+            className="intel-guide-btn"
+            onClick={() => setShowGuideModal(true)}
+            style={{
+              padding: "10px 16px",
+              borderRadius: "8px",
+              border: "1px solid #cbd5e1",
+              background: "#fff",
+              color: "#475569",
+              fontWeight: "600",
+              fontSize: "14px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              transition: "all 0.2s"
+            }}
+          >
+            <FontAwesomeIcon icon={faInfoCircle} />
+            Chú thích thuật ngữ
+          </button>
+          <button
             className="intel-train-btn"
             onClick={handleTrain}
             disabled={training}
@@ -336,23 +360,46 @@ function AdminCustomerIntelligencePage() {
             khách hàng bằng Machine Learning. Hệ thống cần ít nhất 5 khách hàng có
             lịch sử hoạt động.
           </p>
-          <button
-            className="intel-train-btn"
-            onClick={handleTrain}
-            disabled={training}
-          >
-            {training ? (
-              <>
-                <FontAwesomeIcon icon={faSync} spin style={{ marginRight: "6px" }} />
-                Đang training...
-              </>
-            ) : (
-              <>
-                <FontAwesomeIcon icon={faBrain} style={{ marginRight: "6px" }} />
-                Bắt đầu Training
-              </>
-            )}
-          </button>
+          <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+            <button
+              className="intel-train-btn"
+              onClick={handleTrain}
+              disabled={training}
+            >
+              {training ? (
+                <>
+                  <FontAwesomeIcon icon={faSync} spin style={{ marginRight: "6px" }} />
+                  Đang training...
+                </>
+              ) : (
+                <>
+                  <FontAwesomeIcon icon={faBrain} style={{ marginRight: "6px" }} />
+                  Bắt đầu Training
+                </>
+              )}
+            </button>
+            <button
+              className="intel-guide-btn"
+              onClick={() => setShowGuideModal(true)}
+              style={{
+                padding: "10px 16px",
+                borderRadius: "8px",
+                border: "1px solid #cbd5e1",
+                background: "#fff",
+                color: "#475569",
+                fontWeight: "600",
+                fontSize: "14px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                transition: "all 0.2s"
+              }}
+            >
+              <FontAwesomeIcon icon={faInfoCircle} />
+              Chú thích thuật ngữ
+            </button>
+          </div>
         </div>
       ) : (
         <>
@@ -846,6 +893,126 @@ function AdminCustomerIntelligencePage() {
           </div>
 
         </>
+      )}
+
+      {showGuideModal && (
+        <div className="intel-modal-overlay" onClick={() => setShowGuideModal(false)}>
+          <div className="intel-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="intel-modal-header">
+              <h2 className="intel-modal-title">
+                <FontAwesomeIcon icon={faBrain} style={{ marginRight: "10px", color: "var(--primary-color, #4f46e5)" }} />
+                Giải thích chỉ số & Phân loại Phân khúc AI
+              </h2>
+              <button className="intel-modal-close" onClick={() => setShowGuideModal(false)}>
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            </div>
+            <div className="intel-modal-body">
+              <div className="intel-guide-section">
+                <h3 className="intel-guide-subtitle">1. Các chỉ số dự báo bằng Machine Learning</h3>
+                <div className="intel-guide-grid">
+                  <div className="intel-guide-card">
+                    <div className="intel-guide-card__header">
+                      <span className="intel-guide-badge badge--churn">Churn Risk (Tỷ lệ rời bỏ)</span>
+                    </div>
+                    <p className="intel-guide-card__desc">
+                      <strong>Định nghĩa:</strong> Xác suất khách hàng ngừng tương tác hoặc rời bỏ hệ thống trong tương lai gần.
+                    </p>
+                    <p className="intel-guide-card__formula">
+                      <strong>Cách tính:</strong> AI (Random Forest) phân tích chuỗi hoạt động thời gian thực (số lần tương tác chatbot, lượt xem sản phẩm, số ngày không mua hàng...) và so sánh với lịch sử rời bỏ của các khách hàng cũ để dự báo xác suất từ 0% đến 100%.
+                    </p>
+                    <div className="intel-guide-levels">
+                      <div className="level-item"><strong style={{ color: "#16a34a" }}>Thấp (≤ 30%):</strong> Gắn kết tốt, hoạt động đều.</div>
+                      <div className="level-item"><strong style={{ color: "#ea580c" }}>Trung bình (31-70%):</strong> Cần chú ý, gửi nhắc nhở nhẹ.</div>
+                      <div className="level-item"><strong style={{ color: "#dc2626" }}>Cao (> 70%):</strong> Nguy cơ rời đi cực lớn, cần can thiệp khẩn cấp.</div>
+                    </div>
+                  </div>
+
+                  <div className="intel-guide-card">
+                    <div className="intel-guide-card__header">
+                      <span className="intel-guide-badge badge--potential">Potential (Điểm tiềm năng)</span>
+                    </div>
+                    <p className="intel-guide-card__desc">
+                      <strong>Định nghĩa:</strong> Triển vọng đóng góp giá trị dài hạn của khách hàng mới để trở thành khách hàng trung thành.
+                    </p>
+                    <p className="intel-guide-card__formula">
+                      <strong>Cách tính:</strong> Sử dụng mô hình <strong>Gradient Boosting Regressor</strong> để chấm điểm dựa trên hành vi ban đầu (tần suất thêm sản phẩm vào wishlist, xem chi tiết sản phẩm, tốc độ phản hồi chatbot và số lượng giao dịch ban đầu).
+                    </p>
+                    <div className="intel-guide-levels">
+                      <div className="level-item"><strong style={{ color: "#16a34a" }}>Cao (≥ 50):</strong> Có triển vọng lớn để phát triển thành khách hàng trung thành.</div>
+                      <div className="level-item"><strong style={{ color: "#64748b" }}>Thấp (&lt; 50):</strong> Khách hàng vãng lai hoặc ít tương tác.</div>
+                    </div>
+                  </div>
+
+                  <div className="intel-guide-card" style={{ gridColumn: "1 / -1" }}>
+                    <div className="intel-guide-card__header">
+                      <span className="intel-guide-badge badge--clv">CLV Score (Dự đoán giá trị vòng đời)</span>
+                    </div>
+                    <p className="intel-guide-card__desc">
+                      <strong>Định nghĩa:</strong> Tổng giá trị kinh tế (số tiền chi tiêu) mà khách hàng dự kiến sẽ mang lại cho cửa hàng trong toàn bộ vòng đời mua sắm tương lai của họ.
+                    </p>
+                    <p className="intel-guide-card__formula">
+                      <strong>Cách tính:</strong> Sử dụng mô hình <strong>Gradient Boosting Regressor</strong> kết hợp với các chỉ số RFM thực tế để dự báo tổng chi tiêu dài hạn dựa trên: Monetary (tổng số tiền đã chi tiêu), Frequency (tần suất mua hàng), và Recency (mức độ gần đây của đơn hàng cuối).
+                    </p>
+                    <p className="intel-guide-card__note">
+                      💡 <strong>Ứng dụng:</strong> Giúp tối ưu hóa ngân sách tiếp thị. Chỉ tự động gửi Voucher giảm giá cao cho khách hàng có CLV lớn để giữ chân nguồn doanh thu cốt lõi, tránh lãng phí ngân sách đối với nhóm có CLV thấp.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="intel-guide-section" style={{ marginTop: "28px" }}>
+                <h3 className="intel-guide-subtitle">2. Phân loại Phân khúc khách hàng (Segmentation)</h3>
+                <p style={{ fontSize: "13px", color: "#475569", marginBottom: "16px" }}>
+                  Hệ thống tự động phân loại khách hàng thành 6 nhóm RFM thông minh:
+                </p>
+                <div className="intel-segments-table-wrapper">
+                  <table className="intel-segments-table">
+                    <thead>
+                      <tr>
+                        <th>Phân khúc</th>
+                        <th>Quy tắc phân loại (Hành vi & Điểm số AI)</th>
+                        <th>Đặc điểm hành vi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><span className="intel-segment-pill" style={{ border: "1px solid #22c55e", color: "#22c55e", backgroundColor: "#22c55e10", display: "inline-block", padding: "2px 8px", borderRadius: "12px", fontSize: "12px", fontWeight: "600" }}>🏆 Champion</span></td>
+                        <td>Nghỉ mua ≤ 14 ngày, tần suất mua ≥ 5 lần và nằm trong nhóm 20% chi tiêu cao nhất.</td>
+                        <td>Khách hàng giá trị nhất. Mua thường xuyên, chi tiêu cực nhiều và mới hoạt động gần đây.</td>
+                      </tr>
+                      <tr>
+                        <td><span className="intel-segment-pill" style={{ border: "1px solid #3b82f6", color: "#3b82f6", backgroundColor: "#3b82f610", display: "inline-block", padding: "2px 8px", borderRadius: "12px", fontSize: "12px", fontWeight: "600" }}>💎 Loyal</span></td>
+                        <td>Nghỉ mua ≤ 30 ngày, tần suất mua ≥ 3 lần.</td>
+                        <td>Mua sắm đều đặn, gắn bó lâu dài và phản hồi tốt với các chiến dịch.</td>
+                      </tr>
+                      <tr>
+                        <td><span className="intel-segment-pill" style={{ border: "1px solid #a855f7", color: "#a855f7", backgroundColor: "#a855f710", display: "inline-block", padding: "2px 8px", borderRadius: "12px", fontSize: "12px", fontWeight: "600" }}>🌟 Potential Loyalist</span></td>
+                        <td>Nghỉ mua ≤ 30 ngày, số đơn từ 1-2 lần, và có điểm tiềm năng AI (CLV) ≥ 50.</td>
+                        <td>Khách hàng mới tiềm năng. Mua gần đây, số lượng ít nhưng có điểm tiềm năng cao.</td>
+                      </tr>
+                      <tr>
+                        <td><span className="intel-segment-pill" style={{ border: "1px solid #f97316", color: "#f97316", backgroundColor: "#f9731610", display: "inline-block", padding: "2px 8px", borderRadius: "12px", fontSize: "12px", fontWeight: "600" }}>⚠️ At Risk</span></td>
+                        <td>Điểm rời bỏ Churn Risk từ 31% đến 70%, đã mua ít nhất 2 đơn.</td>
+                        <td>Khách hàng có nguy cơ. Từng mua nhiều nhưng đang giảm dần tần suất hoạt động.</td>
+                      </tr>
+                      <tr>
+                        <td><span className="intel-segment-pill" style={{ border: "1px solid #eab308", color: "#eab308", backgroundColor: "#eab30810", display: "inline-block", padding: "2px 8px", borderRadius: "12px", fontSize: "12px", fontWeight: "600" }}>😴 Hibernating</span></td>
+                        <td>Điểm rời bỏ Churn Risk từ 71% đến 90% hoặc đã ngừng hoạt động trên 45 ngày.</td>
+                        <td>Khách hàng ngủ đông. Đã lâu không mua sắm, ít tương tác, khả năng cao sẽ rời đi.</td>
+                      </tr>
+                      <tr>
+                        <td><span className="intel-segment-pill" style={{ border: "1px solid #ef4444", color: "#ef4444", backgroundColor: "#ef444410", display: "inline-block", padding: "2px 8px", borderRadius: "12px", fontSize: "12px", fontWeight: "600" }}>❌ Lost</span></td>
+                        <td>Khách hàng không thuộc các nhóm trên (mặc định của hệ thống).</td>
+                        <td>Mất liên lạc hoàn toàn hoặc khách hàng mới ít hoạt động, tiềm năng thấp.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

@@ -14,13 +14,77 @@ import {
 import "../../css/admin/discounts.css";
 import "../../css/admin/systemLogs.css";
 
-const ACTION_OPTIONS = ["all", "create", "update", "delete"];
-const RESOURCE_OPTIONS = ["all", "product", "discount", "category", "user"];
+const ACTION_OPTIONS = [
+  "all",
+  "create",
+  "update",
+  "delete",
+  "train_model",
+  "run_churn_intervention",
+  "send_cart_reminders",
+  "update_points",
+];
+const RESOURCE_OPTIONS = [
+  "all",
+  "product",
+  "discount",
+  "category",
+  "user",
+  "rewardTier",
+  "ai_model",
+  "campaign",
+];
+
+const ACTION_LABELS = {
+  all: "Tất cả hành động",
+  create: "Thêm mới (Create)",
+  update: "Cập nhật (Update)",
+  delete: "Xóa (Delete)",
+  train_model: "Huấn luyện AI (Train Model)",
+  run_churn_intervention: "Chiến dịch Churn AI",
+  send_cart_reminders: "Chiến dịch Giỏ hàng",
+  update_points: "Thay đổi Điểm (Points)",
+};
+
+const RESOURCE_LABELS = {
+  all: "Tất cả tài nguyên",
+  product: "Sản phẩm (Product)",
+  discount: "Mã giảm giá (Discount)",
+  category: "Danh mục (Category)",
+  user: "Người dùng (User)",
+  rewardTier: "Mức đổi thưởng (Reward)",
+  ai_model: "Mô hình AI (AI Model)",
+  campaign: "Chiến dịch (Campaign)",
+};
 
 const ACTION_TONE_CLASS = {
   create: "create",
   update: "update",
   delete: "delete",
+  train_model: "create",
+  run_churn_intervention: "update",
+  send_cart_reminders: "update",
+  update_points: "other",
+};
+
+const parseUserAgent = (ua) => {
+  if (!ua) return "Thiết bị không rõ";
+  let os = "Không rõ OS";
+  let browser = "Không rõ Trình duyệt";
+  
+  if (ua.includes("Windows")) os = "Windows";
+  else if (ua.includes("Macintosh") || ua.includes("Mac OS X")) os = "macOS";
+  else if (ua.includes("Linux")) os = "Linux";
+  else if (ua.includes("Android")) os = "Android";
+  else if (ua.includes("iPhone") || ua.includes("iPad")) os = "iOS";
+
+  if (ua.includes("Chrome")) browser = "Chrome";
+  else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
+  else if (ua.includes("Firefox")) browser = "Firefox";
+  else if (ua.includes("Edg")) browser = "Edge";
+  else if (ua.includes("Trident") || ua.includes("MSIE")) browser = "IE";
+  
+  return `${os} (${browser})`;
 };
 
 function AdminSystemLogsPage() {
@@ -171,7 +235,7 @@ function AdminSystemLogsPage() {
             <select id="log-action" value={actionFilter} onChange={(event) => setActionFilter(event.target.value)}>
               {ACTION_OPTIONS.map((item) => (
                 <option key={item} value={item}>
-                  {item === "all" ? "Tất cả" : item}
+                  {ACTION_LABELS[item] || item}
                 </option>
               ))}
             </select>
@@ -186,7 +250,7 @@ function AdminSystemLogsPage() {
             >
               {RESOURCE_OPTIONS.map((item) => (
                 <option key={item} value={item}>
-                  {item === "all" ? "Tất cả" : item}
+                  {RESOURCE_LABELS[item] || item}
                 </option>
               ))}
             </select>
@@ -219,7 +283,29 @@ function AdminSystemLogsPage() {
                         <div className="cell-title truncate-text" title={item.adminEmail || "-"}>
                           {item.adminEmail || "-"}
                         </div>
-                        <div className="cell-subtext">IP: {item.ip || "-"}</div>
+                        <div className="cell-subtext" style={{ fontSize: "11px", color: "#64748b" }}>
+                          ID: {item.adminId || "-"}
+                        </div>
+                        <div className="cell-subtext" style={{ fontSize: "11.5px", color: "#475569" }}>
+                          IP: {item.ip || "-"}
+                        </div>
+                        {item.userAgent && (
+                          <div
+                            className="cell-subtext"
+                            title={item.userAgent}
+                            style={{
+                              fontSize: "11px",
+                              color: "#94a3b8",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              maxWidth: "180px",
+                              marginTop: "2px"
+                            }}
+                          >
+                            OS: {parseUserAgent(item.userAgent)}
+                          </div>
+                        )}
                       </td>
                       <td>
                         <span className={`pill system-log-action ${getActionToneClass(item.action)}`}>

@@ -2,6 +2,7 @@ const Discount = require("../../models/Discount");
 const Notification = require("../../models/Notification");
 const User = require("../../models/User");
 const { notifyChurnIntervention, notifyAbandonedCart } = require("../../helpers/notificationHelper");
+const { logAdminAction } = require("../../utils/adminAuditLogger");
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:5001";
 
@@ -96,6 +97,21 @@ const runChurnIntervention = async (req, res) => {
       });
     }
 
+    logAdminAction({
+      req,
+      adminUser: req.adminUser,
+      action: "run_churn_intervention",
+      resource: "campaign",
+      resourceId: "churn_intervention",
+      details: {
+        churnThreshold,
+        cooldownDays,
+        maxTargets,
+        targetsCount: targets.length,
+        vouchersCreated,
+      },
+    });
+
     return res.status(200).json({
       success: true,
       targetsCount: targets.length,
@@ -176,6 +192,23 @@ const sendCartReminders = async (req, res) => {
         voucherCode: createdVoucher ? createdVoucher.code : null,
       });
     }
+
+    logAdminAction({
+      req,
+      adminUser: req.adminUser,
+      action: "send_cart_reminders",
+      resource: "campaign",
+      resourceId: "abandoned_cart",
+      details: {
+        hours,
+        includeDiscount,
+        discountType,
+        discountValue,
+        cartsChecked: carts.length,
+        remindersSent,
+        vouchersCreated,
+      },
+    });
 
     return res.status(200).json({
       success: true,
