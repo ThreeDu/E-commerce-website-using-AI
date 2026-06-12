@@ -20,8 +20,6 @@ import {
   faRotateLeft,
   faTicketSimple,
 } from "@fortawesome/free-solid-svg-icons";
-import "../../../css/admin/discounts.css";
-
 const ITEMS_PER_PAGE = 8;
 
 const VALUE_FILTERS = {
@@ -391,69 +389,80 @@ function AdminListDiscountsPage() {
   };
 
   return (
-    <main className="container page-content admin-discounts-page">
-      <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading || deleting || bulkProcessing}>
-        <div className="dashboard-header-row">
+    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
+      <section className="bg-admin-surface bg-[radial-gradient(circle_at_88%_-8%,rgba(255,111,60,0.12),transparent_36%),radial-gradient(circle_at_-8%_100%,rgba(15,118,110,0.1),transparent_30%)] rounded-[18px] p-6 shadow-[0_12px_32px_rgba(15,23,42,0.08)] animate-admin-rise" aria-busy={loading || deleting || bulkProcessing}>
+        <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-3.5">
           <div>
-            <h2>
-              <FontAwesomeIcon icon={faTicketSimple} style={{ marginRight: "10px", color: "var(--primary-color, #4f46e5)" }} />
+            <h2 className="text-xl font-bold tracking-tight text-admin-ink flex items-center">
+              <FontAwesomeIcon icon={faTicketSimple} className="mr-2.5 text-admin-primary" />
               Quản lý mã giảm giá
             </h2>
-            <p className="dashboard-subtitle">Theo dõi trạng thái hiệu lực và số lượng mã giảm giá theo thời gian thực.</p>
+            <p className="text-sm text-admin-muted mt-1.5 mb-0">Theo dõi trạng thái hiệu lực và số lượng mã giảm giá theo thời gian thực.</p>
           </div>
-          <Link to="/admin/discounts/add" className="primary-link-btn">
-            <FontAwesomeIcon icon={faPlus} style={{ marginRight: "6px" }} />
+          <Link to="/admin/discounts/add" className="inline-flex items-center justify-center bg-gradient-to-r from-admin-primary to-[#0f314f] text-white px-3.5 py-2.5 rounded-xl font-semibold text-sm shadow-[0_8px_18px_rgba(15,118,110,0.22)] transition-all hover:-translate-y-0.5 hover:shadow-[0_9px_16px_rgba(9,26,44,0.14)]">
+            <FontAwesomeIcon icon={faPlus} className="mr-1.5" />
             Thêm mã giảm giá
           </Link>
         </div>
 
-        <div className="dashboard-metric-grid">
-          <article className="metric-card">
-            <span>Tổng mã</span>
-            <strong>{totalDiscounts}</strong>
-            <small className="metric-note">Toàn bộ mã khuyến mãi</small>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 my-2.5">
+          <article className="bg-admin-surface border border-admin-line rounded-lg p-2 px-3 shadow-xs flex flex-col justify-center min-h-[58px] gap-0.5 transition-all hover:-translate-y-0.5 hover:shadow-sm">
+            <span className="text-[10px] font-semibold text-admin-muted uppercase tracking-wider leading-none ml-0.5">Tổng mã</span>
+            <strong className="text-lg font-bold text-admin-ink leading-none ml-0.5">{totalDiscounts}</strong>
+            <small className="text-[9px] text-admin-muted leading-tight ml-0.5">Toàn bộ mã khuyến mãi</small>
           </article>
-          <article className="metric-card success">
-            <span>Đang hoạt động</span>
-            <strong>{activeCount}</strong>
-            <small className="metric-note">Chiếm {percent(activeCount)}</small>
+          <article className="bg-admin-surface border border-admin-line rounded-lg p-2 px-3 shadow-xs flex flex-col justify-center min-h-[58px] gap-0.5 transition-all hover:-translate-y-0.5 hover:shadow-sm">
+            <span className="text-[10px] font-semibold text-admin-muted uppercase tracking-wider leading-none ml-0.5">Đang hoạt động</span>
+            <strong className="text-lg font-bold text-[#166534] leading-none ml-0.5">{activeCount}</strong>
+            <small className="text-[9px] text-admin-muted leading-tight ml-0.5">Chiếm {percent(activeCount)}</small>
           </article>
-          <article className="metric-card warning">
-            <span>Hết mã</span>
-            <strong>{outOfCodeCount}</strong>
-            <small className="metric-note">Chiếm {percent(outOfCodeCount)}</small>
+          <article className="bg-admin-surface border border-admin-line rounded-lg p-2 px-3 shadow-xs flex flex-col justify-center min-h-[58px] gap-0.5 transition-all hover:-translate-y-0.5 hover:shadow-sm">
+            <span className="text-[10px] font-semibold text-admin-muted uppercase tracking-wider leading-none ml-0.5">Hết mã</span>
+            <strong className="text-lg font-bold text-[#b45309] leading-none ml-0.5">{outOfCodeCount}</strong>
+            <small className="text-[9px] text-admin-muted leading-tight ml-0.5">Chiếm {percent(outOfCodeCount)}</small>
           </article>
-          <article className="metric-card danger">
-            <span>Hết hạn</span>
-            <strong>{expiredCount}</strong>
-            <small className="metric-note">Chiếm {percent(expiredCount)}</small>
+          <article className="bg-admin-surface border border-admin-line rounded-lg p-2 px-3 shadow-xs flex flex-col justify-center min-h-[58px] gap-0.5 transition-all hover:-translate-y-0.5 hover:shadow-sm">
+            <span className="text-[10px] font-semibold text-admin-muted uppercase tracking-wider leading-none ml-0.5">Hết hạn</span>
+            <strong className="text-lg font-bold text-[#b42318] leading-none ml-0.5">{expiredCount}</strong>
+            <small className="text-[9px] text-admin-muted leading-tight ml-0.5">Chiếm {percent(expiredCount)}</small>
           </article>
         </div>
 
-        <div className="dashboard-filter-bar">
-          <div className="filter-control search-control">
-            <label htmlFor="discount-search">Tìm kiếm</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-2.5 mb-4">
+          <div className="sm:col-span-2 lg:col-span-2 flex flex-col gap-1.5">
+            <label htmlFor="discount-search" className="text-[11px] font-bold uppercase tracking-wider text-admin-muted">Tìm kiếm</label>
             <input
               id="discount-search"
               type="text"
+              className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
               placeholder="Mã giảm giá hoặc loại mã..."
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
             />
           </div>
 
-          <div className="filter-control">
-            <label htmlFor="discount-type">Danh mục</label>
-            <select id="discount-type" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="discount-type" className="text-[11px] font-bold uppercase tracking-wider text-admin-muted">Danh mục</label>
+            <select
+              id="discount-type"
+              className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
+              value={typeFilter}
+              onChange={(event) => setTypeFilter(event.target.value)}
+            >
               <option value="all">Tất cả loại mã</option>
               <option value="percent">Phần trăm</option>
               <option value="fixed">Số tiền</option>
             </select>
           </div>
 
-          <div className="filter-control">
-            <label htmlFor="discount-value">Mức giảm</label>
-            <select id="discount-value" value={valueFilter} onChange={(event) => setValueFilter(event.target.value)}>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="discount-value" className="text-[11px] font-bold uppercase tracking-wider text-admin-muted">Mức giảm</label>
+            <select
+              id="discount-value"
+              className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
+              value={valueFilter}
+              onChange={(event) => setValueFilter(event.target.value)}
+            >
               <option value="all">Tất cả mức giảm</option>
               <option value="under10">Dưới 10</option>
               <option value="from10To30">10 - 30</option>
@@ -461,18 +470,28 @@ function AdminListDiscountsPage() {
             </select>
           </div>
 
-          <div className="filter-control">
-            <label htmlFor="discount-active">Hoạt động</label>
-            <select id="discount-active" value={activeFilter} onChange={(event) => setActiveFilter(event.target.value)}>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="discount-active" className="text-[11px] font-bold uppercase tracking-wider text-admin-muted">Hoạt động</label>
+            <select
+              id="discount-active"
+              className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
+              value={activeFilter}
+              onChange={(event) => setActiveFilter(event.target.value)}
+            >
               <option value="all">Tất cả</option>
               <option value="active">Đang bật</option>
               <option value="inactive">Đang tắt</option>
             </select>
           </div>
 
-          <div className="filter-control">
-            <label htmlFor="discount-time">Thời gian hiệu lực</label>
-            <select id="discount-time" value={timeFilter} onChange={(event) => setTimeFilter(event.target.value)}>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="discount-time" className="text-[11px] font-bold uppercase tracking-wider text-admin-muted">Thời gian hiệu lực</label>
+            <select
+              id="discount-time"
+              className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
+              value={timeFilter}
+              onChange={(event) => setTimeFilter(event.target.value)}
+            >
               <option value="all">Tất cả</option>
               <option value="running">Đang hiệu lực</option>
               <option value="upcoming">Sắp mở</option>
@@ -481,10 +500,11 @@ function AdminListDiscountsPage() {
             </select>
           </div>
 
-          <div className="filter-control">
-            <label htmlFor="discount-remaining">Số lượt còn lại</label>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="discount-remaining" className="text-[11px] font-bold uppercase tracking-wider text-admin-muted">Số lượt còn lại</label>
             <select
               id="discount-remaining"
+              className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
               value={remainingFilter}
               onChange={(event) => setRemainingFilter(event.target.value)}
             >
@@ -495,34 +515,32 @@ function AdminListDiscountsPage() {
           </div>
         </div>
 
-        <div className="bulk-action-bar">
-          <p>
-            Đã chọn <strong>{selectedDiscounts.length}</strong> mã giảm giá
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 p-2.5 px-3 my-2.5 rounded-xl border border-[#dbe6f3] bg-[#f8fbff]">
+          <p className="text-sm text-[#4f6078] m-0">
+            Đã chọn <strong className="font-bold">{selectedDiscounts.length}</strong> mã giảm giá
           </p>
-          <div className="bulk-action-buttons">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              className="secondary-btn"
+              className="inline-flex items-center gap-1.5 border border-[#d0d9e4] rounded-lg py-2 px-3 text-xs font-semibold bg-[#e8edf3] text-admin-ink cursor-pointer hover:bg-[#dbe3ed] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={selectedDiscounts.length === 0 || bulkProcessing}
               onClick={() => handleBulkActiveChange(true)}
-              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
             >
-              <FontAwesomeIcon icon={faToggleOn} style={{ color: "var(--success-color, #22c55e)" }} />
+              <FontAwesomeIcon icon={faToggleOn} className="text-[#22c55e]" />
               Bật đã chọn
             </button>
             <button
               type="button"
-              className="secondary-btn"
+              className="inline-flex items-center gap-1.5 border border-[#d0d9e4] rounded-lg py-2 px-3 text-xs font-semibold bg-[#e8edf3] text-admin-ink cursor-pointer hover:bg-[#dbe3ed] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={selectedDiscounts.length === 0 || bulkProcessing}
               onClick={() => handleBulkActiveChange(false)}
-              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
             >
-              <FontAwesomeIcon icon={faToggleOff} style={{ color: "var(--text-secondary, #6b7280)" }} />
+              <FontAwesomeIcon icon={faToggleOff} className="text-admin-muted" />
               Tắt đã chọn
             </button>
             <button
               type="button"
-              className="danger-btn"
+              className="inline-flex items-center gap-1.5 border border-[#9a3412]/20 rounded-lg py-2 px-3 text-xs font-semibold bg-admin-accent-soft text-[#9a3412] cursor-pointer hover:bg-[#ffd9c7] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={selectedDiscounts.length === 0 || deleting || bulkProcessing}
               onClick={() =>
                 setDiscountPendingDelete({
@@ -530,17 +548,15 @@ function AdminListDiscountsPage() {
                   code: `${selectedDiscounts.length} mã đã chọn`,
                 })
               }
-              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
             >
               <FontAwesomeIcon icon={faTrash} />
               Xóa đã chọn
             </button>
             <button
               type="button"
-              className="secondary-btn"
+              className="inline-flex items-center gap-1.5 border border-[#d0d9e4] rounded-lg py-2 px-3 text-xs font-semibold bg-[#e8edf3] text-admin-ink cursor-pointer hover:bg-[#dbe3ed] transition-all"
               disabled={selectedDiscounts.length === 0}
               onClick={() => setSelectedDiscountIds([])}
-              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
             >
               <FontAwesomeIcon icon={faRotateLeft} />
               Bỏ chọn
@@ -549,15 +565,15 @@ function AdminListDiscountsPage() {
         </div>
 
         {loading ? (
-          <p>Đang tải danh sách mã giảm giá...</p>
+          <p className="text-center py-6 text-admin-muted text-sm">Đang tải danh sách mã giảm giá...</p>
         ) : (
           <>
-            <div className="dashboard-table-card">
-              <div className="users-table-wrap">
-                <table className="users-table dashboard-table">
+            <div className="border border-[#e2eaf4] rounded-2xl overflow-hidden bg-admin-surface">
+              <div className="w-full overflow-x-auto">
+                <table className="w-full text-left border-collapse table-fixed text-[13px] [&>thead>tr>th]:bg-[#f2f7ff] [&>thead>tr>th]:text-[#4a5c75] [&>thead>tr>th]:font-semibold [&>thead>tr>th]:p-[8px_6px] [&>thead>tr>th]:align-middle [&>tbody>tr>td]:p-[8px_6px] [&>tbody>tr>td]:align-middle [&>tbody>tr>td]:break-words [&>tbody>tr]:border-b [&>tbody>tr]:border-admin-line [&>tbody>tr]:transition-colors hover:[&>tbody>tr]:bg-[#f8fbff]">
                   <thead>
                     <tr>
-                      <th>
+                      <th className="w-[5%] text-center">
                         <input
                           type="checkbox"
                           aria-label="Chọn tất cả mã giảm giá trong trang"
@@ -565,11 +581,11 @@ function AdminListDiscountsPage() {
                           onChange={toggleSelectAllOnPage}
                         />
                       </th>
-                      <th>Mã giảm giá</th>
-                      <th>Giá trị & điều kiện</th>
-                      <th>Hiệu lực</th>
-                      <th>Trạng thái</th>
-                      <th>Thao tác</th>
+                      <th className="w-[20%]">Mã giảm giá</th>
+                      <th className="w-[23%]">Giá trị & điều kiện</th>
+                      <th className="w-[22%]">Hiệu lực</th>
+                      <th className="w-[12%] text-center">Trạng thái</th>
+                      <th className="w-[18%]">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -578,7 +594,7 @@ function AdminListDiscountsPage() {
 
                       return (
                         <tr key={discount._id}>
-                          <td>
+                          <td className="text-center">
                             <input
                               type="checkbox"
                               aria-label={`Chọn mã giảm giá ${discount.code}`}
@@ -587,61 +603,60 @@ function AdminListDiscountsPage() {
                             />
                           </td>
                           <td>
-                            <div className="cell-title truncate-text" title={discount.code}>
+                            <div className="font-bold text-admin-ink block break-words whitespace-normal" title={discount.code}>
                               {discount.code}
                             </div>
-                            <div className="cell-subtext">{discount.type === "percent" ? "Phần trăm" : "Số tiền"}</div>
+                            <div className="text-xs text-admin-muted mt-1 block break-words whitespace-normal">{discount.type === "percent" ? "Phần trăm" : "Số tiền"}</div>
                           </td>
                           <td>
-                            <div className="price-stack">
-                              <span className="pill price-pill">
+                            <div className="grid gap-1 min-w-0">
+                              <span className="inline-flex items-center rounded-full font-bold text-[11px] py-0.5 px-1.5 bg-[#e7f0ff] text-[#1749a6] w-max">
                                 {discount.type === "percent"
                                   ? `${discount.value}%`
                                   : `${Number(discount.value).toLocaleString("vi-VN")} đ`}
                               </span>
-                              <span className="cell-subtext truncate-text" title={`Đơn tối thiểu: ${Number(discount.minOrderValue || 0).toLocaleString("vi-VN")} đ`}>
+                              <span className="text-xs text-admin-muted mt-1 block break-words whitespace-normal" title={`Đơn tối thiểu: ${Number(discount.minOrderValue || 0).toLocaleString("vi-VN")} đ`}>
                                 Đơn tối thiểu: {Number(discount.minOrderValue || 0).toLocaleString("vi-VN")} đ
                               </span>
-                              <span className="cell-subtext">
+                              <span className="text-xs text-admin-muted mt-1 block break-words whitespace-normal">
                                 Số lượng còn lại: {getRemainingQuantity(discount).toLocaleString("vi-VN")}
                               </span>
                             </div>
                           </td>
                           <td>
-                            <div className="date-range-stack" title={`${formatDateTime(discount.startDate)} - ${formatDateTime(discount.endDate)}`}>
-                              <div className="date-item start-date">
-                                <span className="date-label">Từ:</span>
-                                <span className="date-val">{formatDateTime(discount.startDate)}</span>
+                            <div className="flex flex-col gap-1" title={`${formatDateTime(discount.startDate)} - ${formatDateTime(discount.endDate)}`}>
+                              <div className="flex items-center gap-1.5 text-[13px] leading-tight start-date">
+                                <span className="text-[9px] uppercase font-bold text-admin-muted w-8 shrink-0 whitespace-nowrap">Từ:</span>
+                                <span className="text-[#334155] font-medium font-mono text-[11px]">{formatDateTime(discount.startDate)}</span>
                               </div>
-                              <div className="date-item end-date">
-                                <span className="date-label">Đến:</span>
-                                <span className="date-val">{formatDateTime(discount.endDate)}</span>
+                              <div className="flex items-center gap-1.5 text-[13px] leading-tight end-date">
+                                <span className="text-[9px] uppercase font-bold text-admin-muted w-8 shrink-0 whitespace-nowrap">Đến:</span>
+                                <span className="text-[#334155] font-medium font-mono text-[11px]">{formatDateTime(discount.endDate)}</span>
                               </div>
                             </div>
                           </td>
-                          <td>
+                          <td className="text-center">
                             <span
-                              className={`pill status-pill ${
+                              className={`inline-flex items-center rounded-full font-bold text-[11px] py-0.5 px-1.5 w-max ${
                                 status === "Hết hạn"
-                                  ? "danger"
+                                  ? "bg-[#ffe8e8] text-[#b42318]"
                                   : status === "Sắp mở"
-                                    ? "info"
+                                    ? "bg-[#e8f1ff] text-[#1d4ed8]"
                                   : status === "Hết mã"
-                                    ? "warning"
+                                    ? "bg-[#fff3dd] text-[#b45309]"
                                     : status === "Hoạt động"
-                                      ? "success"
-                                      : "muted"
+                                      ? "bg-[#e7f9ef] text-[#166534]"
+                                      : "bg-[#e8edf3] text-[#475569]"
                               }`}
                             >
                               {status}
                             </span>
                           </td>
                           <td>
-                            <div className="table-actions">
+                            <div className="flex items-center gap-1 flex-nowrap w-full">
                               <Link
                                 to={`/admin/discounts/edit/${discount._id}`}
-                                className="table-link-btn"
-                                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                                className="inline-flex items-center gap-1 py-1 px-2 text-[11px] font-semibold rounded-md border border-[#b5ccf0] bg-[#f6f9ff] text-[#0f3f84] hover:bg-[#e6efff] transition-colors shrink-0 whitespace-nowrap"
                                 title="Chỉnh sửa mã giảm giá"
                               >
                                 <FontAwesomeIcon icon={faPen} />
@@ -649,9 +664,8 @@ function AdminListDiscountsPage() {
                               </Link>
                               <button
                                 type="button"
-                                className="danger-btn"
+                                className="inline-flex items-center gap-1 py-1 px-2 text-[11px] font-semibold rounded-md border border-[#9a3412]/20 bg-admin-accent-soft text-[#9a3412] hover:bg-[#ffd9c7] transition-colors shrink-0 whitespace-nowrap"
                                 onClick={() => setDiscountPendingDelete(discount)}
-                                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                                 title="Xóa mã giảm giá"
                               >
                                 <FontAwesomeIcon icon={faTrash} />
@@ -664,7 +678,7 @@ function AdminListDiscountsPage() {
                     })}
                     {paginatedDiscounts.length === 0 && (
                       <tr>
-                        <td colSpan="6" className="table-empty-cell">
+                        <td colSpan="6" className="text-center text-[#657589] p-6">
                           Không tìm thấy mã giảm giá phù hợp bộ lọc.
                         </td>
                       </tr>
@@ -674,33 +688,31 @@ function AdminListDiscountsPage() {
               </div>
             </div>
 
-            <div className="dashboard-pagination">
-              <p>
-                Hiển thị <strong>{paginatedDiscounts.length}</strong> / {filteredDiscounts.length} mã giảm giá
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-3 px-4 border-t border-[#edf2f8]">
+              <p className="text-sm text-admin-muted m-0">
+                Hiển thị <strong className="font-bold">{paginatedDiscounts.length}</strong> / {filteredDiscounts.length} mã giảm giá
               </p>
-              <div className="pagination-actions">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className="secondary-btn pager-btn"
+                  className="inline-flex items-center justify-center min-h-[34px] min-w-[92px] px-3.5 py-1.75 rounded-xl border border-[#cdd9e8] bg-[#f9fbfe] text-[#5f6f85] text-[13px] font-bold tracking-wide cursor-pointer transition-all duration-150 hover:-translate-y-px hover:bg-[#eef4fb] hover:text-[#3f4f67] hover:shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
-                  <FontAwesomeIcon icon={faChevronLeft} />
+                  <FontAwesomeIcon icon={faChevronLeft} className="mr-1.5" />
                   Trước
                 </button>
-                <span className="page-indicator">
+                <span className="min-w-[100px] text-center text-[#4b5b73] font-semibold text-sm">
                   Trang {currentPage}/{totalPages}
                 </span>
                 <button
                   type="button"
-                  className="secondary-btn pager-btn"
+                  className="inline-flex items-center justify-center min-h-[34px] min-w-[92px] px-3.5 py-1.75 rounded-xl border border-[#cdd9e8] bg-[#f9fbfe] text-[#5f6f85] text-[13px] font-bold tracking-wide cursor-pointer transition-all duration-150 hover:-translate-y-px hover:bg-[#eef4fb] hover:text-[#3f4f67] hover:shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
                   Sau
-                  <FontAwesomeIcon icon={faChevronRight} />
+                  <FontAwesomeIcon icon={faChevronRight} className="ml-1.5" />
                 </button>
               </div>
             </div>
@@ -709,22 +721,22 @@ function AdminListDiscountsPage() {
       </section>
 
       {discountPendingDelete && (
-        <div className="confirm-modal-backdrop" role="presentation">
-          <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title">
-            <h3 id="delete-title">Xác nhận xóa mã giảm giá</h3>
-            <p>
-              Bạn có chắc chắn muốn xóa <strong>{discountPendingDelete.code}</strong>?
+        <div className="fixed inset-0 bg-[#09111b]/50 flex items-center justify-center z-[999] p-4" role="presentation">
+          <div className="w-[min(460px,100%)] bg-admin-surface rounded-xl p-4.5 shadow-[0_18px_36px_rgba(13,29,44,0.22)]" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+            <h3 id="delete-title" className="text-lg font-bold text-admin-ink mt-0 mb-2">Xác nhận xóa mã giảm giá</h3>
+            <p className="text-sm text-admin-muted mt-0 mb-3.5">
+              Bạn có chắc chắn muốn xóa <strong className="font-bold">{discountPendingDelete.code}</strong>?
             </p>
-            <div className="confirm-modal-actions">
+            <div className="flex justify-end gap-2.5">
               <button
                 type="button"
-                className="secondary-btn"
+                className="border border-[#d0d9e4] rounded-lg py-2 px-3.5 font-semibold text-sm bg-[#e8edf3] text-admin-ink cursor-pointer hover:bg-[#dbe3ed] transition-colors disabled:opacity-50"
                 onClick={() => setDiscountPendingDelete(null)}
                 disabled={deleting}
               >
                 Hủy
               </button>
-              <button type="button" className="danger-btn" onClick={handleDelete} disabled={deleting}>
+              <button type="button" className="border border-[#b42318] rounded-lg py-2 px-3.5 font-semibold text-sm bg-[#b42318] text-white cursor-pointer hover:bg-[#991b1b] transition-colors disabled:opacity-50" onClick={handleDelete} disabled={deleting}>
                 {deleting ? "Đang xóa..." : "Xóa"}
               </button>
             </div>

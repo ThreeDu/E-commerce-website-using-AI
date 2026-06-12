@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useUserNotification } from "../../context/UserNotificationContext";
-import "../../css/notification-bell.css";
-
 function IconBell() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
@@ -88,17 +86,17 @@ const getNotificationIcon = (type) => {
 const getIconClass = (type) => {
   switch (type) {
     case "order_status":
-      return "icon-order";
+      return "bg-[#eaf5ff] text-[#0066cc]";
     case "product_discount":
-      return "icon-discount";
+      return "bg-[#fff7ed] text-[#f97316]";
     case "new_coupon":
-      return "icon-coupon";
+      return "bg-[#faf5ff] text-[#a855f7]";
     case "churn_intervention":
-      return "icon-gift";
+      return "bg-[#fee2e2] text-[#ef4444]";
     case "abandoned_cart":
-      return "icon-cart";
+      return "bg-[#fff7ed] text-[#f97316]";
     default:
-      return "icon-system";
+      return "bg-[#f0fdf4] text-[#22c55e]";
   }
 };
 
@@ -182,29 +180,31 @@ export default function NotificationBell() {
   };
 
   return (
-    <div className="notification-bell-container" ref={dropdownRef}>
+    <div className="relative inline-flex" ref={dropdownRef}>
       <button
         type="button"
-        className={`notification-bell-trigger ${isOpen ? "active" : ""}`}
+        className={`relative inline-flex items-center justify-center w-[38px] h-[38px] border border-black/10 rounded-full bg-white text-[#1d1d1f] cursor-pointer transition-all hover:bg-[#eaf5ff] hover:border-[#0066cc]/20 hover:text-[#0066cc] hover:scale-105 ${
+          isOpen ? "bg-[#eaf5ff] border-[#0066cc]/20 text-[#0066cc] scale-105" : ""
+        }`}
         onClick={handleBellClick}
         aria-label="Thông báo"
       >
         <IconBell />
         {unreadCount > 0 && (
-          <span className="notification-badge">
+          <span className="absolute -top-0.5 -right-0.5 bg-[#ef4444] text-white text-[10px] font-extrabold min-w-[17px] h-[17px] rounded-full inline-flex items-center justify-center px-1 border-[1.5px] border-white shadow-[0_2px_6px_rgba(239,68,68,0.4)] animate-pulse-badge">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="notification-dropdown">
-          <div className="notification-header">
-            <h3>Thông báo</h3>
+        <div className="absolute top-[calc(100%+12px)] right-0 w-[380px] max-h-[480px] bg-white border border-black/8 rounded-2xl shadow-elevated flex flex-col overflow-hidden z-[1100] animate-fade-in max-[480px]:fixed max-[480px]:top-[82px] max-[480px]:left-0 max-[480px]:right-0 max-[480px]:w-screen max-[480px]:max-h-[calc(100vh-82px)] max-[480px]:rounded-none max-[480px]:border-x-0">
+          <div className="flex items-center justify-between p-3.5 px-4 border-b border-black/6 bg-[#fdfdfd]">
+            <h3 className="m-0 text-base font-extrabold text-[#1d1d1f]">Thông báo</h3>
             {unreadCount > 0 && (
               <button
                 type="button"
-                className="mark-all-read-btn"
+                className="bg-transparent border-none text-[#0066cc] text-xs font-bold cursor-pointer py-1 px-2 rounded-lg transition-colors hover:bg-[#eaf5ff]"
                 onClick={markAllRead}
               >
                 Đọc tất cả
@@ -212,36 +212,40 @@ export default function NotificationBell() {
             )}
           </div>
 
-          <div className="notification-list">
+          <div className="flex-1 overflow-y-auto max-h-[400px] scrollbar-thin max-[480px]:max-h-[calc(100vh-150px)]">
             {notifications.length === 0 ? (
-              <div className="notification-empty">
-                <IconBell />
-                <p>Không có thông báo mới</p>
+              <div className="flex flex-col items-center justify-center py-10 px-5 text-[#86868b] text-center">
+                <div className="w-[42px] h-[42px] text-[#d2d2d7] mb-3">
+                  <IconBell />
+                </div>
+                <p className="m-0 text-xs font-medium">Không có thông báo mới</p>
               </div>
             ) : (
               notifications.map((item) => (
                 <div
                   key={item._id}
-                  className={`notification-item ${!item.isRead ? "unread" : ""}`}
+                  className={`flex gap-3 p-3.5 px-4 border-b border-black/4 cursor-pointer transition-colors relative hover:bg-[#f5f5f7] last:border-b-0 group ${
+                    !item.isRead ? "bg-[#f7faff] before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3.5px] before:bg-[#0066cc]" : ""
+                  }`}
                   onClick={() => handleNotificationClick(item)}
                 >
-                  <div className={`notification-item-icon ${getIconClass(item.type)}`}>
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${getIconClass(item.type)}`}>
                     {getNotificationIcon(item.type)}
                   </div>
-                  <div className="notification-item-content">
-                    <div className="notification-item-title-row">
-                      <span className="notification-item-title">{item.title}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start gap-2 mb-1">
+                      <span className="text-[13.5px] font-bold text-[#1d1d1f] leading-snug">{item.title}</span>
                       <button
                         type="button"
-                        className="notification-item-delete"
+                        className="bg-transparent border-none text-[#86868b] cursor-pointer p-1 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-black/5 hover:text-[#ef4444]"
                         onClick={(e) => handleDeleteClick(e, item._id)}
                         title="Xóa"
                       >
                         <IconTrash />
                       </button>
                     </div>
-                    <p className="notification-item-message">{item.message}</p>
-                    <span className="notification-item-time">
+                    <p className="m-0 mb-1.5 text-[12.5px] text-[#515154] leading-relaxed line-clamp-2">{item.message}</p>
+                    <span className="text-[11px] text-[#86868b] font-semibold">
                       {formatRelativeTime(item.createdAt)}
                     </span>
                   </div>

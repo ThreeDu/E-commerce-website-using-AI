@@ -4,8 +4,6 @@ import { useAuth } from "../../../context/AuthContext";
 import { useNotification } from "../../../context/NotificationContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faGift } from "@fortawesome/free-solid-svg-icons";
-import "../../../css/admin/rewards.css";
-
 const API_BASE = "/api/auth/admin/rewards";
 
 const EMPTY_FORM = {
@@ -95,23 +93,23 @@ function AdminAddRewardTierPage() {
   };
 
   return (
-    <main className="container page-content admin-products-page admin-rewards-page">
-      <section className="hero-card dashboard-surface admin-page-enter">
-        <div className="dashboard-header-row" style={{ marginBottom: "20px" }}>
+    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
+      <section className="bg-admin-surface border border-admin-line rounded-3xl shadow-admin p-8 flex flex-col gap-6 animate-admin-rise bg-[radial-gradient(circle_at_92%_-10%,rgba(255,111,60,0.12),transparent_36%),radial-gradient(circle_at_-8%_100%,rgba(15, 118, 110, 0.1),transparent_30%),#ffffff]">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-1">
           <div>
-            <h2>
-              <FontAwesomeIcon icon={faGift} style={{ marginRight: "10px", color: "var(--primary-color, #4f46e5)" }} />
+            <h2 className="text-2xl font-bold tracking-tight text-admin-ink mt-0 mb-1 flex items-center">
+              <FontAwesomeIcon icon={faGift} className="mr-2.5 text-admin-primary" />
               Thêm mức đổi thưởng mới
             </h2>
-            <p className="dashboard-subtitle">
+            <p className="text-admin-muted text-sm mt-1 mb-0">
               Cấu hình các mức điểm và phần thưởng voucher cho người dùng.
             </p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "600px" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <label htmlFor="name" style={{ fontWeight: "600", fontSize: "14px", color: "#374151" }}>Tên mức đổi thưởng *</label>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5 w-full max-w-[600px]">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="name" className="text-[13px] font-bold tracking-wide text-[#1f3348]">Tên mức đổi thưởng *</label>
             <input
               id="name"
               name="name"
@@ -119,21 +117,14 @@ function AdminAddRewardTierPage() {
               placeholder="Nhập tên mức đổi thưởng..."
               value={form.name}
               onChange={handleChange}
-              style={{
-                padding: "10px 14px",
-                border: "1px solid #d1d5db",
-                borderRadius: "6px",
-                fontSize: "14px",
-                width: "100%",
-                boxSizing: "border-box"
-              }}
+              className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
               required
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label htmlFor="pointsRequired" style={{ fontWeight: "600", fontSize: "14px", color: "#374151" }}>Điểm cần *</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="pointsRequired" className="text-[13px] font-bold tracking-wide text-[#1f3348]">Điểm cần *</label>
               <input
                 id="pointsRequired"
                 name="pointsRequired"
@@ -142,34 +133,19 @@ function AdminAddRewardTierPage() {
                 min="1"
                 value={form.pointsRequired}
                 onChange={handleChange}
-                style={{
-                  padding: "10px 14px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "6px",
-                  fontSize: "14px",
-                  width: "100%",
-                  boxSizing: "border-box"
-                }}
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
                 required
               />
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label htmlFor="discountType" style={{ fontWeight: "600", fontSize: "14px", color: "#374151" }}>Loại giảm giá</label>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="discountType" className="text-[13px] font-bold tracking-wide text-[#1f3348]">Loại giảm giá</label>
               <select
                 id="discountType"
                 name="discountType"
                 value={form.discountType}
                 onChange={handleChange}
-                style={{
-                  padding: "10px 14px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "6px",
-                  fontSize: "14px",
-                  width: "100%",
-                  backgroundColor: "#fff",
-                  boxSizing: "border-box"
-                }}
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
               >
                 <option value="percent">Phần trăm (%)</option>
                 <option value="fixed">Cố định (VNĐ)</option>
@@ -177,9 +153,9 @@ function AdminAddRewardTierPage() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label htmlFor="discountValue" style={{ fontWeight: "600", fontSize: "14px", color: "#374151" }}>Giá trị giảm *</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="discountValue" className="text-[13px] font-bold tracking-wide text-[#1f3348]">Giá trị giảm *</label>
               <input
                 id="discountValue"
                 name="discountValue"
@@ -188,20 +164,13 @@ function AdminAddRewardTierPage() {
                 min="1"
                 value={form.discountValue}
                 onChange={handleChange}
-                style={{
-                  padding: "10px 14px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "6px",
-                  fontSize: "14px",
-                  width: "100%",
-                  boxSizing: "border-box"
-                }}
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
                 required
               />
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label htmlFor="maxDiscountValue" style={{ fontWeight: "600", fontSize: "14px", color: "#374151" }}>Giảm tối đa (VNĐ)</label>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="maxDiscountValue" className="text-[13px] font-bold tracking-wide text-[#1f3348]">Giảm tối đa (VNĐ)</label>
               <input
                 id="maxDiscountValue"
                 name="maxDiscountValue"
@@ -210,21 +179,14 @@ function AdminAddRewardTierPage() {
                 min="0"
                 value={form.maxDiscountValue}
                 onChange={handleChange}
-                style={{
-                  padding: "10px 14px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "6px",
-                  fontSize: "14px",
-                  width: "100%",
-                  boxSizing: "border-box"
-                }}
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
               />
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label htmlFor="minOrderValue" style={{ fontWeight: "600", fontSize: "14px", color: "#374151" }}>Đơn tối thiểu (VNĐ)</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="minOrderValue" className="text-[13px] font-bold tracking-wide text-[#1f3348]">Đơn tối thiểu (VNĐ)</label>
               <input
                 id="minOrderValue"
                 name="minOrderValue"
@@ -233,19 +195,12 @@ function AdminAddRewardTierPage() {
                 min="0"
                 value={form.minOrderValue}
                 onChange={handleChange}
-                style={{
-                  padding: "10px 14px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "6px",
-                  fontSize: "14px",
-                  width: "100%",
-                  boxSizing: "border-box"
-                }}
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
               />
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label htmlFor="voucherValidDays" style={{ fontWeight: "600", fontSize: "14px", color: "#374151" }}>Hiệu lực (ngày)</label>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="voucherValidDays" className="text-[13px] font-bold tracking-wide text-[#1f3348]">Hiệu lực (ngày)</label>
               <input
                 id="voucherValidDays"
                 name="voucherValidDays"
@@ -254,68 +209,38 @@ function AdminAddRewardTierPage() {
                 min="1"
                 value={form.voucherValidDays}
                 onChange={handleChange}
-                style={{
-                  padding: "10px 14px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "6px",
-                  fontSize: "14px",
-                  width: "100%",
-                  boxSizing: "border-box"
-                }}
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
               />
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "6px" }}>
+          <div className="flex items-center gap-2 mt-1.5">
             <input
               id="isActive"
               name="isActive"
               type="checkbox"
               checked={form.isActive}
               onChange={handleChange}
-              style={{ width: "16px", height: "16px", cursor: "pointer" }}
+              className="w-4 h-4 cursor-pointer accent-admin-primary"
             />
-            <label htmlFor="isActive" style={{ fontWeight: "600", fontSize: "14px", color: "#374151", cursor: "pointer" }}>
+            <label htmlFor="isActive" className="text-sm font-semibold text-admin-ink cursor-pointer select-none">
               Kích hoạt mức đổi thưởng này
             </label>
           </div>
 
-          <div style={{ display: "flex", gap: "12px", marginTop: "12px" }}>
+          <div className="flex gap-3 mt-3">
             <button
               type="submit"
               disabled={submitting}
-              className="primary-link-btn"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "10px 20px",
-                border: "none",
-                borderRadius: "6px",
-                fontWeight: "600",
-                fontSize: "14px",
-                cursor: "pointer",
-                backgroundColor: "var(--primary-color, #4f46e5)",
-                color: "#fff"
-              }}
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg font-semibold text-sm cursor-pointer bg-gradient-to-r from-admin-primary to-admin-sidebar-end text-white hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
             >
               <FontAwesomeIcon icon={faPlus} />
               {submitting ? "Đang lưu..." : "Thêm mới"}
             </button>
             <button
               type="button"
-              className="secondary-btn"
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg font-semibold text-sm cursor-pointer bg-[#e8edf3] text-admin-ink border border-[#d2dce8] hover:bg-[#dce3ec] transition-colors"
               onClick={() => navigate("/admin/rewards")}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "10px 20px",
-                borderRadius: "6px",
-                fontWeight: "600",
-                fontSize: "14px",
-                cursor: "pointer"
-              }}
             >
               Hủy
             </button>

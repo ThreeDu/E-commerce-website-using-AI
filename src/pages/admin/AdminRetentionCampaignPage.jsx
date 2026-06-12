@@ -18,8 +18,6 @@ import {
   faAngleDoubleLeft,
   faAngleDoubleRight,
 } from "@fortawesome/free-solid-svg-icons";
-import "../../css/admin/retention-campaign.css";
-
 const API_BASE = "/api/auth/admin/intelligence/retention";
 
 function AdminRetentionCampaignPage() {
@@ -199,35 +197,35 @@ function AdminRetentionCampaignPage() {
   };
 
   return (
-    <main className="container page-content retention-page">
+    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10 animate-fade-in">
       {/* Header */}
-      <div className="retention-header">
-        <h1 className="retention-title">
-          <FontAwesomeIcon icon={faBullhorn} style={{ color: "#4f46e5" }} />
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-admin-ink flex items-center gap-3">
+          <FontAwesomeIcon icon={faBullhorn} className="text-[#4f46e5]" />
           Chiến dịch giữ chân khách hàng (Customer Retention)
         </h1>
-        <p className="retention-subtitle">
+        <p className="text-admin-muted text-sm md:text-base mt-1.5">
           Quản lý và thực hiện các chiến dịch tự động tương tác, phát voucher giữ chân khách hàng bằng trí tuệ nhân tạo AI.
         </p>
       </div>
 
       {/* Grid of campaigns */}
-      <div className="retention-grid">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Campaign 1: Churn Intervention */}
-        <div className="retention-card">
-          <div className="retention-card__banner retention-card__banner--churn">
+        <div className="bg-white rounded-2xl border border-admin-line shadow-xs overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-md flex flex-col">
+          <div className="p-6 text-white font-semibold text-lg flex items-center gap-2.5 bg-gradient-to-r from-[#ff6b6b] to-[#ff8e53]">
             <FontAwesomeIcon icon={faGift} />
             🔴 Chiến dịch Can thiệp Churn Risk
           </div>
-          <div className="retention-card__content">
-            <p className="retention-card__desc">
+          <div className="p-6 flex flex-col flex-1 gap-5">
+            <p className="text-sm leading-relaxed text-admin-muted">
               Hệ thống AI tự động phát hiện những khách hàng có nguy cơ rời bỏ (Churn Risk) dựa trên hoạt động mua sắm, tương tác chatbot, lượt xem sản phẩm. Nhấn nút để gửi thông báo nhắc nhở kèm Voucher giảm giá tối ưu tự động dựa trên CLV của khách hàng.
             </p>
 
-            <div className="retention-form-group">
-              <label className="retention-form-label">Ngưỡng Churn Risk tối thiểu (%)</label>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-admin-ink">Ngưỡng Churn Risk tối thiểu (%)</label>
               <input
-                className="retention-input"
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
                 type="number"
                 min="10"
                 max="100"
@@ -236,37 +234,37 @@ function AdminRetentionCampaignPage() {
               />
             </div>
 
-            <div className="retention-form-group">
-              <label className="retention-form-label">Tần suất nhận tin nhắn (cooldown ngày)</label>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-admin-ink">Tần suất nhận tin nhắn (cooldown ngày)</label>
               <input
-                className="retention-input"
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
                 type="number"
                 min="1"
                 value={cooldownDays}
                 onChange={(e) => setCooldownDays(Number(e.target.value))}
               />
-              <span style={{ fontSize: "11px", color: "var(--retention-text-muted)" }}>
+              <span className="text-[11px] text-admin-muted">
                 * Chống spam: Mỗi khách nhận tối đa 1 lần trong số ngày này
               </span>
             </div>
 
-            <div className="retention-form-group">
-              <label className="retention-form-label">Giới hạn khách hàng can thiệp tối đa</label>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-admin-ink">Giới hạn khách hàng can thiệp tối đa</label>
               <input
-                className="retention-input"
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
                 type="number"
                 min="1"
                 max="100"
                 value={maxTargets}
                 onChange={(e) => setMaxTargets(Number(e.target.value))}
               />
-              <span style={{ fontSize: "11px", color: "var(--retention-text-muted)" }}>
+              <span className="text-[11px] text-admin-muted">
                 * Bảo vệ ngân sách voucher (Khuyên dùng tối đa 20 KH)
               </span>
             </div>
 
             <button
-              className="retention-button retention-button--churn"
+              className="w-full p-3 rounded-xl font-bold text-white cursor-pointer transition-all duration-150 flex items-center justify-center gap-2 mt-auto disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98] bg-red-600 hover:bg-red-700"
               disabled={runningChurn || runningCart}
               onClick={handleRunChurnCampaign}
             >
@@ -286,20 +284,20 @@ function AdminRetentionCampaignPage() {
         </div>
 
         {/* Campaign 2: Abandoned Cart Recovery */}
-        <div className="retention-card">
-          <div className="retention-card__banner retention-card__banner--cart">
+        <div className="bg-white rounded-2xl border border-admin-line shadow-xs overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-md flex flex-col">
+          <div className="p-6 text-white font-semibold text-lg flex items-center gap-2.5 bg-gradient-to-r from-[#4facfe] to-[#00f2fe]">
             <FontAwesomeIcon icon={faShoppingCart} />
             🛒 Khôi phục giỏ hàng bỏ rơi
           </div>
-          <div className="retention-card__content">
-            <p className="retention-card__desc">
+          <div className="p-6 flex flex-col flex-1 gap-5">
+            <p className="text-sm leading-relaxed text-admin-muted">
               Phát hiện giỏ hàng đã lâu không hoạt động (&gt; 24 giờ). Gửi thông báo đẩy nhắc nhở khách hàng hoàn tất giỏ hàng kèm ưu đãi giảm giá nhỏ tăng tỷ lệ chuyển đổi, kích thích thanh toán nhanh chóng.
             </p>
 
-            <div className="retention-form-group">
-              <label className="retention-form-label">Thời gian bỏ rơi tối thiểu (giờ)</label>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-admin-ink">Thời gian bỏ rơi tối thiểu (giờ)</label>
               <input
-                className="retention-input"
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
                 type="number"
                 min="1"
                 value={hoursStale}
@@ -307,22 +305,22 @@ function AdminRetentionCampaignPage() {
               />
             </div>
 
-            <div className="retention-checkbox-container" onClick={() => setIncludeCartDiscount(!includeCartDiscount)}>
+            <div className="flex items-center gap-2 cursor-pointer select-none text-sm font-semibold text-admin-ink" onClick={() => setIncludeCartDiscount(!includeCartDiscount)}>
               <input
                 type="checkbox"
                 checked={includeCartDiscount}
                 onChange={() => {}}
-                style={{ cursor: "pointer" }}
+                className="cursor-pointer"
               />
               <span>Tặng mã giảm giá kích cầu</span>
             </div>
 
             {includeCartDiscount && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div className="retention-form-group">
-                  <label className="retention-form-label">Loại Voucher</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-admin-ink">Loại Voucher</label>
                   <select
-                    className="retention-input"
+                    className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled cursor-pointer"
                     value={cartDiscountType}
                     onChange={(e) => setCartDiscountType(e.target.value)}
                   >
@@ -330,10 +328,10 @@ function AdminRetentionCampaignPage() {
                     <option value="fixed">Số tiền cố định (đ)</option>
                   </select>
                 </div>
-                <div className="retention-form-group">
-                  <label className="retention-form-label">Giá trị</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-admin-ink">Giá trị</label>
                   <input
-                    className="retention-input"
+                    className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
                     type="number"
                     min="1"
                     value={cartDiscountValue}
@@ -344,7 +342,7 @@ function AdminRetentionCampaignPage() {
             )}
 
             <button
-              className="retention-button retention-button--cart"
+              className="w-full p-3 rounded-xl font-bold text-white cursor-pointer transition-all duration-150 flex items-center justify-center gap-2 mt-auto disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98] bg-[#0284c7] hover:bg-[#0369a1]"
               disabled={runningCart || runningChurn}
               onClick={handleRunCartCampaign}
             >
@@ -366,41 +364,41 @@ function AdminRetentionCampaignPage() {
 
       {/* Results Panel */}
       {campaignResult && (
-        <div className="retention-results">
-          <div className="retention-results__header">
-            <h2 className="retention-results__title">
-              <FontAwesomeIcon icon={faUserTag} style={{ color: "var(--retention-primary)" }} />
+        <div className="bg-[#f8fafc] rounded-2xl border border-[#e2e8f0] p-6 mb-8 shadow-xs animate-fade-in">
+          <div className="flex justify-between items-center mb-5 border-b border-[#e2e8f0] pb-3">
+            <h2 className="text-base md:text-lg font-bold text-admin-ink flex items-center gap-2">
+              <FontAwesomeIcon icon={faUserTag} className="text-[#6366f1]" />
               Kết quả chiến dịch vừa thực hiện
             </h2>
-            <button className="retention-results__close" onClick={() => setCampaignResult(null)}>
+            <button className="bg-transparent border-none text-admin-muted text-lg cursor-pointer hover:text-admin-ink transition-colors" onClick={() => setCampaignResult(null)}>
               <FontAwesomeIcon icon={faTimes} />
             </button>
           </div>
 
-          <div className="retention-results__summary">
-            <div className="retention-results__stat">
-              <span className="retention-results__stat-val">
+          <div className="flex gap-5 mb-5">
+            <div className="bg-white border border-[#e2e8f0] p-3 px-5 rounded-xl flex flex-col shadow-xs">
+              <span className="text-2xl font-bold text-[#6366f1]">
                 {campaignResult.campaignType === "churn_intervention"
                   ? campaignResult.targetsCount
                   : campaignResult.remindersSent}
               </span>
-              <span className="retention-results__stat-label">Khách hàng được tiếp cận</span>
+              <span className="text-xs text-admin-muted mt-1 font-semibold">Khách hàng được tiếp cận</span>
             </div>
-            <div className="retention-results__stat">
-              <span className="retention-results__stat-val" style={{ color: "#d97706" }}>
+            <div className="bg-white border border-[#e2e8f0] p-3 px-5 rounded-xl flex flex-col shadow-xs">
+              <span className="text-2xl font-bold text-amber-600">
                 {campaignResult.vouchersCreated}
               </span>
-              <span className="retention-results__stat-label">Voucher phát thành công</span>
+              <span className="text-xs text-admin-muted mt-1 font-semibold">Voucher phát thành công</span>
             </div>
           </div>
 
-          <h3 style={{ fontSize: "15px", fontWeight: "600", color: "#334155", marginBottom: "12px" }}>
+          <h3 className="text-[14px] font-bold text-admin-ink mb-3">
             Danh sách khách hàng trong chiến dịch:
           </h3>
-          <div className="retention-table-container">
-            <table className="retention-table">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm">
               <thead>
-                <tr>
+                <tr className="[&>th]:p-3 [&>th]:bg-[#f1f5f9] [&>th]:font-semibold [&>th]:text-xs [&>th]:text-admin-muted [&>th]:uppercase [&>th]:border-b-2 [&>th]:border-admin-line">
                   <th>Khách hàng</th>
                   <th>Email</th>
                   {campaignResult.campaignType === "churn_intervention" ? (
@@ -419,29 +417,29 @@ function AdminRetentionCampaignPage() {
                   <th>Mã giảm giá tặng kèm</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-admin-line">
                 {campaignResult.results.map((r, idx) => (
-                  <tr key={idx}>
+                  <tr key={idx} className="hover:bg-[#f8fafc] [&>td]:p-3 [&>td]:text-admin-ink">
                     <td><strong>{r.userName}</strong></td>
                     <td>{r.email}</td>
                     {campaignResult.campaignType === "churn_intervention" ? (
                       <>
-                        <td><span className="retention-badge" style={{ backgroundColor: "#fee2e2", color: "#ef4444" }}>{r.churnScore}%</span></td>
-                        <td><span className="retention-badge" style={{ backgroundColor: "#e0f2fe", color: "#0284c7" }}>{r.clvScore}</span></td>
-                        <td><span className="retention-badge" style={{ backgroundColor: "#f1f5f9", color: "#64748b" }}>{r.segment}</span></td>
+                        <td><span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-red-100 text-red-600">{r.churnScore}%</span></td>
+                        <td><span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-sky-100 text-sky-700">{r.clvScore}</span></td>
+                        <td><span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-600">{r.segment}</span></td>
                       </>
                     ) : (
                       <>
                         <td>{r.hoursAbandoned} giờ</td>
                         <td>{r.estimatedValue.toLocaleString("vi-VN")} đ</td>
-                        <td><span className="retention-badge" style={{ backgroundColor: "#fef3c7", color: "#d97706" }}>{r.priorityScore}</span></td>
+                        <td><span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-700">{r.priorityScore}</span></td>
                       </>
                     )}
                     <td>
                       {r.voucherCode ? (
-                        <span className="retention-badge retention-badge--voucher">{r.voucherCode}</span>
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-700 border border-dashed border-amber-400">{r.voucherCode}</span>
                       ) : (
-                        <span style={{ color: "#94a3b8" }}>— (Chỉ nhắc nhở)</span>
+                        <span className="text-admin-muted text-xs">— (Chỉ nhắc nhở)</span>
                       )}
                     </td>
                   </tr>
@@ -453,21 +451,21 @@ function AdminRetentionCampaignPage() {
       )}
 
       {/* Campaign Timeline History */}
-      <div className="retention-history-card">
-        <h2 className="retention-history-title">
-          <FontAwesomeIcon icon={faHistory} style={{ color: "#4f46e5" }} />
+      <div className="bg-white rounded-2xl border border-admin-line shadow-xs p-6">
+        <h2 className="text-lg md:text-xl font-bold text-admin-ink mb-5 flex items-center gap-2">
+          <FontAwesomeIcon icon={faHistory} className="text-[#4f46e5]" />
           Lịch sử chiến dịch giữ chân khách hàng (Campaign Logs)
         </h2>
 
         {loadingHistory ? (
-          <p style={{ textAlign: "center", padding: "24px", color: "var(--retention-text-muted)" }}>
+          <p className="text-center py-6 text-admin-muted font-medium">
             Đang tải lịch sử...
           </p>
         ) : (
-          <div className="retention-table-container">
-            <table className="retention-table">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm">
               <thead>
-                <tr>
+                <tr className="[&>th]:p-3 [&>th]:bg-[#f1f5f9] [&>th]:font-semibold [&>th]:text-xs [&>th]:text-admin-muted [&>th]:uppercase [&>th]:border-b-2 [&>th]:border-admin-line">
                   <th>Thời gian</th>
                   <th>Chiến dịch</th>
                   <th>Khách hàng nhận</th>
@@ -475,15 +473,15 @@ function AdminRetentionCampaignPage() {
                   <th>Mã Voucher tặng kèm</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-admin-line">
                 {currentHistory.map((item) => (
-                  <tr key={item._id}>
-                    <td style={{ whiteSpace: "nowrap" }}>
-                      <FontAwesomeIcon icon={faClock} style={{ marginRight: "6px", color: "#94a3b8" }} />
+                  <tr key={item._id} className="hover:bg-[#f8fafc] [&>td]:p-3 [&>td]:text-admin-ink">
+                    <td className="whitespace-nowrap">
+                      <FontAwesomeIcon icon={faClock} className="mr-1.5 text-[#94a3b8]" />
                       {new Date(item.createdAt).toLocaleString("vi-VN")}
                     </td>
                     <td>
-                      <span className={`retention-badge ${item.type === "churn_intervention" ? "retention-badge--churn" : "retention-badge--cart"}`}>
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold ${item.type === "churn_intervention" ? "bg-red-100 text-red-600" : "bg-sky-100 text-sky-700"}`}>
                         {item.type === "churn_intervention" ? "Can thiệp Churn" : "Nhắc nhở giỏ hàng"}
                       </span>
                     </td>
@@ -492,27 +490,27 @@ function AdminRetentionCampaignPage() {
                         <div>
                           <strong>{item.user.name}</strong>
                           <br />
-                          <span style={{ fontSize: "11px", color: "var(--retention-text-muted)" }}>{item.user.email}</span>
+                          <span className="text-xs text-admin-muted">{item.user.email}</span>
                         </div>
                       ) : (
-                        <span style={{ color: "var(--retention-danger)" }}>
-                          <FontAwesomeIcon icon={faExclamationTriangle} /> Khách đã xóa
+                        <span className="text-red-600 text-xs font-bold">
+                          <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" /> Khách đã xóa
                         </span>
                       )}
                     </td>
-                    <td style={{ maxWidth: "350px", fontSize: "13px", color: "#475569" }}>{item.message}</td>
+                    <td className="max-w-[350px] text-xs text-[#475569] leading-relaxed">{item.message}</td>
                     <td>
                       {item.data?.voucherCode ? (
-                        <span className="retention-badge retention-badge--voucher">{item.data.voucherCode}</span>
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-700 border border-dashed border-amber-400">{item.data.voucherCode}</span>
                       ) : (
-                        <span style={{ color: "#94a3b8" }}>— (Không tặng mã)</span>
+                        <span className="text-admin-muted text-xs">— (Không tặng mã)</span>
                       )}
                     </td>
                   </tr>
                 ))}
                 {history.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: "center", padding: "24px", color: "#94a3b8" }}>
+                    <td colSpan={5} className="text-center p-6 text-admin-muted">
                       Chưa có chiến dịch giữ chân nào được thực hiện.
                     </td>
                   </tr>
@@ -522,14 +520,14 @@ function AdminRetentionCampaignPage() {
 
             {/* Pagination Controls */}
             {totalPages > 0 && history.length > 0 && (
-              <div className="retention-pagination-container">
-                <div className="retention-pagination-info">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 mt-4 border-t border-admin-line">
+                <div className="text-[13.5px] text-admin-muted font-medium">
                   Hiển thị {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, history.length)} trong tổng số {history.length} bản ghi
                 </div>
 
-                <div className="retention-pagination-right">
+                <div className="flex flex-wrap items-center gap-4">
                   {/* Page Size Selector */}
-                  <div className="retention-page-size-selector">
+                  <div className="flex items-center gap-2 text-[13.5px] text-admin-muted font-medium">
                     <span>Số hàng:</span>
                     <select
                       value={itemsPerPage}
@@ -537,6 +535,7 @@ function AdminRetentionCampaignPage() {
                         setItemsPerPage(Number(e.target.value));
                         setCurrentPage(1);
                       }}
+                      className="p-1 border border-admin-line rounded-lg bg-white focus:outline-none cursor-pointer"
                     >
                       <option value={10}>10</option>
                       <option value={20}>20</option>
@@ -546,10 +545,10 @@ function AdminRetentionCampaignPage() {
                   </div>
 
                   {/* Page Navigation Buttons */}
-                  <div className="retention-pagination-pages">
+                  <div className="flex items-center gap-1.5">
                     {/* First Page */}
                     <button
-                      className="retention-pagination-btn"
+                      className="inline-flex items-center justify-center min-w-[36px] h-9 px-2.5 rounded-xl border border-admin-line bg-white text-[#5f6f85] text-[13px] font-bold tracking-wide cursor-pointer transition-all duration-150 hover:-translate-y-px hover:bg-[#eef4fb] disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                       onClick={() => setCurrentPage(1)}
                       disabled={activePage === 1}
                       title="Trang đầu"
@@ -559,7 +558,7 @@ function AdminRetentionCampaignPage() {
 
                     {/* Previous Page */}
                     <button
-                      className="retention-pagination-btn"
+                      className="inline-flex items-center justify-center min-w-[36px] h-9 px-2.5 rounded-xl border border-admin-line bg-white text-[#5f6f85] text-[13px] font-bold tracking-wide cursor-pointer transition-all duration-150 hover:-translate-y-px hover:bg-[#eef4fb] disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                       onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       disabled={activePage === 1}
                       title="Trang trước"
@@ -598,18 +597,7 @@ function AdminRetentionCampaignPage() {
                                 setEditingEllipsis(null);
                               }}
                               autoFocus
-                              className="retention-pagination-btn"
-                              style={{
-                                width: "50px",
-                                height: "36px",
-                                padding: "0",
-                                textAlign: "center",
-                                border: "1px solid var(--retention-primary, #6366f1)",
-                                background: "#fff",
-                                color: "#1d1d1f",
-                                outline: "none",
-                                borderRadius: "8px"
-                              }}
+                              className="inline-flex items-center justify-center w-[50px] h-9 px-1 rounded-xl border border-admin-primary bg-white text-admin-ink text-center text-[13px] font-bold outline-none"
                             />
                           );
                         }
@@ -617,13 +605,12 @@ function AdminRetentionCampaignPage() {
                           <button
                             key={`dots-${index}`}
                             type="button"
-                            className="retention-pagination-btn"
+                            className="inline-flex items-center justify-center min-w-[36px] h-9 px-2.5 rounded-xl border border-admin-line bg-white text-[#94a3b8] text-[13px] font-bold cursor-pointer hover:bg-[#eef4fb]"
                             onClick={() => {
                               setEditingEllipsis(item.id);
                               setInputPageValue("");
                             }}
                             title="Nhấp để nhập số trang mong muốn"
-                            style={{ cursor: "pointer", color: "#94a3b8", fontWeight: "bold" }}
                           >
                             ...
                           </button>
@@ -632,8 +619,10 @@ function AdminRetentionCampaignPage() {
                       return (
                         <button
                           key={item.value}
-                          className={`retention-pagination-btn ${
-                            activePage === item.value ? "retention-pagination-btn--active" : ""
+                          className={`inline-flex items-center justify-center min-w-[36px] h-9 px-2.5 rounded-xl border text-[13px] font-bold cursor-pointer transition-all duration-150 hover:-translate-y-px ${
+                            activePage === item.value
+                              ? "bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] border-transparent text-white shadow-md hover:translate-y-0"
+                              : "border-admin-line bg-white text-[#5f6f85] hover:bg-[#eef4fb]"
                           }`}
                           onClick={() => setCurrentPage(item.value)}
                         >
@@ -644,7 +633,7 @@ function AdminRetentionCampaignPage() {
 
                     {/* Next Page */}
                     <button
-                      className="retention-pagination-btn"
+                      className="inline-flex items-center justify-center min-w-[36px] h-9 px-2.5 rounded-xl border border-admin-line bg-white text-[#5f6f85] text-[13px] font-bold tracking-wide cursor-pointer transition-all duration-150 hover:-translate-y-px hover:bg-[#eef4fb] disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                       onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                       disabled={activePage === totalPages}
                       title="Trang sau"
@@ -654,7 +643,7 @@ function AdminRetentionCampaignPage() {
 
                     {/* Last Page */}
                     <button
-                      className="retention-pagination-btn"
+                      className="inline-flex items-center justify-center min-w-[36px] h-9 px-2.5 rounded-xl border border-admin-line bg-white text-[#5f6f85] text-[13px] font-bold tracking-wide cursor-pointer transition-all duration-150 hover:-translate-y-px hover:bg-[#eef4fb] disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                       onClick={() => setCurrentPage(totalPages)}
                       disabled={activePage === totalPages}
                       title="Trang cuối"

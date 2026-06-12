@@ -7,8 +7,7 @@ import AvatarEditor from "../components/common/AvatarEditor";
 import { formatPrice, parsePrice } from "../utils/priceUtils";
 import { fetchMyVouchers } from "../services/orderService";
 import { getMyPoints, getRewards, redeemPoints } from "../services/pointService";
-import "../css/profile.css";
-import "../css/avatar-editor.css";
+
 
 function IconHeart() {
   return (
@@ -348,7 +347,6 @@ function UserDashboard() {
     { key: "orders", label: "Đơn hàng của tôi", icon: <IconMenuOrders /> },
     { key: "wishlist", label: "Sản phẩm yêu thích", icon: <IconHeart /> },
     { key: "voucher", label: "Voucher của tôi", icon: <IconMenuVoucher /> },
-    { key: "redeem", label: "Đổi điểm tích lũy", icon: <IconGift /> },
     { key: "address", label: "Địa chỉ của tôi", icon: <IconMenuAddress /> },
     { key: "payment", label: "Phương thức thanh toán", icon: <IconMenuCard /> },
     { key: "password", label: "Đổi mật khẩu", icon: <IconMenuLock /> },
@@ -487,174 +485,203 @@ function UserDashboard() {
   };
 
   return (
-    <main className="container page-content profile-page">
-      <div className="profile-layout">
-        <aside className="profile-sidebar">
-          <div className="profile-sidebar__brand">
-            <div className="profile-sidebar__avatar">
+    <main className="w-[min(1200px,95%)] mx-auto flex-1 py-10 px-4">
+      <div className="grid grid-cols-[260px_1fr] gap-6 max-[960px]:grid-cols-1">
+        <aside className="sticky top-6 h-fit bg-white rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-[#e2e8f0] flex flex-col gap-4">
+          <div className="flex items-center gap-4 py-3 border-b border-[#f3f4f6] mb-2">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#ddd6fe] to-[#bfdbfe] flex items-center justify-center shrink-0 overflow-hidden border-2 border-[#e5e7eb]">
               {avatar ? (
-                <img src={avatar} alt={auth?.user?.name || "Avatar"} />
+                <img src={avatar} alt={auth?.user?.name || "Avatar"} className="w-full h-full object-cover rounded-full" />
               ) : (
-                <span>{String(auth?.user?.name || "A").slice(0, 1).toUpperCase()}</span>
+                <span className="text-xl font-bold text-profile-primary">{String(auth?.user?.name || "A").slice(0, 1).toUpperCase()}</span>
               )}
             </div>
-            <div>
-              <h2>{auth?.user?.name || "Người dùng"}</h2>
-              <p>{auth?.user?.email}</p>
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-[#1f2937] m-0 leading-tight truncate">{auth?.user?.name || "Người dùng"}</h2>
+              <p className="text-xs text-[#9ca3af] m-0 leading-tight break-all truncate mt-0.5">{auth?.user?.email}</p>
             </div>
           </div>
 
-          <nav className="profile-sidebar__nav" aria-label="Menu hồ sơ">
+          <nav className="flex flex-col gap-1.5" aria-label="Menu hồ sơ">
             {sidebarItems.map((item) => (
               <button
                 key={item.key}
                 type="button"
-                className={`profile-sidebar__item ${activeMenu === item.key ? "is-active" : ""} ${item.danger ? "is-danger" : ""}`}
+                className={`flex items-center gap-3.5 py-3.5 px-4 bg-transparent border-none rounded-xl cursor-pointer text-sm font-medium transition-all text-[#64748b] hover:bg-[#f8fafc] hover:text-[#1e293b] ${
+                  item.danger
+                    ? "text-[#ef4444] hover:bg-[#ef4444]/10"
+                    : ""
+                } ${
+                  activeMenu === item.key
+                    ? item.danger
+                      ? "bg-[#ef4444]/15 text-[#ef4444] font-semibold"
+                      : "bg-[#f5f3ff] text-[#4f46e5] font-semibold"
+                    : ""
+                }`}
                 onClick={() => handleMenuAction(item.key)}
               >
-                <span className="profile-sidebar__icon">{item.icon}</span>
+                <span className="w-5 h-5 flex items-center justify-center text-inherit">{item.icon}</span>
                 <span>{item.label}</span>
               </button>
             ))}
           </nav>
 
-          <div className="profile-sidebar__support">
-            <div className="profile-sidebar__support-title">
-              <span className="profile-sidebar__support-icon"><IconSupport /></span>
-              <strong>Hỗ trợ</strong>
+          <div className="p-4.5 bg-gradient-to-br from-[#eff6ff] to-[#f4f7ff] border border-[#dbeafe] rounded-2xl mt-2 flex flex-col gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <span className="w-5 h-5 text-[#2563eb] flex items-center justify-center"><IconSupport /></span>
+              <strong className="text-xs font-bold text-[#1e2937] uppercase tracking-wider">Hỗ trợ</strong>
             </div>
-            <p>Nhận tư vấn về đơn hàng, đổi trả và bảo hành từ đội ngũ chăm sóc khách hàng.</p>
-            <a href="mailto:support@shop.com">support@shop.com</a>
+            <p className="text-xs text-[#64748b] leading-relaxed m-0">Nhận tư vấn về đơn hàng, đổi trả và bảo hành từ đội ngũ chăm sóc khách hàng.</p>
+            <a href="mailto:support@shop.com" className="text-xs text-[#2563eb] no-underline font-bold hover:underline">support@shop.com</a>
           </div>
         </aside>
 
-        <section className="profile-main">
-          <article className="profile-card profile-hero-card">
-            <div className="profile-hero__avatar">
-              <AvatarEditor
-                currentAvatar={avatar}
-                userName={auth?.user?.name}
-                token={auth?.token}
-                onAvatarUpdated={(user) => {
-                  setAvatar(user.avatar);
-                  login({ token: auth.token, user });
-                }}
-                showError={error}
-                showSuccess={success}
-                compact={true}
-              />
-            </div>
+        <section className="grid gap-6">
+          <article className="bg-white rounded-3xl p-6 border border-[#e2e8f0] shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col">
+            <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_200px] gap-6 items-start border-b border-[#f1f5f9] pb-6 mb-6">
+              <div className="flex justify-center shrink-0">
+                <AvatarEditor
+                  currentAvatar={avatar}
+                  userName={auth?.user?.name}
+                  token={auth?.token}
+                  onAvatarUpdated={(user) => {
+                    setAvatar(user.avatar);
+                    login({ token: auth.token, user });
+                  }}
+                  showError={error}
+                  showSuccess={success}
+                  compact={true}
+                />
+              </div>
 
-            <div className="profile-hero__info">
-              <p className="profile-hero__eyebrow">Tổng quan tài khoản</p>
-              <h1>{auth?.user?.name || "Người dùng"}</h1>
+              <div className="flex flex-col text-left">
+                <span className="text-[11px] font-bold text-[#6366f1] uppercase tracking-wider block mb-1">TỔNG QUAN TÀI KHOẢN</span>
+                <h1 className="text-2xl font-black text-[#1e293b] m-0 mb-5 leading-tight">{auth?.user?.name || "Người dùng"}</h1>
 
-              <div className="profile-hero__details">
-                <div className="profile-hero__detail">
-                  <span>Email</span>
-                  <strong>{auth?.user?.email || "Chưa cập nhật"}</strong>
-                </div>
-                <div className="profile-hero__detail">
-                  <span>Số điện thoại</span>
-                  <strong>{auth?.user?.phone || "Chưa cập nhật"}</strong>
-                </div>
-                <div className="profile-hero__detail">
-                  <span>Địa chỉ</span>
-                  <strong>{auth?.user?.address || "Chưa cập nhật"}</strong>
-                </div>
-                <div className="profile-hero__detail">
-                  <span>Ngày tham gia</span>
-                  <strong>{memberSince}</strong>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-4 max-[480px]:grid-cols-1 text-left">
+                  <div>
+                    <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider block mb-0.5">EMAIL</span>
+                    <span className="text-sm font-semibold text-[#1e293b] block break-all leading-normal">{auth?.user?.email || "Chưa cập nhật"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider block mb-0.5">SỐ ĐIỆN THOẠI</span>
+                    <span className="text-sm font-semibold text-[#1e293b] block leading-normal">{auth?.user?.phone || "Chưa cập nhật"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider block mb-0.5">ĐỊA CHỈ</span>
+                    <span className="text-sm font-semibold text-[#1e293b] block leading-snug">{auth?.user?.address || "Chưa cập nhật"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider block mb-0.5">NGÀY THAM GIA</span>
+                    <span className="text-sm font-semibold text-[#1e293b] block leading-normal">{memberSince || "Đang cập nhật"}</span>
+                  </div>
                 </div>
               </div>
 
-              <button type="button" className="profile-hero__action" onClick={scrollToEditForm}>
-                Chỉnh sửa thông tin
-              </button>
+              <div className="flex flex-col gap-3 self-center">
+                <div className="bg-[#f8fafc] border border-[#f1f5f9] p-3.5 rounded-2xl flex flex-col hover:bg-[#f1f5f9] transition-all" style={{ cursor: "pointer" }} onClick={() => setIsRedeemModalOpen(true)}>
+                  <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">ĐIỂM TÍCH LŨY</span>
+                  <span className="text-2xl font-black text-[#1e293b] mt-0.5">{metrics.points.toLocaleString("vi-VN")}</span>
+                </div>
+                <div className="bg-[#eff6ff] border border-[#dbeafe] p-3.5 rounded-2xl flex flex-col">
+                  <span className="text-[10px] font-bold text-[#3b82f6] uppercase tracking-wider">TRẠNG THÁI</span>
+                  <span className="text-sm font-black text-[#2563eb] mt-1">Hoạt động</span>
+                </div>
+              </div>
             </div>
 
-
+            <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_200px] gap-6">
+              <div className="hidden md:block"></div>
+              <div className="text-left">
+                <button type="button" className="py-2.5 px-8 bg-[#3b82f6] text-white border-none rounded-full text-xs font-bold uppercase tracking-wider cursor-pointer transition-all hover:bg-blue-600 hover:-translate-y-0.5 shadow-sm hover:shadow-[0_4px_12px_rgba(59,130,246,0.35)]" onClick={scrollToEditForm}>
+                  Chỉnh sửa thông tin
+                </button>
+              </div>
+              <div className="hidden md:block"></div>
+            </div>
           </article>
 
-          <section className="profile-stats-grid">
-            <article className="profile-stat-card stat-blue">
-              <div className="stat-icon"><IconMenuOrders /></div>
-              <div className="stat-content">
-                <p className="stat-label">Đơn hàng</p>
-                <strong className="stat-value">{metrics.orderCount}</strong>
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <article className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-[#e2e8f0] shadow-[0_8px_30px_rgb(0,0,0,0.01)]">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-[#eff6ff] text-[#3b82f6]"><IconMenuOrders /></div>
+              <div className="flex flex-col min-w-0">
+                <p className="m-0 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">ĐƠN HÀNG</p>
+                <strong className="m-0 text-xl font-black text-[#1e293b] mt-0.5">{metrics.orderCount}</strong>
               </div>
             </article>
 
-            <article className="profile-stat-card stat-pink">
-              <div className="stat-icon"><IconHeart /></div>
-              <div className="stat-content">
-                <p className="stat-label">Yêu thích</p>
-                <strong className="stat-value">{metrics.wishlistCount}</strong>
+            <article className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-[#e2e8f0] shadow-[0_8px_30px_rgb(0,0,0,0.01)]">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-[#fff1f2] text-[#f43f5e]"><IconHeart /></div>
+              <div className="flex flex-col min-w-0">
+                <p className="m-0 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">YÊU THÍCH</p>
+                <strong className="m-0 text-xl font-black text-[#1e293b] mt-0.5">{metrics.wishlistCount}</strong>
               </div>
             </article>
 
             <article 
-              className="profile-stat-card stat-amber" 
-              style={{ cursor: "pointer" }}
+              className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-[#e2e8f0] shadow-[0_8px_30px_rgb(0,0,0,0.01)] cursor-pointer hover:bg-[#fafafa] transition-all" 
               onClick={() => setIsVoucherModalOpen(true)}
             >
-              <div className="stat-icon"><IconMenuVoucher /></div>
-              <div className="stat-content">
-                <p className="stat-label">Voucher</p>
-                <strong className="stat-value">{metrics.vouchers}</strong>
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-[#fef3c7] text-[#d97706]"><IconMenuVoucher /></div>
+              <div className="flex flex-col min-w-0">
+                <p className="m-0 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">VOUCHER</p>
+                <strong className="m-0 text-xl font-black text-[#1e293b] mt-0.5">{metrics.vouchers}</strong>
               </div>
             </article>
 
             <article 
-              className="profile-stat-card stat-violet" 
-              style={{ cursor: "pointer" }}
+              className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-[#e2e8f0] shadow-[0_8px_30px_rgb(0,0,0,0.01)] cursor-pointer hover:bg-[#fafafa] transition-all" 
               onClick={() => setIsRedeemModalOpen(true)}
             >
-              <div className="stat-icon">
-                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" /></svg>
-              </div>
-              <div className="stat-content">
-                <p className="stat-label">Điểm tích lũy</p>
-                <strong className="stat-value">{metrics.points.toLocaleString("vi-VN")}</strong>
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-[#f5f3ff] text-[#8b5cf6]"><IconGift /></div>
+              <div className="flex flex-col min-w-0">
+                <p className="m-0 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">ĐIỂM TÍCH LŨY</p>
+                <strong className="m-0 text-xl font-black text-[#1e293b] mt-0.5">{metrics.points.toLocaleString("vi-VN")}</strong>
               </div>
             </article>
           </section>
 
-          <section className="profile-content-row">
-            <article className="profile-card wishlist-card">
-              <div className="card-header">
-                <h3>Danh sách yêu thích</h3>
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <article className="bg-white rounded-3xl p-6 border border-[#e2e8f0] shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col">
+              <div className="flex justify-between items-center pb-3 border-b border-[#f1f5f9] mb-4">
+                <h3 className="m-0 text-sm font-bold text-[#1f2937]">Danh sách yêu thích</h3>
                 {wishlist.length > 3 && (
-                  <Link to="/wishlist" className="card-link">
+                  <Link to="/wishlist" className="text-xs font-semibold text-[#6366f1] no-underline hover:underline">
                     Xem tất cả ({wishlist.length})
                   </Link>
                 )}
               </div>
 
-              <div className="wishlist-preview-grid">
+              <div className="grid grid-cols-3 gap-3">
                 {isWishlistLoading ? (
-                  <p className="empty-state">Đang tải danh sách yêu thích...</p>
+                  <p className="text-center py-6 text-[#6b7280] text-sm col-span-3">Đang tải danh sách yêu thích...</p>
                 ) : wishlistPreview.length === 0 ? (
-                  <p className="empty-state">Chưa có sản phẩm yêu thích.</p>
+                  <p className="text-center py-6 text-[#6b7280] text-sm col-span-3">Chưa có sản phẩm yêu thích.</p>
                 ) : (
                   wishlistPreview.map((item) => (
-                    <article key={item._id} className="wishlist-preview-card">
-                      <div className="wishlist-preview-card__image">
+                    <article key={item._id} className="flex flex-col gap-2 relative bg-white border border-[#f1f5f9] rounded-2xl overflow-hidden p-2.5 group hover:border-[#cbd5e1] hover:shadow-sm transition-all text-center">
+                      <div className="w-full aspect-square rounded-xl bg-[#f8fafc] relative overflow-hidden flex items-center justify-center">
                         <img
                           src={normalizeImageSrc(item.image)}
                           alt={item.name}
+                          className="w-full h-full object-cover rounded-xl transition-transform group-hover:scale-105"
                           onError={(event) => {
                             event.currentTarget.onerror = null;
                             event.currentTarget.src = "/placeholder.svg";
                           }}
                         />
-                        <button type="button" className="wishlist-preview-card__remove" onClick={() => handleRemoveWishlistItem(item._id)}>
-                          <IconHeart />
+                        <button 
+                          type="button" 
+                          className="absolute top-2 right-2 w-6.5 h-6.5 rounded-full bg-white flex items-center justify-center border border-[#e5e7eb] cursor-pointer text-[#ef4444] shadow-sm hover:scale-110 transition-transform" 
+                          onClick={() => handleRemoveWishlistItem(item._id)}
+                          aria-label="Xóa khỏi yêu thích"
+                        >
+                          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 21.35 10.55 20.03C5.4 15.36 2 12.28 2 8.5A5.49 5.49 0 0 1 7.5 3 6.1 6.1 0 0 1 12 5.09 6.1 6.1 0 0 1 16.5 3 5.49 5.49 0 0 1 22 8.5c0 3.78-3.4 6.86-8.55 11.53L12 21.35Z" /></svg>
                         </button>
                       </div>
-                      <div className="wishlist-preview-card__body">
-                        <h4>{item.name}</h4>
-                        <p>{formatPrice(parsePrice(item.finalPrice || item.price || 0))}</p>
+                      <div className="flex flex-col min-w-0">
+                        <h4 className="text-[11px] font-semibold text-[#1e293b] line-clamp-2 h-8 m-0 leading-snug">{item.name}</h4>
+                        <p className="text-[13px] font-bold text-[#2563eb] mt-1">{formatPrice(parsePrice(item.finalPrice || item.price || 0))}</p>
                       </div>
                     </article>
                   ))
@@ -662,26 +689,32 @@ function UserDashboard() {
               </div>
             </article>
 
-            <article className="profile-card recent-orders-card">
-              <div className="card-header">
-                <h3>Đơn hàng gần đây</h3>
-                <button type="button" onClick={() => navigate("/order-history")} className="card-link">
+            <article className="bg-white rounded-3xl p-6 border border-[#e2e8f0] shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col">
+              <div className="flex justify-between items-center pb-3 border-b border-[#f1f5f9] mb-4">
+                <h3 className="m-0 text-sm font-bold text-[#1f2937]">Đơn hàng gần đây</h3>
+                <button type="button" onClick={() => navigate("/order-history")} className="text-xs font-semibold text-[#6366f1] border-none bg-transparent cursor-pointer no-underline hover:underline">
                   Xem tất cả
                 </button>
               </div>
 
-              <div className="orders-list">
+              <div className="flex flex-col gap-3">
                 {recentOrders.length === 0 ? (
-                  <p className="empty-state">Chưa có đơn hàng gần đây.</p>
+                  <p className="text-center py-6 text-[#6b7280] text-sm">Chưa có đơn hàng gần đây.</p>
                 ) : (
                   recentOrders.map((order) => (
-                    <div key={order._id} className="order-row">
-                      <div className="order-info">
-                        <p className="order-id">#{String(order._id).slice(-8)}</p>
-                        <p className="order-date">{new Date(order.createdAt).toLocaleDateString("vi-VN")}</p>
+                    <div key={order._id} className="flex justify-between items-center p-3 border border-[#f1f5f9] rounded-2xl hover:border-[#cbd5e1] hover:bg-[#f8fafc] transition-all" style={{ cursor: "pointer" }} onClick={() => navigate(`/order-history/${order._id}`)}>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-bold text-sm text-[#1e293b]">#{String(order._id).slice(-8)}</span>
+                        <span className="text-[11px] text-[#94a3b8]">{new Date(order.createdAt).toLocaleDateString("vi-VN")}</span>
                       </div>
-                      <span className={`order-status status-${String(order.status || "pending").toLowerCase()}`}>
-                        {getStatusLabel(order.status)}
+                      <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full border ${
+                        order.status === "delivered" ? "bg-[#f0fdf4] text-[#16a34a] border-[#dcfce7]" :
+                        order.status === "shipping" ? "bg-[#ecfdf5] text-[#059669] border-[#d1fae5]" :
+                        order.status === "confirmed" ? "bg-[#eff6ff] text-[#2563eb] border-[#dbeafe]" :
+                        order.status === "cancelled" ? "bg-[#fef2f2] text-[#dc2626] border-[#fee2e2]" :
+                        "bg-[#fffbeb] text-[#d97706] border-[#fef3c7]" // pending
+                      }`}>
+                        {getStatusLabel(order.status).toUpperCase()}
                       </span>
                     </div>
                   ))
@@ -690,18 +723,18 @@ function UserDashboard() {
             </article>
           </section>
 
-          <article className="profile-card profile-edit-card" ref={profileEditRef}>
-            <div className="card-header">
-              <h3>Chỉnh sửa thông tin</h3>
-              <button type="button" className="card-link" onClick={() => setIsPasswordModalOpen(true)}>
+          <article className="bg-white rounded-3xl p-6 border border-[#e2e8f0] shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col" ref={profileEditRef}>
+            <div className="flex justify-between items-center p-6 border-b border-[#f3f4f6]">
+              <h3 className="m-0 text-lg font-bold text-[#1f2937]">Chỉnh sửa thông tin</h3>
+              <button type="button" className="text-xs font-semibold text-profile-primary no-underline hover:underline" onClick={() => setIsPasswordModalOpen(true)}>
                 Đổi mật khẩu
               </button>
             </div>
 
-            <form className="profile-edit-form" onSubmit={handleSubmit}>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Họ và tên</label>
+            <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+              <div className="grid grid-cols-2 gap-4 max-[680px]:grid-cols-1">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-[#1f2937] uppercase tracking-wider">Họ và tên</label>
                   <input
                     type="text"
                     name="name"
@@ -709,42 +742,45 @@ function UserDashboard() {
                     onChange={handleChange}
                     required
                     placeholder="Nhập họ và tên"
+                    className="w-full p-3.5 rounded-xl border border-[#cbd5e1] bg-white text-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-profile-primary transition-all"
                   />
                 </div>
-                <div className="form-group">
-                  <label>Số điện thoại</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-[#1f2937] uppercase tracking-wider">Số điện thoại</label>
                   <input
                     type="tel"
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
                     placeholder="Nhập số điện thoại"
+                    className="w-full p-3.5 rounded-xl border border-[#cbd5e1] bg-white text-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-profile-primary transition-all"
                   />
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Địa chỉ</label>
+              <div className="grid grid-cols-2 gap-4 max-[680px]:grid-cols-1">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-[#1f2937] uppercase tracking-wider">Địa chỉ</label>
                   <textarea
                     name="address"
                     value={formData.address}
                     onChange={handleChange}
                     rows="4"
                     placeholder="Nhập số nhà, tên đường, phường/xã, quận/huyện..."
+                    className="w-full p-3.5 rounded-xl border border-[#cbd5e1] bg-white text-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-profile-primary transition-all"
                   />
                 </div>
-                <div className="form-group profile-edit__note">
-                  <label>Ngày tham gia</label>
-                  <div className="profile-edit__readonly">
+                <div className="flex flex-col gap-2 content-start">
+                  <label className="text-xs font-bold text-[#1f2937] uppercase tracking-wider">Ngày tham gia</label>
+                  <div className="min-h-12 flex items-center px-3.5 py-3 rounded-[14px] bg-gradient-to-br from-[#f8fafc] to-[#eef2ff] border border-[#e5e7eb] text-[#0f172a] font-bold">
                     {memberSince}
                   </div>
-                  <p className="profile-edit__hint">
+                  <p className="m-0 text-[#64748b] text-[0.88rem] leading-relaxed">
                     Avatar có thể đổi trực tiếp bằng biểu tượng camera trên ảnh đại diện.
                   </p>
                 </div>
               </div>
-              <div className="form-actions">
-                <button type="submit" className="btn-primary">
+              <div className="flex justify-end gap-3.5 mt-4">
+                <button type="submit" className="py-3.5 px-6 font-bold rounded-xl text-sm transition-all cursor-pointer bg-profile-primary text-white hover:bg-profile-primary-light hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(99,102,241,0.3)]">
                   Lưu thay đổi
                 </button>
               </div>
@@ -754,17 +790,17 @@ function UserDashboard() {
       </div>
 
       {isPasswordModalOpen && (
-        <div className="profile-modal-backdrop">
-          <div className="profile-modal-content">
-            <div className="modal-header">
-              <h3>Đổi mật khẩu</h3>
-              <button type="button" className="modal-close" onClick={() => setIsPasswordModalOpen(false)}>
+        <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center z-[9999] p-5">
+          <div className="bg-white rounded-2xl w-full max-w-[500px] p-6 shadow-xl border border-[#e2e8f0] animate-fade-in">
+            <div className="flex justify-between items-center p-6 border-b border-[#f1f5f9]">
+              <h3 className="m-0 text-xl font-extrabold text-[#0f172a]">Đổi mật khẩu</h3>
+              <button type="button" className="w-8 h-8 rounded bg-[#f1f5f9] border-none text-[#64748b] text-[1.2rem] cursor-pointer transition-all flex items-center justify-center hover:bg-[#e2e8f0] hover:text-[#0f172a]" onClick={() => setIsPasswordModalOpen(false)}>
                 ✕
               </button>
             </div>
-            <form onSubmit={handleChangePassword} className="modal-form">
-              <div className="form-group">
-                <label>Mật khẩu hiện tại</label>
+            <form onSubmit={handleChangePassword} className="p-6 flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-[#1f2937] uppercase tracking-wider">Mật khẩu hiện tại</label>
                 <input
                   type="password"
                   name="currentPassword"
@@ -772,10 +808,11 @@ function UserDashboard() {
                   onChange={handlePasswordChange}
                   required
                   placeholder="Nhập mật khẩu hiện tại"
+                  className="w-full p-3.5 rounded-xl border border-[#cbd5e1] bg-white text-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-profile-primary transition-all"
                 />
               </div>
-              <div className="form-group">
-                <label>Mật khẩu mới</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-[#1f2937] uppercase tracking-wider">Mật khẩu mới</label>
                 <input
                   type="password"
                   name="newPassword"
@@ -784,10 +821,11 @@ function UserDashboard() {
                   required
                   minLength={6}
                   placeholder="Nhập mật khẩu mới"
+                  className="w-full p-3.5 rounded-xl border border-[#cbd5e1] bg-white text-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-profile-primary transition-all"
                 />
               </div>
-              <div className="form-group">
-                <label>Xác nhận mật khẩu mới</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-[#1f2937] uppercase tracking-wider">Xác nhận mật khẩu mới</label>
                 <input
                   type="password"
                   name="confirmPassword"
@@ -796,13 +834,14 @@ function UserDashboard() {
                   required
                   minLength={6}
                   placeholder="Xác nhận mật khẩu mới"
+                  className="w-full p-3.5 rounded-xl border border-[#cbd5e1] bg-white text-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-profile-primary transition-all"
                 />
               </div>
-              <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={() => setIsPasswordModalOpen(false)}>
+              <div className="flex gap-3 justify-end mt-2">
+                <button type="button" className="py-3.5 px-6 font-bold rounded-xl text-sm transition-all cursor-pointer bg-[#f3f4f6] text-[#1f2937] border border-[#e5e7eb] hover:bg-[#e5e7eb]" onClick={() => setIsPasswordModalOpen(false)}>
                   Hủy
                 </button>
-                <button type="submit" className="btn-primary">
+                <button type="submit" className="py-3.5 px-6 font-bold rounded-xl text-sm transition-all cursor-pointer bg-profile-primary text-white hover:bg-profile-primary-light hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(99,102,241,0.3)]">
                   Cập nhật mật khẩu
                 </button>
               </div>
@@ -812,39 +851,38 @@ function UserDashboard() {
       )}
 
       {isVoucherModalOpen && (
-        <div className="profile-modal-backdrop">
-          <div className="profile-modal-content" style={{ maxWidth: "500px" }}>
-            <div className="modal-header">
-              <h3>Ví Voucher của bạn</h3>
-              <button type="button" className="modal-close" onClick={() => setIsVoucherModalOpen(false)}>
+        <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center z-[9999] p-5">
+          <div className="bg-white rounded-2xl w-full max-w-[500px] p-6 shadow-xl border border-[#e2e8f0] animate-fade-in">
+            <div className="flex justify-between items-center p-6 border-b border-[#f1f5f9]">
+              <h3 className="m-0 text-xl font-extrabold text-[#0f172a]">Ví Voucher của bạn</h3>
+              <button type="button" className="w-8 h-8 rounded bg-[#f1f5f9] border-none text-[#64748b] text-[1.2rem] cursor-pointer transition-all flex items-center justify-center hover:bg-[#e2e8f0] hover:text-[#0f172a]" onClick={() => setIsVoucherModalOpen(false)}>
                 ✕
               </button>
             </div>
-            <p className="dashboard-subtitle" style={{ marginBottom: "16px", color: "var(--color-text-secondary)", fontSize: "0.9rem" }}>Danh sách các mã giảm giá bạn có thể sử dụng ngay.</p>
+            <p className="m-0 mb-4 text-[#6b7280] text-[0.9rem] leading-normal mt-4">Danh sách các mã giảm giá bạn có thể sử dụng ngay.</p>
             
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "400px", overflowY: "auto", paddingRight: "4px" }}>
+            <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-1">
               {vouchers.length === 0 ? (
-                <p className="empty-state">Bạn hiện chưa có mã giảm giá nào.</p>
+                <p className="text-center py-6 text-[#6b7280] text-sm">Bạn hiện chưa có mã giảm giá nào.</p>
               ) : (
                 vouchers.map(v => (
-                  <div key={v.id} style={{ border: "1px dashed var(--color-primary-light)", borderRadius: "var(--radius-md)", padding: "var(--spacing-md)", background: "var(--color-primary-lighter)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div key={v.id} className="border border-dashed border-[#818cf8] rounded-xl p-4 bg-profile-primary-lighter flex justify-between items-center">
                     <div>
-                      <h4 style={{ margin: "0 0 4px", color: "var(--color-primary)", fontWeight: "700" }}>{v.code}</h4>
-                      <p style={{ margin: "0", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+                      <h4 className="m-0 mb-1 text-profile-primary font-bold">{v.code}</h4>
+                      <p className="m-0 text-[0.85rem] text-[#6b7280]">
                         Giảm {v.type === "percent" ? `${v.value}%` : `${Number(v.value).toLocaleString("vi-VN")}đ`} 
                         {Number(v.minOrderValue) > 0 && ` cho đơn từ ${Number(v.minOrderValue).toLocaleString("vi-VN")}đ`}
                         {Number(v.maxDiscountValue) > 0 && ` (Tối đa ${Number(v.maxDiscountValue).toLocaleString("vi-VN")}đ)`}
                       </p>
                       {v.endDate && (
-                        <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "var(--color-accent-amber)", fontWeight: "600" }}>
+                        <p className="mt-1 text-[0.8rem] text-accent-amber font-semibold">
                           HSD: {new Date(v.endDate).toLocaleString("vi-VN")}
                         </p>
                       )}
                     </div>
                     <button 
                       type="button" 
-                      className="btn-primary" 
-                      style={{ padding: "6px 12px", fontSize: "0.85rem", borderRadius: "var(--radius-sm)" }}
+                      className="px-3 py-1.5 font-bold rounded-lg text-[0.85rem] transition-all cursor-pointer bg-profile-primary text-white hover:bg-profile-primary-light hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(99,102,241,0.3)]"
                       onClick={() => {
                         navigator.clipboard.writeText(v.code);
                         success(`Đã copy mã ${v.code}`);
@@ -857,12 +895,11 @@ function UserDashboard() {
               )}
             </div>
 
-            <div className="modal-actions" style={{ marginTop: "24px" }}>
+            <div className="flex gap-3 justify-end mt-6">
               <button
                 type="button"
                 onClick={() => setIsVoucherModalOpen(false)}
-                className="btn-secondary"
-                style={{ width: "100%" }}
+                className="py-3.5 px-6 font-bold rounded-xl text-sm transition-all cursor-pointer bg-[#f3f4f6] text-[#1f2937] border border-[#e5e7eb] hover:bg-[#e5e7eb] w-full"
               >
                 Đóng
               </button>
@@ -872,70 +909,57 @@ function UserDashboard() {
       )}
 
       {isRedeemModalOpen && (
-        <div className="profile-modal-backdrop">
-          <div className="profile-modal-content" style={{ maxWidth: "520px" }}>
-            <div className="modal-header">
-              <h3>Đổi điểm lấy Voucher</h3>
-              <button type="button" className="modal-close" onClick={() => setIsRedeemModalOpen(false)}>
+        <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center z-[9999] p-5">
+          <div className="bg-white rounded-2xl w-full max-w-[520px] p-6 shadow-xl border border-[#e2e8f0] animate-fade-in">
+            <div className="flex justify-between items-center p-6 border-b border-[#f1f5f9]">
+              <h3 className="m-0 text-xl font-extrabold text-[#0f172a]">Đổi điểm lấy Voucher</h3>
+              <button type="button" className="w-8 h-8 rounded bg-[#f1f5f9] border-none text-[#64748b] text-[1.2rem] cursor-pointer transition-all flex items-center justify-center hover:bg-[#e2e8f0] hover:text-[#0f172a]" onClick={() => setIsRedeemModalOpen(false)}>
                 ✕
               </button>
             </div>
 
-            <div style={{ textAlign: "center", padding: "16px 0 20px", borderBottom: "1px solid var(--color-border-light, #e2eaf4)", marginBottom: "16px" }}>
-              <p style={{ margin: "0 0 4px", fontSize: "0.9rem", color: "var(--color-text-secondary, #62728a)" }}>Số dư hiện tại</p>
-              <strong style={{ fontSize: "2rem", color: "var(--color-primary, #10375c)" }}>{loyaltyPoints.toLocaleString("vi-VN")}</strong>
-              <span style={{ fontSize: "1rem", color: "var(--color-text-secondary, #62728a)", marginLeft: "6px" }}>điểm</span>
+            <div className="text-center py-4.5 border-b border-[#e2eaf4] mb-4">
+              <p className="m-0 mb-1 text-[0.9rem] text-[#62728a]">Số dư hiện tại</p>
+              <strong className="text-[2rem] text-profile-primary">{loyaltyPoints.toLocaleString("vi-VN")}</strong>
+              <span className="text-[1rem] text-[#62728a] ml-1.5">điểm</span>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "320px", overflowY: "auto", paddingRight: "4px" }}>
+            <div className="flex flex-col gap-3 max-h-[320px] overflow-y-auto pr-1">
               {rewardTiers.length === 0 ? (
-                <p className="empty-state">Chưa có mức đổi thưởng nào. Vui lòng quay lại sau.</p>
+                <p className="text-center py-6 text-[#6b7280] text-sm">Chưa có mức đổi thưởng nào. Vui lòng quay lại sau.</p>
               ) : (
                 rewardTiers.map(tier => {
                   const canRedeem = loyaltyPoints >= tier.pointsRequired;
                   const missingPoints = tier.pointsRequired - loyaltyPoints;
 
                   return (
-                    <div key={tier._id} style={{
-                      border: `1px ${canRedeem ? "solid" : "dashed"} ${canRedeem ? "var(--color-primary-light, #b5ccf0)" : "var(--color-border-light, #e2eaf4)"}`,
-                      borderRadius: "var(--radius-md, 8px)",
-                      padding: "var(--spacing-md, 12px)",
-                      background: canRedeem ? "var(--color-primary-lighter, #f8fbff)" : "#f8f9fa",
-                      opacity: canRedeem ? 1 : 0.7,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}>
+                    <div key={tier._id} className={`border rounded-lg p-3 flex justify-between items-center transition-all ${
+                      canRedeem 
+                        ? "border-[#b5ccf0] bg-[#f8fbff] opacity-100" 
+                        : "border-dashed border-[#e2eaf4] bg-[#f8f9fa] opacity-70"
+                    }`}>
                       <div>
-                        <h4 style={{ margin: "0 0 4px", color: canRedeem ? "var(--color-primary, #10375c)" : "#888", fontWeight: "700" }}>{tier.name}</h4>
-                        <p style={{ margin: "0", fontSize: "0.85rem", color: "var(--color-text-secondary, #62728a)" }}>
+                        <h4 className={`m-0 mb-1 font-bold ${canRedeem ? "text-profile-primary" : "text-[#888]"}`}>{tier.name}</h4>
+                        <p className="m-0 text-[0.85rem] text-[#62728a]">
                           {tier.pointsRequired.toLocaleString("vi-VN")} điểm →{" "}
                           Giảm {tier.discountType === "percent" ? `${tier.discountValue}%` : `${Number(tier.discountValue).toLocaleString("vi-VN")}đ`}
                           {Number(tier.maxDiscountValue) > 0 && ` (tối đa ${Number(tier.maxDiscountValue).toLocaleString("vi-VN")}đ)`}
                         </p>
                         {Number(tier.minOrderValue) > 0 && (
-                          <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: "#888" }}>
+                          <p className="mt-0.5 text-[0.8rem] text-[#888]">
                             Đơn tối thiểu {Number(tier.minOrderValue).toLocaleString("vi-VN")}đ · Hiệu lực {tier.voucherValidDays} ngày
                           </p>
                         )}
                         {!canRedeem && (
-                          <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "var(--color-danger, #b42318)", fontWeight: 600 }}>
+                          <p className="mt-1 text-[0.8rem] text-[#b42318] font-semibold">
                             Còn thiếu {missingPoints.toLocaleString("vi-VN")} điểm
                           </p>
                         )}
                       </div>
                       <button
                         type="button"
-                        className="btn-primary"
                         disabled={!canRedeem || isRedeeming}
-                        style={{
-                          padding: "8px 16px",
-                          fontSize: "0.85rem",
-                          borderRadius: "var(--radius-sm, 6px)",
-                          opacity: canRedeem ? 1 : 0.5,
-                          cursor: canRedeem ? "pointer" : "not-allowed",
-                          whiteSpace: "nowrap",
-                        }}
+                        className="px-4 py-2 text-[0.85rem] rounded-md whitespace-nowrap font-bold transition-all bg-profile-primary text-white hover:bg-profile-primary-light hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(99,102,241,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#9ca3af] disabled:shadow-none disabled:transform-none"
                         onClick={() => handleRedeem(tier._id)}
                       >
                         {isRedeeming ? "Đang đổi..." : "Đổi ngay"}
@@ -947,13 +971,13 @@ function UserDashboard() {
             </div>
 
             {pointHistory.length > 0 && (
-              <div style={{ marginTop: "20px", borderTop: "1px solid var(--color-border-light, #e2eaf4)", paddingTop: "16px" }}>
-                <h4 style={{ margin: "0 0 10px", fontSize: "0.9rem", color: "var(--color-text-secondary, #62728a)" }}>Lịch sử gần đây</h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "140px", overflowY: "auto" }}>
+              <div className="mt-5 border-t border-[#e2eaf4] pt-4">
+                <h4 className="m-0 mb-2.5 text-[0.9rem] text-[#62728a]">Lịch sử gần đây</h4>
+                <div className="flex flex-col gap-1.5 max-h-[140px] overflow-y-auto">
                   {pointHistory.slice(0, 8).map(h => (
-                    <div key={h._id} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", padding: "4px 0" }}>
-                      <span style={{ color: "var(--color-text-secondary, #62728a)" }}>{h.reason}</span>
-                      <span style={{ fontWeight: 700, color: h.amount >= 0 ? "var(--color-success, #166534)" : "var(--color-danger, #b42318)" }}>
+                    <div key={h._id} className="flex justify-between text-[0.82rem] py-1">
+                      <span className="text-[#62728a]">{h.reason}</span>
+                      <span className={`font-bold ${h.amount >= 0 ? "text-[#166534]" : "text-[#b42318]"}`}>
                         {h.amount >= 0 ? "+" : ""}{h.amount}
                       </span>
                     </div>
@@ -962,12 +986,11 @@ function UserDashboard() {
               </div>
             )}
 
-            <div className="modal-actions" style={{ marginTop: "20px" }}>
+            <div className="flex gap-3 justify-end mt-5">
               <button
                 type="button"
                 onClick={() => setIsRedeemModalOpen(false)}
-                className="btn-secondary"
-                style={{ width: "100%" }}
+                className="py-3.5 px-6 font-bold rounded-xl text-sm transition-all cursor-pointer bg-[#f3f4f6] text-[#1f2937] border border-[#e5e7eb] hover:bg-[#e5e7eb] w-full"
               >
                 Đóng
               </button>

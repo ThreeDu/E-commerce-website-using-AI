@@ -3,8 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { useStatusMessageBridge } from "../../../hooks/useStatusMessageBridge";
 import { createAdminCategory, getAdminCategories } from "../../../services/admin/categoryService";
-import "../../../css/admin/categories.css";
-
 function AdminAddCategoryPage() {
   const navigate = useNavigate();
   const { auth } = useAuth();
@@ -138,18 +136,31 @@ function AdminAddCategoryPage() {
   };
 
   return (
-    <main className="container page-content">
-      <section className="hero-card admin-form-surface">
-        <h2>Thêm danh mục</h2>
-        <p className="admin-surface-subtitle">Tạo danh mục mới theo cấp: chính, phụ cấp 2 hoặc phụ cấp 3.</p>
-        {message && <p className="form-message">{message}</p>}
+    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
+      <section className="relative border border-admin-line rounded-[24px] p-8 shadow-admin bg-gradient-to-br from-white to-[#f8fbff] animate-admin-rise">
+        <h2 className="text-[25px] font-bold tracking-tight text-admin-ink mt-0 mb-1">Thêm danh mục</h2>
+        <p className="text-sm text-admin-muted mt-2 mb-0 max-w-[760px] leading-relaxed">
+          Tạo danh mục mới theo cấp: chính, phụ cấp 2 hoặc phụ cấp 3.
+        </p>
+        {message && (
+          <p className="mt-3 rounded-[10px] p-[10px_12px] border border-[#ffd8a8] bg-[#fff8ef] text-[#9a3412] text-sm font-semibold">
+            {message}
+          </p>
+        )}
 
         {loading ? (
-          <p>Đang tải dữ liệu danh mục...</p>
+          <p className="text-sm text-admin-muted py-4">Đang tải dữ liệu danh mục...</p>
         ) : (
-          <form className="category-create-form" onSubmit={handleSubmit}>
-            <label htmlFor="category-level">Cấp danh mục</label>
-            <select id="category-level" value={level} onChange={handleLevelChange}>
+          <form className="mt-6 max-w-[620px] grid gap-4" onSubmit={handleSubmit}>
+            <label htmlFor="category-level" className="text-[13px] font-bold text-[#1f3348] tracking-wide">
+              Cấp danh mục
+            </label>
+            <select
+              id="category-level"
+              className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
+              value={level}
+              onChange={handleLevelChange}
+            >
               <option value="1">Danh mục chính (cấp 1)</option>
               <option value="2">Danh mục phụ cấp 2</option>
               <option value="3">Danh mục phụ cấp 3</option>
@@ -157,9 +168,12 @@ function AdminAddCategoryPage() {
 
             {level === "2" && (
               <>
-                <label htmlFor="main-parent">Danh mục chính</label>
+                <label htmlFor="main-parent" className="text-[13px] font-bold text-[#1f3348] tracking-wide">
+                  Danh mục chính
+                </label>
                 <select
                   id="main-parent"
+                  className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
                   value={selectedMainId}
                   onChange={(event) => setSelectedMainId(event.target.value)}
                   required
@@ -176,9 +190,12 @@ function AdminAddCategoryPage() {
 
             {level === "3" && (
               <>
-                <label htmlFor="level2-parent">Danh mục phụ cấp 2</label>
+                <label htmlFor="level2-parent" className="text-[13px] font-bold text-[#1f3348] tracking-wide">
+                  Danh mục phụ cấp 2
+                </label>
                 <select
                   id="level2-parent"
+                  className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
                   value={selectedLevel2Id}
                   onChange={(event) => setSelectedLevel2Id(event.target.value)}
                   required
@@ -193,23 +210,32 @@ function AdminAddCategoryPage() {
               </>
             )}
 
-            <label htmlFor="category-name">Tên danh mục</label>
+            <label htmlFor="category-name" className="text-[13px] font-bold text-[#1f3348] tracking-wide">
+              Tên danh mục
+            </label>
             <input
               id="category-name"
+              className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Ví dụ: Giày thể thao"
               required
             />
-            <p className="admin-form-note">Mẹo: đặt tên ngắn gọn, thống nhất theo nhóm sản phẩm để dễ tìm kiếm.</p>
+            <p className="text-xs text-[#63768e] mt-0.5">
+              Mẹo: đặt tên ngắn gọn, thống nhất theo nhóm sản phẩm để dễ tìm kiếm.
+            </p>
 
-            <div className="add-form-actions">
-              <button type="submit" disabled={saving}>
+            <div className="flex gap-2.5 mt-2">
+              <button
+                type="submit"
+                className="min-w-[124px] bg-gradient-to-r from-admin-primary to-[#0f314f] text-white py-2.5 px-3.5 rounded-full font-semibold transition-all duration-150 cursor-pointer hover:-translate-y-px hover:shadow-[0_9px_16px_rgba(9,26,44,0.14)] disabled:opacity-70 disabled:cursor-not-allowed"
+                disabled={saving}
+              >
                 {saving ? "Đang thêm..." : "Thêm danh mục"}
               </button>
               <button
                 type="button"
-                className="secondary-btn"
+                className="min-w-[124px] bg-[#e8edf3] text-[#0f2233] py-2.5 px-3.5 rounded-full font-semibold transition-all duration-150 cursor-pointer hover:-translate-y-px hover:shadow-[0_9px_16px_rgba(9,26,44,0.14)] disabled:opacity-70 disabled:cursor-not-allowed"
                 onClick={() => navigate("/admin/categories")}
                 disabled={saving}
               >

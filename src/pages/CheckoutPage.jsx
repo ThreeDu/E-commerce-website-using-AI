@@ -7,9 +7,6 @@ import { trackEvent } from "../services/analyticsService";
 import { parsePrice, formatPrice } from "../utils/priceUtils";
 import { getProductImageSrc } from "../utils/productUtils";
 import { verifyCoupon, createOrder, fetchMyVouchers } from "../services/orderService";
-import "../css/checkout.css";
-import "../css/profile.css";
-
 function CheckoutPage() {
   const { cart, removeSelectedItems } = useCart();
   const navigate = useNavigate();
@@ -193,46 +190,46 @@ function CheckoutPage() {
   // Chặn người dùng vào trang thanh toán nếu không có sản phẩm được chọn
   if (selectedItems.length === 0) {
     return (
-      <main className="container page-content checkout-empty">
-        <h2 className="checkout-empty__title">Bạn chưa chọn sản phẩm để thanh toán!</h2>
-        <Link to="/cart" className="checkout-empty__link">Quay lại giỏ hàng</Link>
+      <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10 text-center py-[100px] px-5">
+        <h2 className="mb-4 text-2xl font-bold">Bạn chưa chọn sản phẩm để thanh toán!</h2>
+        <Link to="/cart" className="text-[#4f46e5] no-underline font-bold hover:underline">Quay lại giỏ hàng</Link>
       </main>
     );
   }
 
   return (
-    <main className="container page-content checkout-page">
-      <h2 className="checkout-page__title">Thanh toán &amp; Đặt hàng</h2>
+    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10 px-5 text-[#1e293b]">
+      <h2 className="mb-6 text-[28px] font-bold">Thanh toán &amp; Đặt hàng</h2>
 
-      <div className="checkout-layout">
+      <div className="flex gap-8 flex-wrap">
         {/* Cột Form điền thông tin */}
-        <div className="checkout-form-col">
-          <h3 className="checkout-form-col__title">Thông tin giao hàng</h3>
+        <div className="flex-[1_1_60%] min-w-[300px] bg-[#f8fafc] p-6 rounded-2xl border border-[#e2e8f0]">
+          <h3 className="mb-5 text-xl font-bold text-[#1e293b]">Thông tin giao hàng</h3>
           {formError && (
-            <p className="checkout-form-error">{formError}</p>
+            <p className="mb-4 p-2.5 rounded-xl bg-[#fff1f2] text-[#9f1239] border border-[#fecdd3]">{formError}</p>
           )}
           <form onSubmit={handlePlaceOrder} id="checkout-form">
-            <div className="checkout-field-row">
-              <div className="checkout-field">
-                <label className="checkout-field__label">Họ và tên</label>
+            <div className="grid grid-cols-2 gap-4 max-[768px]:grid-cols-1">
+              <div className="mb-4">
+                <label className="block mb-2 font-bold text-[#1e293b]">Họ và tên</label>
                 <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required
-                  className="checkout-field__input" placeholder="Nhập họ và tên..." />
+                  className="w-full p-2.5 rounded-xl border border-[#e2e8f0] bg-[#f9fafb] text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#4f46e5]" placeholder="Nhập họ và tên..." />
               </div>
-              <div className="checkout-field">
-                <label className="checkout-field__label">Số điện thoại</label>
+              <div className="mb-4">
+                <label className="block mb-2 font-bold text-[#1e293b]">Số điện thoại</label>
                 <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required
-                  className="checkout-field__input" placeholder="Nhập số điện thoại..." />
+                  className="w-full p-2.5 rounded-xl border border-[#e2e8f0] bg-[#f9fafb] text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#4f46e5]" placeholder="Nhập số điện thoại..." />
               </div>
             </div>
-            <div className="checkout-field">
-              <label className="checkout-field__label">Địa chỉ chi tiết</label>
+            <div className="mb-4">
+              <label className="block mb-2 font-bold text-[#1e293b]">Địa chỉ chi tiết</label>
               <textarea name="address" value={formData.address} onChange={handleChange} required rows="3"
-                className="checkout-field__textarea" placeholder="Nhập số nhà, tên đường, phường/xã, quận/huyện..."></textarea>
+                className="w-full p-2.5 rounded-xl border border-[#e2e8f0] bg-[#f9fafb] text-[#1e293b] resize-y focus:outline-none focus:ring-2 focus:ring-[#4f46e5]" placeholder="Nhập số nhà, tên đường, phường/xã, quận/huyện..."></textarea>
             </div>
-            <div className="checkout-field--lg">
-              <label className="checkout-field__label">Phương thức thanh toán</label>
+            <div className="mb-6">
+              <label className="block mb-2 font-bold text-[#1e293b]">Phương thức thanh toán</label>
               <select name="paymentMethod" value={formData.paymentMethod} onChange={handleChange}
-                className="checkout-field__select">
+                className="w-full p-2.5 rounded-xl border border-[#e2e8f0] bg-[#f9fafb] text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#4f46e5]">
                 <option value="cod">Thanh toán khi nhận hàng (COD)</option>
                 <option value="transfer">Chuyển khoản ngân hàng</option>
               </select>
@@ -241,45 +238,44 @@ function CheckoutPage() {
         </div>
 
         {/* Cột Tóm tắt đơn hàng */}
-        <div className="checkout-summary">
-          <h3 className="checkout-summary__title">Đơn hàng của bạn</h3>
-          <div className="checkout-summary__items">
+        <div className="flex-[1_1_30%] min-w-[280px] bg-[#f8fafc] p-6 rounded-2xl border border-[#e2e8f0] h-fit">
+          <h3 className="mb-5 text-xl border-b border-[#e2e8f0] pb-3 text-[#1e293b] font-bold">Đơn hàng của bạn</h3>
+          <div className="mb-5 max-h-[320px] overflow-y-auto pr-2 scrollbar-subtle">
             {selectedItems.map((item) => (
-              <div key={item.id} className="checkout-summary__item">
+              <div key={item.id} className="flex items-center gap-3 mb-3.5 text-sm leading-relaxed">
                 <img
                   src={getProductImageSrc(item)}
                   alt={item.name}
-                  className="checkout-summary__item-thumb"
+                  className="w-11 h-11 object-cover rounded-[10px] border border-[#e2e8f0] bg-white shrink-0"
                   onError={(event) => {
                     event.currentTarget.onerror = null;
                     event.currentTarget.src = "/placeholder.svg";
                   }}
                 />
-                <div className="checkout-summary__item-body">
-                  <span className="checkout-summary__item-name">{item.name}</span>
-                  <span className="checkout-summary__item-qty">x{item.quantity}</span>
+                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                  <span className="text-[#1e293b] font-semibold truncate">{item.name}</span>
+                  <span className="text-[#64748b] text-[13px]">x{item.quantity}</span>
                 </div>
-                <span className="checkout-summary__item-price">
+                <span className="font-bold text-[#e11d48] shrink-0">
                   {formatPrice(parsePrice(item.finalPrice || item.price) * item.quantity)}
                 </span>
               </div>
             ))}
           </div>
-          <div className="checkout-coupon">
-            <label className="checkout-coupon__label">Mã giảm giá</label>
-            <div className="checkout-coupon__row">
+          <div className="mb-4">
+            <label className="block mb-2 font-bold text-[#1e293b]">Mã giảm giá</label>
+            <div className="flex gap-2">
               <input
                 type="text"
                 value={couponCode}
                 onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
                 placeholder="Nhập mã..."
-                className="checkout-coupon__input"
+                className="flex-1 p-2.5 rounded-xl border border-[#e2e8f0] bg-[#f9fafb] text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#4f46e5]"
               />
               <button
                 type="button"
                 onClick={() => setIsVoucherModalOpen(true)}
-                className="checkout-coupon__btn checkout-coupon__btn--outline"
-                style={{ background: "#f8fbff", color: "#10375c", borderColor: "#b5ccf0" }}
+                className="py-2.5 px-3.5 rounded-xl border border-[#b5ccf0] bg-[#f8fbff] text-[#10375c] font-bold cursor-pointer hover:bg-[#eff5ff]"
               >
                 Chọn mã
               </button>
@@ -287,52 +283,52 @@ function CheckoutPage() {
                 type="button"
                 onClick={handleApplyCoupon}
                 disabled={isApplyingCoupon}
-                className="checkout-coupon__btn"
+                className="py-2.5 px-3.5 rounded-xl border-none bg-[#4f46e5] text-white font-bold cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 hover:bg-[#4338ca]"
               >
                 {isApplyingCoupon ? "Đang áp dụng..." : "Áp dụng"}
               </button>
             </div>
             {couponInfo?.coupon?.code && (
-              <div className="checkout-coupon__applied">
+              <div className="mt-2 flex items-center justify-between text-[13px] text-[#166534]">
                 <span>Đã áp dụng mã: <strong>{couponInfo.coupon.code}</strong></span>
-                <button type="button" onClick={handleRemoveCoupon} className="checkout-coupon__remove">Xóa mã</button>
+                <button type="button" onClick={handleRemoveCoupon} className="border-none bg-transparent text-[#b91c1c] cursor-pointer font-bold hover:underline">Xóa mã</button>
               </div>
             )}
-            {couponError && <p className="checkout-coupon__error">{couponError}</p>}
+            {couponError && <p className="mt-2 mb-0 text-[#b91c1c] text-[13px]">{couponError}</p>}
           </div>
-          <div className="checkout-summary__row">
-            <span>Phí vận chuyển:</span><span style={{ fontWeight: "bold" }}>Miễn phí</span>
+          <div className="flex justify-between mb-4 text-base border-t border-[#e2e8f0] pt-3 leading-[1.7] text-[#334155]">
+            <span>Phí vận chuyển:</span><span className="font-bold">Miễn phí</span>
           </div>
           {discountAmount > 0 && (
-            <div className="checkout-summary__row--discount">
+            <div className="flex justify-between mb-3 text-base leading-[1.7]">
               <span>Giảm giá:</span>
-              <span className="checkout-summary__discount-value">- {formatPrice(discountAmount)}</span>
+              <span className="font-bold text-[#e11d48]">- {formatPrice(discountAmount)}</span>
             </div>
           )}
-          <div className="checkout-summary__row--total">
+          <div className="flex justify-between mb-6 text-xl leading-[1.6] [&>span]:font-bold">
             <span>Tổng cộng:</span>
-            <span className="checkout-summary__total-price">{formatPrice(finalTotal)}</span>
+            <span className="text-[#e11d48]">{formatPrice(finalTotal)}</span>
           </div>
 
-          <button type="submit" form="checkout-form" className="checkout-submit">
+          <button type="submit" form="checkout-form" className="w-full py-3.5 bg-[#4f46e5] text-white border-none rounded-xl text-base font-bold cursor-pointer transition-all duration-[180ms] hover:bg-[#4338ca] hover:-translate-y-px hover:shadow-[0_10px_22px_rgba(79,70,229,0.18)]">
             Hoàn tất đặt hàng
           </button>
         </div>
       </div>
 
       {isVoucherModalOpen && (
-        <div className="profile-modal-backdrop" style={{ zIndex: 9999 }}>
-          <div className="profile-modal-content" style={{ maxWidth: "500px" }}>
-            <div className="modal-header">
-              <h3>Chọn Mã Giảm Giá</h3>
-              <button type="button" className="modal-close" onClick={() => setIsVoucherModalOpen(false)}>
+        <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center z-[9999] p-5">
+          <div className="bg-white rounded-2xl w-full max-w-[500px] p-6 shadow-xl border border-[#e2e8f0] animate-fade-in">
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-[#e2e8f0]">
+              <h3 className="text-xl font-bold text-[#1e293b]">Chọn Mã Giảm Giá</h3>
+              <button type="button" className="border-none bg-transparent text-[#64748b] text-lg cursor-pointer hover:text-[#1e293b]" onClick={() => setIsVoucherModalOpen(false)}>
                 ✕
               </button>
             </div>
             
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "400px", overflowY: "auto", paddingRight: "4px", marginTop: "16px" }}>
+            <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-1 mt-4 scrollbar-subtle">
               {vouchers.length === 0 ? (
-                <p className="empty-state">Bạn hiện chưa có mã giảm giá nào.</p>
+                <p className="text-center py-6 text-[#64748b]">Bạn hiện chưa có mã giảm giá nào.</p>
               ) : (
                 vouchers.map(v => {
                   const minRequired = Number(v.minOrderValue || 0);
@@ -340,44 +336,37 @@ function CheckoutPage() {
                   const missingAmount = minRequired - totalPrice;
 
                   return (
-                    <div key={v.id} style={{ 
-                      border: "1px dashed var(--color-primary-light)", 
-                      borderRadius: "var(--radius-md)", 
-                      padding: "var(--spacing-md)", 
-                      background: isEligible ? "var(--color-primary-lighter)" : "var(--color-bg-tertiary)", 
-                      opacity: isEligible ? 1 : 0.7,
-                      display: "flex", 
-                      justifyContent: "space-between", 
-                      alignItems: "center" 
-                    }}>
-                      <div>
-                        <h4 style={{ margin: "0 0 4px", color: isEligible ? "var(--color-primary)" : "var(--color-text-secondary)", fontWeight: "700" }}>{v.code}</h4>
-                        <p style={{ margin: "0", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+                    <div key={v.id} className={`border border-dashed rounded-xl p-4 flex justify-between items-center transition-all ${
+                      isEligible 
+                        ? "border-profile-primary bg-profile-primary/10 opacity-100" 
+                        : "border-[#e2e8f0] bg-[#f8fafc] opacity-70"
+                    }`}>
+                      <div className="flex flex-col gap-1">
+                        <h4 className={`text-base font-bold m-0 ${isEligible ? "text-profile-primary" : "text-[#64748b]"}`}>{v.code}</h4>
+                        <p className="text-xs text-[#64748b] m-0">
                           Giảm {v.type === "percent" ? `${v.value}%` : `${Number(v.value).toLocaleString("vi-VN")}đ`} 
                           {minRequired > 0 && ` cho đơn từ ${minRequired.toLocaleString("vi-VN")}đ`}
                           {Number(v.maxDiscountValue) > 0 && ` (Tối đa ${Number(v.maxDiscountValue).toLocaleString("vi-VN")}đ)`}
                         </p>
                         {!isEligible && (
-                          <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#b42318", fontWeight: 600 }}>
+                          <p className="text-[11px] text-[#b42318] font-semibold m-0 mt-0.5">
                             Mua thêm {missingAmount.toLocaleString("vi-VN")}đ để dùng mã
                           </p>
                         )}
                         {v.endDate && isEligible && (
-                          <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "var(--color-accent-amber)", fontWeight: "600" }}>
+                          <p className="text-[11px] text-accent-amber font-semibold m-0 mt-0.5">
                             HSD: {new Date(v.endDate).toLocaleString("vi-VN")}
                           </p>
                         )}
                       </div>
                       <button 
                         type="button" 
-                        className={isEligible ? "btn-primary" : "btn-secondary"} 
                         disabled={!isEligible}
-                        style={{ 
-                          padding: "6px 12px", 
-                          fontSize: "0.85rem",
-                          borderRadius: "var(--radius-sm)",
-                          cursor: isEligible ? "pointer" : "not-allowed"
-                        }}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                          isEligible 
+                            ? "bg-profile-primary text-white hover:bg-profile-primary-light cursor-pointer" 
+                            : "bg-[#e2e8f0] text-[#94a3b8] cursor-not-allowed"
+                        }`}
                         onClick={() => {
                           setCouponCode(v.code);
                           setIsVoucherModalOpen(false);

@@ -1,6 +1,5 @@
 import { Component } from "react";
 import { Link } from "react-router-dom";
-import "../../css/error-boundary.css";
 
 /**
  * React Error Boundary.
@@ -37,30 +36,30 @@ class ErrorBoundary extends Component {
     }
 
     return (
-      <div className="error-boundary">
-        <div className="error-boundary__card">
-          <div className="error-boundary__icon" aria-hidden="true">⚠️</div>
-          <h2 className="error-boundary__title">Đã xảy ra lỗi</h2>
-          <p className="error-boundary__message">
+      <div className="flex items-center justify-center min-h-[60vh] py-10 px-5">
+        <div className="text-center max-w-[480px] w-full bg-white border border-border rounded-xl py-10 px-8 shadow-elevated">
+          <div className="text-5xl mb-4" aria-hidden="true">⚠️</div>
+          <h2 className="m-0 mb-3 text-2xl text-[#111827]">Đã xảy ra lỗi</h2>
+          <p className="m-0 mb-6 text-text-secondary leading-relaxed">
             Ứng dụng gặp lỗi không mong muốn. Vui lòng thử lại hoặc quay về trang chủ.
           </p>
           {process.env.NODE_ENV === "development" && this.state.error ? (
-            <details className="error-boundary__details">
-              <summary>Chi tiết lỗi (development only)</summary>
-              <pre className="error-boundary__stack">
+            <details className="text-left mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <summary className="cursor-pointer text-red-700 font-semibold text-[13px]">Chi tiết lỗi (development only)</summary>
+              <pre className="mt-2 p-2 text-xs text-red-900 whitespace-pre-wrap break-words max-h-[200px] overflow-y-auto">
                 {String(this.state.error)}
               </pre>
             </details>
           ) : null}
-          <div className="error-boundary__actions">
+          <div className="flex gap-3 justify-center">
             <button
               type="button"
-              className="error-boundary__btn error-boundary__btn--primary"
+              className="py-2.5 px-5 rounded-md font-bold text-sm cursor-pointer no-underline inline-flex items-center border-none bg-[#2563eb] text-white hover:bg-[#1d4ed8] transition-colors"
               onClick={this.handleReset}
             >
               Thử lại
             </button>
-            <Link to="/" className="error-boundary__btn error-boundary__btn--ghost" onClick={this.handleReset}>
+            <Link to="/" className="py-2.5 px-5 rounded-md font-bold text-sm cursor-pointer no-underline inline-flex items-center border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors" onClick={this.handleReset}>
               Về trang chủ
             </Link>
           </div>
