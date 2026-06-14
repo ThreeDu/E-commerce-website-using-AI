@@ -4,8 +4,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
-import "../css/chatbot.css";
-
 const SESSION_STORAGE_KEY = "chatbot_session_id";
 const BEHAVIOR_STORAGE_KEY = "chatbot_behavior";
 
@@ -98,14 +96,20 @@ function formatVnd(value) {
 
 function renderAssistantMarkdown(text) {
   return (
-    <div className="chatbot-markdown">
+    <div className="grid gap-2.5 overflow-x-auto">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          table: ({ node, ...props }) => <table className="chatbot-markdown-table" {...props} />,
-          th: ({ node, ...props }) => <th {...props} />,
-          td: ({ node, ...props }) => <td {...props} />,
-          p: ({ node, ...props }) => <p {...props} />,
+          table: ({ node, ...props }) => (
+            <table className="w-full min-w-full border-collapse border-spacing-0 border-2 border-[#1e1e1e] rounded-lg overflow-hidden shadow-[4px_4px_0px_#1e1e1e] bg-gradient-to-b from-[#f7f1ff] to-[#eef8ff] text-xs" {...props} />
+          ),
+          th: ({ node, ...props }) => (
+            <th className="p-2 px-2.5 border-r border-b border-[#1e1e1e]/12 align-top bg-gradient-to-b from-[#ffe8c7] to-[#ffd9f0] font-extrabold text-[#1e1e1e] text-left last:border-r-0" {...props} />
+          ),
+          td: ({ node, ...props }) => (
+            <td className="p-2 px-2.5 border-r border-b border-[#1e1e1e]/12 align-top text-[#202124] leading-relaxed last:border-r-0 first:font-bold hover:bg-white/70" {...props} />
+          ),
+          p: ({ node, ...props }) => <p className="m-0 mt-2 first:mt-0 whitespace-pre-wrap" {...props} />,
         }}
       >
         {String(text || "")}
@@ -385,12 +389,19 @@ function ChatbotWidget() {
   }
 
   return (
-    <div className={`chatbot-widget ${open ? "open" : ""}`}>
+    <div className={`fixed right-[18px] bottom-[18px] z-[1400] grid gap-2.5 justify-items-end max-[640px]:right-[10px] max-[640px]:bottom-[10px] ${open ? "open" : ""}`}>
       {open ? (
-        <section className="chatbot-panel" aria-label="AI chatbot">
-          <header className="chatbot-header">
-            <div className="chatbot-header-main">
-              <div className="chatbot-header-icon" aria-hidden="true">
+        <section 
+          className={`w-[min(420px,calc(100vw-24px))] max-h-[min(640px,calc(100vh-96px))] grid grid-rows-[auto_1fr_auto_auto] bg-white border border-black/10 rounded-3xl overflow-hidden transition-all duration-[200ms] max-[640px]:w-[min(100vw-12px,420px)] max-[640px]:max-h-[min(78vh,620px)] ${
+            open 
+              ? "scale-100 shadow-[0_18px_40px_rgba(15,34,51,0.12),0_0_0_6px_rgba(208,228,255,0.35)]" 
+              : "scale-98 shadow-[0_18px_40px_rgba(15,34,51,0.12)]"
+          }`}
+          aria-label="AI chatbot"
+        >
+          <header className="p-3 px-3.5 border-b border-black/8 flex justify-between gap-2 items-center bg-[#e9f6ff]/90 backdrop-blur-md">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8.5 h-8.5 rounded-xl grid place-items-center bg-gradient-to-br from-[#e0f2ff] to-[#f4ebff] text-[#0f314f] border border-[#0f314f]/12 shadow-[0_4px_10px_rgba(15,49,79,0.12)] [&>svg]:w-5 [&>svg]:h-5" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
                   <path
                     d="M8 4.5a1 1 0 0 1 2 0v1h4v-1a1 1 0 1 1 2 0v1.2a4.5 4.5 0 0 1 4 4.48v5.32a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 15.5v-5.32a4.5 4.5 0 0 1 4-4.48V4.5Zm0 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm8 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"
@@ -398,26 +409,23 @@ function ChatbotWidget() {
                   />
                 </svg>
               </div>
-              <div className="chatbot-header-text">
-                <strong>AI Shopping Assistant</strong>
-                <p>Gợi ý nhanh theo nhu cầu của bạn</p>
+              <div className="grid gap-0.5">
+                <strong className="block text-[#0f2233] text-sm">AI Shopping Assistant</strong>
+                <p className="m-0 mt-1 text-[#334155] font-semibold text-xs">Gợi ý nhanh theo nhu cầu của bạn</p>
               </div>
             </div>
 
-
-            
-
-            <button type="button" onClick={() => setOpen(false)} aria-label="Dong chatbot">
+            <button type="button" className="border border-black/12 bg-white rounded-lg w-7 h-7 flex items-center justify-center cursor-pointer transition-all hover:bg-[#eef6ff] hover:shadow-card active:scale-94" onClick={() => setOpen(false)} aria-label="Dong chatbot">
               ×
             </button>
           </header>
 
-          <div className="chatbot-messages">
+          <div className="p-2.5 overflow-y-auto display grid gap-2.5 bg-gradient-to-b from-[#f3f7ff] to-[#fbf9ff] scrollbar-thin">
             {messages.map((msg) => (
-              <article key={msg.id} className={`chatbot-message ${msg.role}`}>
-                <div className={`chatbot-message-row ${msg.role}`}>
+              <article key={msg.id} className="w-full">
+                <div className={`flex gap-2 items-start ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   {msg.role === "assistant" ? (
-                    <div className="chatbot-avatar" aria-hidden="true">
+                    <div className="w-7 h-7 rounded-full grid place-items-center text-[#0f2233] bg-gradient-to-br from-[#d8ecff] to-[#f6f2ff] border border-[#0f494f]/15 shadow-sm [&>svg]:w-4 [&>svg]:h-4" aria-hidden="true">
                       <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
                         <path
                           d="M8 4.5a1 1 0 0 1 2 0v1h4v-1a1 1 0 1 1 2 0v1.2a4.5 4.5 0 0 1 4 4.48v5.32a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 15.5v-5.32a4.5 4.5 0 0 1 4-4.48V4.5Zm0 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm8 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"
@@ -426,19 +434,19 @@ function ChatbotWidget() {
                       </svg>
                     </div>
                   ) : null}
-                  <div className="chatbot-bubble">
-                    {msg.role === "assistant" ? renderAssistantMarkdown(msg.text) : <p>{msg.text}</p>}
+                  <div className={`max-w-[84%] rounded-[18px] p-2.5 px-3 border border-[#0f2233]/10 shadow-sm animate-chatbot-pop ${msg.role === "user" ? "bg-[#efeaff] border-[#0f494f]/12 origin-top-right" : "bg-[#f7faff] origin-top-left"}`}>
+                    {msg.role === "assistant" ? renderAssistantMarkdown(msg.text) : <p className="m-0 text-sm leading-relaxed">{msg.text}</p>}
                     {msg.products.length > 0 ? (
-                      <div className="chatbot-product-list">
+                      <div className="mt-2 grid gap-2">
                         {msg.products.map((product, index) => (
                           <article
                             key={product._id}
-                            className="chatbot-product-card"
+                            className="grid gap-2 text-[#0f2233] p-3 border border-black/8 rounded-xl bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#0f494f]/18 animate-chatbot-pop group"
                             style={{ animationDelay: `${Math.min(index, 6) * 60}ms` }}
                           >
                             <Link
                               to={`/products/${product._id}`}
-                              className="chatbot-product-main"
+                              className="grid grid-cols-[56px_1fr] gap-2 text-[#0f2233] no-underline"
                               onClick={() => {
                                 trackEvent({
                                   eventType: "click",
@@ -453,24 +461,25 @@ function ChatbotWidget() {
                               <img
                                 src={getProductImageSrc(product)}
                                 alt={product.name}
+                                className="w-14 h-14 object-cover rounded-lg bg-[#eef4fa] transition-all group-hover:scale-[1.04] group-hover:shadow-md"
                                 onError={(event) => {
                                   event.currentTarget.onerror = null;
                                   event.currentTarget.src = "/placeholder.svg";
                                 }}
                               />
                               <div>
-                                <h4>{product.name}</h4>
-                                <p className="price">{formatVnd(product.finalPrice || product.price)}</p>
+                                <h4 className="m-0 text-xs font-bold leading-tight">{product.name}</h4>
+                                <p className="mt-1 text-xs font-bold text-[#0f314f] transition-colors group-hover:text-[#1a4d7a]">{formatVnd(product.finalPrice || product.price)}</p>
                                 {Number(product.price || 0) > Number(product.finalPrice || product.price || 0) ? (
-                                  <p className="old-price">{formatVnd(product.price)}</p>
+                                  <p className="mt-0.5 text-[11px] text-[#6b7280] line-through">{formatVnd(product.price)}</p>
                                 ) : null}
-                                <p className="reason">{product.reason}</p>
+                                <p className="mt-0.5 text-[11px] text-[#64748b]">{product.reason}</p>
                               </div>
                             </Link>
 
                             <button
                               type="button"
-                              className="chatbot-add-cart-btn"
+                              className="border border-black/10 bg-white text-[#0f2233] rounded-lg min-h-[34px] text-xs font-medium cursor-pointer transition-all hover:bg-[#edf4ff] active:scale-97"
                               onClick={() => {
                                 addToCart({ ...product, id: product._id });
                                 trackEvent({
@@ -494,9 +503,9 @@ function ChatbotWidget() {
               </article>
             ))}
             {pending ? (
-              <article className="chatbot-message assistant">
-                <div className="chatbot-message-row assistant">
-                  <div className="chatbot-avatar" aria-hidden="true">
+              <article className="w-full">
+                <div className="flex gap-2 items-start justify-start">
+                  <div className="w-7 h-7 rounded-full grid place-items-center text-[#0f2233] bg-gradient-to-br from-[#d8ecff] to-[#f6f2ff] border border-[#0f494f]/15 shadow-sm [&>svg]:w-4 [&>svg]:h-4" aria-hidden="true">
                     <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
                       <path
                         d="M8 4.5a1 1 0 0 1 2 0v1h4v-1a1 1 0 1 1 2 0v1.2a4.5 4.5 0 0 1 4 4.48v5.32a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 15.5v-5.32a4.5 4.5 0 0 1 4-4.48V4.5Zm0 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm8 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"
@@ -504,11 +513,11 @@ function ChatbotWidget() {
                       />
                     </svg>
                   </div>
-                  <div className="chatbot-bubble">
-                    <div className="chatbot-typing" aria-label="Dang nhap">
-                      <span />
-                      <span />
-                      <span />
+                  <div className="max-w-[84%] rounded-[18px] p-2.5 px-3 border border-[#0f2233]/10 bg-[#f7faff] shadow-sm animate-chatbot-pop origin-top-left">
+                    <div className="inline-flex items-center gap-1 min-h-[18px]" aria-label="Dang nhap">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#5b6a7c] animate-chatbot-dot" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#5b6a7c] animate-chatbot-dot" style={{ animationDelay: "0.15s" }} />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#5b6a7c] animate-chatbot-dot" style={{ animationDelay: "0.3s" }} />
                     </div>
                   </div>
                 </div>
@@ -517,9 +526,9 @@ function ChatbotWidget() {
           </div>
 
           {quickReplies.length > 0 ? (
-            <div className="chatbot-quick-replies">
+            <div className="p-2 px-2.5 flex gap-1.5 flex-wrap border-t border-black/6 bg-white">
               {quickReplies.map((item) => (
-                <button key={item} type="button" onClick={() => sendMessage(item)} disabled={pending}>
+                <button key={item} type="button" className="border border-black/10 bg-white text-[#1f2937] rounded-full py-1.5 px-2.5 text-xs cursor-pointer transition-all hover:bg-[#f1f6ff] hover:shadow-sm active:scale-97" onClick={() => sendMessage(item)} disabled={pending}>
                   {item}
                 </button>
               ))}
@@ -527,7 +536,7 @@ function ChatbotWidget() {
           ) : null}
 
           <form
-            className="chatbot-input"
+            className="border-t border-black/8 grid grid-cols-[1fr_auto] gap-2 p-2.5 bg-white"
             onSubmit={(event) => {
               event.preventDefault();
               sendMessage(input);
@@ -538,17 +547,19 @@ function ChatbotWidget() {
               onChange={(event) => setInput(event.target.value)}
               placeholder="Nhập nhu cầu của bạn..."
               disabled={pending}
+              className="border border-black/10 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dfeeff]"
             />
             <button
               type="submit"
               disabled={pending || !String(input).trim()}
               aria-label="Gửi"
               title="Gửi"
+              className="border border-black/10 rounded-xl bg-[#dfeeff] text-[#0f314f] min-w-[44px] font-bold cursor-pointer transition-all hover:shadow-sm active:scale-96 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {pending ? (
                 "..."
               ) : (
-                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true" className="w-[18px] h-[18px]">
                   <path
                     d="M3.4 11.2a1 1 0 0 0 0 1.6l16.6 8.4a1 1 0 0 0 1.4-1.1l-3.1-7.1-15-1.8Zm0 1.6 16.6-8.4a1 1 0 0 1 1.4 1.1l-3.1 7.1-15 1.8Z"
                     fill="currentColor"
@@ -560,7 +571,7 @@ function ChatbotWidget() {
         </section>
       ) : null}
 
-      <button type="button" className="chatbot-toggle" onClick={() => setOpen((prev) => !prev)}>
+      <button type="button" className="border border-black/10 rounded-full bg-[#dfeeff] text-[#0f314f] py-2.5 px-4.5 text-sm font-bold cursor-pointer shadow-[0_10px_24px_rgba(15,34,51,0.15)] transition-all duration-[100ms] hover:bg-[#e8f4ff] hover:shadow-[0_12px_28px_rgba(15,34,51,0.18)] active:scale-97" onClick={() => setOpen((prev) => !prev)}>
         {open ? "Đóng" : "Chat AI"}
       </button>
     </div>

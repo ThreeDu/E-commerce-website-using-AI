@@ -9,7 +9,6 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import AdminSidebar from "./layout/AdminSidebar";
 import UserHeader from "./layout/UserHeader";
-import "../css/header.css";
 
 function Header() {
   const { auth, logout } = useAuth();

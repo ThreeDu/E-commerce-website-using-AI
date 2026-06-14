@@ -8,7 +8,7 @@ import { getProductImageSrc, getProductPricing, isOutOfStock } from "../utils/pr
 import { fetchProducts } from "../services/productService";
 import { fetchCategories } from "../services/categoryService";
 import { fetchWishlist, addToWishlist, removeFromWishlist } from "../services/wishlistService";
-import "../css/shop-experience.css";
+
 
 function normalizeCategoryId(value) {
   return String(value || "").trim();
@@ -431,24 +431,24 @@ function ProductsPage() {
   };
 
   return (
-    <main className="container page-content">
-      <div className="shopx-page">
-        <div className="shopx-shell">
-          <aside className="shopx-panel shopx-panel--sticky">
-            <h3 className="shopx-filter-title">Bộ lọc</h3>
-            <div className="shopx-field">
-              <h4 style={{ margin: 0 }}>Sắp xếp</h4>
-              <select className="shopx-select" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
+      <div className="bg-gradient-to-b from-[#f8fafc] to-[#f3f7fb] rounded-shop-lg p-[30px] max-[720px]:p-[18px] max-[720px]:rounded-[20px]">
+        <div className="grid grid-cols-[270px_minmax(0,1fr)] gap-5 max-[960px]:grid-cols-1">
+          <aside className="sticky top-[94px] self-start p-[22px] bg-gradient-to-b from-white to-[#f8fbff] border border-shop-line rounded-shop-lg shadow-shop max-[960px]:static max-[960px]:p-4.5">
+            <h3 className="m-0 mb-3 text-lg font-extrabold text-shop-ink">Bộ lọc</h3>
+            <div className="grid gap-2 mb-4">
+              <h4 className="m-0 text-sm font-bold text-shop-ink">Sắp xếp</h4>
+              <select className="w-full border border-shop-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-shop-primary" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
                 <option value="best-selling">Bán chạy nhất</option>
                 <option value="most-viewed">Xem nhiều nhất</option>
                 <option value="top-rated">Đánh giá cao nhất</option>
               </select>
             </div>
 
-            <div className="shopx-field">
-              <h4 style={{ margin: 0 }}>Danh mục</h4>
+            <div className="grid gap-2 mb-4">
+              <h4 className="m-0 text-sm font-bold text-shop-ink">Danh mục</h4>
               <select
-                className="shopx-select"
+                className="w-full border border-shop-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-shop-primary"
                 value={categoryLevel1}
                 onChange={(event) => {
                   const nextValue = event.target.value;
@@ -467,7 +467,7 @@ function ProductsPage() {
 
               {categoryLevel1 !== "all" && (
                 <select
-                  className="shopx-select"
+                  className="w-full border border-shop-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-shop-primary mt-2"
                   value={categoryLevel2}
                   onChange={(event) => {
                     const nextValue = event.target.value;
@@ -486,7 +486,7 @@ function ProductsPage() {
 
               {categoryLevel2 !== "all" && level3Categories.length > 0 && (
                 <select
-                  className="shopx-select"
+                  className="w-full border border-shop-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-shop-primary mt-2"
                   value={categoryLevel3}
                   onChange={(event) => setCategoryLevel3(event.target.value)}
                 >
@@ -500,11 +500,11 @@ function ProductsPage() {
               )}
             </div>
 
-            <div className="shopx-field">
-              <h4 style={{ margin: 0 }}>Mức giá</h4>
-              <div className="shopx-range-wrap">
+            <div className="grid gap-2 mb-4">
+              <h4 className="m-0 text-sm font-bold text-shop-ink">Mức giá</h4>
+              <div className="grid gap-2">
                 <input
-                  className="shopx-range"
+                  className="w-full accent-shop-primary"
                   type="range"
                   min="0"
                   max={maxPossiblePrice}
@@ -512,7 +512,7 @@ function ProductsPage() {
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(Number(e.target.value))}
                 />
-                <div className="shopx-range-text">
+                <div className="text-[13px] text-shop-muted">
                   Dưới {maxPrice.toLocaleString("vi-VN")} đ / Tối đa {maxPossiblePrice.toLocaleString("vi-VN")} đ
                 </div>
               </div>
@@ -520,20 +520,20 @@ function ProductsPage() {
           </aside>
 
           <section>
-            <div className="shopx-panel shopx-hero">
+            <div className="p-6 mb-[18px] grid grid-cols-[1fr_auto] gap-4 bg-gradient-to-br from-white to-shop-soft-orange border border-shop-line rounded-shop-lg shadow-shop max-[720px]:grid-cols-1">
               <div>
-                <h1 className="shopx-title">Kho sản phẩm</h1>
-                <p className="shopx-subtitle">
+                <h1 className="m-0 text-[33px] tracking-tight text-shop-ink font-black max-[720px]:text-[27px]">Kho sản phẩm</h1>
+                <p className="mt-2 text-shop-muted text-sm leading-[1.55]">
                   Các sản phẩm hiện tại đang được bày bán.
                 </p>
               </div>
             </div>
 
             {loading ? (
-              <div className="shopx-empty">Đang tải danh sách sản phẩm...</div>
+              <div className="text-center py-9 px-4.5 bg-white border border-dashed border-[rgba(0,0,0,0.12)] rounded-[20px] text-shop-muted text-sm leading-[1.55]">Đang tải danh sách sản phẩm...</div>
             ) : currentProducts.length > 0 ? (
               <>
-                <div className="shopx-grid">
+                <div className="grid grid-cols-3 gap-4 max-[960px]:grid-cols-2 max-[720px]:grid-cols-1">
                   {currentProducts.map((product) => {
                     const productId = String(product._id);
                     const isWishlisted = wishlistIds.includes(productId);
@@ -542,49 +542,55 @@ function ProductsPage() {
                     const pricing = getProductPricing(product);
 
                     return (
-                      <article key={productId} className="shopx-card">
+                      <article key={productId} className="bg-shop-surface border border-shop-line rounded-shop-md shadow-shop p-3.5 flex flex-col h-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_35px_rgba(15,23,42,0.08)] animate-shopx-fade-up">
                         <Link to={`/products/${product._id}`} style={{ textDecoration: "none" }}>
-                          <div className={`shopx-card-image-wrap ${outOfStock ? "is-out-of-stock" : ""}`}>
+                          <div className="relative rounded-[16px] overflow-hidden border border-shop-line bg-gradient-to-br from-[#f3f8ff] to-[#fdf6f1] mb-3">
                             {pricing.hasDiscount ? (
-                              <span className="shopx-sale-badge">-{pricing.discountPercent}%</span>
+                              <span className="absolute top-2 left-2 z-10 inline-flex items-center justify-center min-h-[24px] px-2.5 py-0.5 rounded-full text-[11px] font-extrabold tracking-wider bg-[#ef4444] text-white border border-[#dc2626]">-{pricing.discountPercent}%</span>
                             ) : null}
-                            {outOfStock ? <span className="shopx-stock-badge">Hết hàng</span> : null}
+                            {outOfStock ? <span className="absolute left-2 right-2 bottom-2 z-10 inline-flex items-center justify-center min-h-[24px] px-2 py-0.5 rounded-full text-[11px] font-extrabold tracking-wider bg-[#ef4444] text-white border border-[#dc2626]">Hết hàng</span> : null}
                             <img
                               src={getProductImageSrc(product)}
                               alt={product.name}
-                              className="shopx-card-image"
+                              className={`w-full h-[212px] object-cover block ${outOfStock ? "grayscale-[55%] brightness-[88%]" : ""}`}
                               onError={(event) => {
                                 event.currentTarget.onerror = null;
                                 event.currentTarget.src = "/placeholder.svg";
                               }}
                             />
                           </div>
-                          <h3 className="shopx-card-name">{product.name}</h3>
-                          <div className="shopx-meta-row">
-                            <span className="shopx-chip shopx-chip--rating">
+                          <h3 className="m-0 text-[17px] text-shop-ink font-bold">{product.name}</h3>
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            <span className="inline-flex items-center rounded-full border border-shop-line px-2.5 py-1 text-xs font-bold bg-[#fff5d9] text-[#92400e]">
                               {Number(product.averageRating || 0).toFixed(1)} sao ({Number(product.totalRatings || 0)})
                             </span>
-                            <span className="shopx-chip shopx-chip--views">{Number(product.totalViews || 0)} lượt xem</span>
-                            <span className="shopx-chip shopx-chip--sold">{Number(product.totalPurchases || 0)} lượt mua</span>
+                            <span className="inline-flex items-center rounded-full border border-shop-line px-2.5 py-1 text-xs font-bold bg-[#e6f7ff] text-[#075985]">{Number(product.totalViews || 0)} lượt xem</span>
+                            <span className="inline-flex items-center rounded-full border border-shop-line px-2.5 py-1 text-xs font-bold bg-[#ebfbe8] text-[#166534]">{Number(product.totalPurchases || 0)} lượt mua</span>
                           </div>
-                          <p className="shopx-price">{pricing.finalPrice.toLocaleString("vi-VN")} đ</p>
+                          <p className="my-3 text-[#be2f00] text-[21px] font-extrabold">{pricing.finalPrice.toLocaleString("vi-VN")} đ</p>
                           {pricing.hasDiscount ? (
-                            <p className="shopx-old-price">{pricing.basePrice.toLocaleString("vi-VN")} đ</p>
+                            <p className="-mt-1.5 mb-2.5 text-[#94a3b8] text-sm line-through font-bold">{pricing.basePrice.toLocaleString("vi-VN")} đ</p>
                           ) : null}
                         </Link>
 
-                        <div className="shopx-card-actions">
+                        <div className="mt-auto grid gap-2 pt-3">
                           <button
                             type="button"
                             disabled={isPending}
-                            className={`shopx-btn shopx-btn--ghost shopx-btn--wishlist ${isWishlisted ? "shopx-btn--active" : ""}`}
+                            className={isWishlisted
+                              ? "rounded-[14px] border border-[#fca5a5] bg-[#fee2e2] text-[#b91c1c] px-3 py-2.5 text-sm font-bold cursor-pointer transition-all duration-150 hover:-translate-y-px hover:shadow-xs disabled:cursor-not-allowed disabled:opacity-70"
+                              : "rounded-[14px] border border-[#fdba74] bg-[#fff7ed] text-[#c2410c] px-3 py-2.5 text-sm font-bold cursor-pointer transition-all duration-150 hover:-translate-y-px hover:shadow-xs hover:bg-[#ffedd5] disabled:cursor-not-allowed disabled:opacity-70"
+                            }
                             onClick={() => handleToggleWishlist(productId)}
                           >
                             {isPending ? "Đang xử lý..." : isWishlisted ? "Đã yêu thích" : "Thêm yêu thích"}
                           </button>
                           <button
                             type="button"
-                            className={`shopx-btn shopx-btn--primary shopx-btn--cart ${outOfStock ? "shopx-btn--out-of-stock" : ""}`}
+                            className={outOfStock
+                              ? "rounded-[14px] border border-[#fca5a5] bg-[#fee2e2] text-[#b91c1c] px-3 py-2.5 text-sm font-bold cursor-not-allowed opacity-100"
+                              : "rounded-[14px] border border-[#0f766e] bg-gradient-to-br from-[#0f766e] to-[#115e59] text-white px-3 py-2.5 text-sm font-bold cursor-pointer transition-all duration-150 hover:-translate-y-px hover:shadow-xs hover:from-[#159287] hover:to-[#0f766e] disabled:cursor-not-allowed disabled:opacity-70"
+                            }
                             disabled={outOfStock}
                             onClick={() => handleAddToCart(product)}
                           >
@@ -597,10 +603,10 @@ function ProductsPage() {
                 </div>
 
                 {totalPages > 1 && (
-                  <div className="shopx-pagination">
+                  <div className="flex justify-center items-center gap-2 mt-8 py-2.5">
                     <button
                       type="button"
-                      className="shopx-pagination__btn"
+                      className="inline-flex items-center justify-center min-w-[40px] h-10 px-3.5 rounded-shop-md border border-shop-line bg-white text-shop-ink font-semibold cursor-pointer transition-all duration-200 shadow-[0_4px_10px_rgba(0,0,0,0.02)] hover:bg-shop-bg hover:border-shop-muted hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-shop-bg"
                       disabled={currentPage === 1}
                       onClick={() => {
                         setCurrentPage((prev) => Math.max(1, prev - 1));
@@ -642,18 +648,7 @@ function ProductsPage() {
                                 setEditingEllipsis(null);
                               }}
                               autoFocus
-                              className="shopx-pagination__btn"
-                              style={{
-                                width: "60px",
-                                height: "40px",
-                                padding: "0",
-                                textAlign: "center",
-                                border: "1px solid var(--shopx-primary)",
-                                background: "#fff",
-                                color: "var(--shopx-ink)",
-                                outline: "none",
-                                borderRadius: "var(--shopx-radius-md)"
-                              }}
+                              className="inline-flex items-center justify-center w-[60px] h-10 p-0 text-center border border-shop-primary bg-white text-shop-ink outline-none rounded-shop-md"
                             />
                           );
                         }
@@ -662,13 +657,12 @@ function ProductsPage() {
                           <button
                             key={`dots-${item.id}-${index}`}
                             type="button"
-                            className="shopx-pagination__btn"
+                            className="inline-flex items-center justify-center min-w-[40px] h-10 text-shop-muted font-bold text-[15px] cursor-pointer hover:text-shop-primary"
                             onClick={() => {
                               setEditingEllipsis(item.id);
                               setInputPageValue("");
                             }}
                             title="Nhấp để nhập trang trực tiếp"
-                            style={{ cursor: "pointer", color: "var(--shopx-muted)", fontWeight: "bold" }}
                           >
                             ...
                           </button>
@@ -679,7 +673,7 @@ function ProductsPage() {
                         <button
                           key={`page-${item.value}`}
                           type="button"
-                          className={`shopx-pagination__btn ${currentPage === item.value ? "shopx-pagination__btn--active" : ""}`}
+                          className={`inline-flex items-center justify-center min-w-[40px] h-10 px-3.5 rounded-shop-md border border-shop-line bg-white text-shop-ink font-semibold cursor-pointer transition-all duration-200 shadow-[0_4px_10px_rgba(0,0,0,0.02)] hover:bg-shop-bg hover:border-shop-muted hover:-translate-y-px ${currentPage === item.value ? "bg-shop-primary text-white border-shop-primary hover:bg-shop-primary hover:text-white hover:border-shop-primary" : ""}`}
                           onClick={() => {
                             setCurrentPage(item.value);
                             window.scrollTo({ top: 0, behavior: "smooth" });
@@ -691,7 +685,7 @@ function ProductsPage() {
                     })}
                     <button
                       type="button"
-                      className="shopx-pagination__btn"
+                      className="inline-flex items-center justify-center min-w-[40px] h-10 px-3.5 rounded-shop-md border border-shop-line bg-white text-shop-ink font-semibold cursor-pointer transition-all duration-200 shadow-[0_4px_10px_rgba(0,0,0,0.02)] hover:bg-shop-bg hover:border-shop-muted hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-shop-bg"
                       disabled={currentPage === totalPages}
                       onClick={() => {
                         setCurrentPage((prev) => Math.min(totalPages, prev + 1));
@@ -704,7 +698,7 @@ function ProductsPage() {
                 )}
               </>
             ) : (
-              <div className="shopx-empty">Không tìm thấy sản phẩm phù hợp.</div>
+              <div className="text-center py-9 px-4.5 bg-white border border-dashed border-[rgba(0,0,0,0.12)] rounded-[20px] text-shop-muted text-sm leading-[1.55]">Không tìm thấy sản phẩm phù hợp.</div>
             )}
           </section>
         </div>

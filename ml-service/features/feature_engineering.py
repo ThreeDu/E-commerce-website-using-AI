@@ -337,16 +337,37 @@ def extract_features_for_user(user_id):
 
 def generate_churn_labels(df):
     """
-    Auto-label churn target:
-      1 = recency_days > CHURN_INACTIVE_DAYS AND frequency == 0 in recent window
-      0 = otherwise
+    Auto-label churn target with probabilistic behavior to avoid perfect separation
+    and allow intermediate probabilities (medium churn risk).
     """
-    labels = np.where(
-        (df["recency_days"] > CHURN_NO_ORDER_DAYS) & (df["product_views_30d"] == 0),
-        1,
-        0,
-    )
-    return labels.astype(int)
+    recency = df["recency_days"].values.astype(float)
+    views = df["product_views_30d"].values.astype(float)
+    
+    labels = []
+    # Use a fixed seed for deterministic seeding results
+    rng = np.random.default_rng(42)
+    for r, v in zip(recency, views):
+        # Base probability of churn
+        p_churn = 0.05 # Baseline risk
+        
+        # Add risk based on recency
+        if r > 45:
+            p_churn += 0.55
+        elif r > 20:
+            p_churn += 0.25
+            
+        # Add risk based on product views
+        if v == 0:
+            p_churn += 0.30
+        elif v < 5:
+            p_churn += 0.15
+            
+        p_churn = min(0.95, max(0.05, p_churn))
+        # Draw label
+        label = 1 if rng.random() < p_churn else 0
+        labels.append(label)
+        
+    return np.array(labels, dtype=int)
 
 
 def generate_potential_labels(df):

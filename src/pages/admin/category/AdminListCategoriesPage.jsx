@@ -19,8 +19,6 @@ import {
   faChevronRight,
   faFolderOpen,
 } from "@fortawesome/free-solid-svg-icons";
-import "../../../css/admin/categories.css";
-
 function AdminListCategoriesPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -286,29 +284,30 @@ function AdminListCategoriesPage() {
     editingCategory && String(editingCategory.parentId || "") !== String(editingCategory.originalParentId || "");
 
   return (
-    <main className="container page-content admin-categories-page">
-      <section className="hero-card admin-form-surface" aria-busy={loading || deleting}>
-        <h2>
-          <FontAwesomeIcon icon={faFolderOpen} style={{ marginRight: "10px", color: "var(--primary-color, #4f46e5)" }} />
+    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
+      <section className="relative border border-admin-line rounded-[24px] p-8 shadow-admin bg-gradient-to-br from-white to-[#f8fbff] animate-admin-rise" aria-busy={loading || deleting}>
+        <h2 className="text-[25px] font-bold tracking-tight text-admin-ink mt-0 mb-1 flex items-center">
+          <FontAwesomeIcon icon={faFolderOpen} className="mr-2.5 text-admin-primary" />
           Quản lý danh mục
         </h2>
-        <p className="admin-surface-subtitle">
+        <p className="text-sm text-admin-muted mt-2 mb-0 max-w-[760px] leading-relaxed">
           Danh sách hiển thị theo cấu trúc cha-con: cấp 1 (danh mục chính), cấp 2 và cấp 3 tương
           ứng.
         </p>
 
-        <div className="admin-page-toolbar">
-          <Link to="/admin/categories/add" className="primary-link-btn">
-            <FontAwesomeIcon icon={faPlus} style={{ marginRight: "6px" }} />
+        <div className="mt-3 mb-4">
+          <Link to="/admin/categories/add" className="inline-flex items-center justify-center bg-gradient-to-r from-admin-primary to-[#0f314f] text-white py-2.5 px-3.5 rounded-xl font-semibold shadow-md transition-all duration-150 hover:-translate-y-px hover:shadow-lg hover:opacity-95">
+            <FontAwesomeIcon icon={faPlus} className="mr-1.5" />
             Thêm danh mục mới
           </Link>
         </div>
 
-        <div className="category-search-row">
-          <label htmlFor="category-search">Tìm kiếm danh mục</label>
+        <div className="grid gap-1.5 mt-2 mb-3.5 max-w-[440px]">
+          <label htmlFor="category-search" className="text-xs uppercase tracking-wider text-[#6b7a8d] font-bold">Tìm kiếm danh mục</label>
           <input
             id="category-search"
             type="text"
+            className="h-10 rounded-[10px] border border-[#d7e1ed] px-3 bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
             placeholder="Nhập tên hoặc đường dẫn danh mục..."
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
@@ -316,23 +315,23 @@ function AdminListCategoriesPage() {
         </div>
 
         {hasParentChanged && (
-          <p className="category-change-warning">
+          <p className="mb-3 p-[10px_12px] rounded-[10px] border border-[#ffd8a8] bg-[#fff7e8] text-[#8a4b00] text-sm font-semibold">
             Bạn đang đổi danh mục cha. Vui lòng kiểm tra kỹ trước khi lưu để tránh ảnh hưởng cấu trúc cây.
           </p>
         )}
 
         {loading ? (
-          <p>Đang tải danh sách danh mục...</p>
+          <p className="text-sm text-admin-muted py-4">Đang tải danh sách danh mục...</p>
         ) : (
-          <div className="users-table-wrap categories-table-wrap">
-            <table className="users-table categories-table">
+          <div className="mt-4 overflow-x-auto border border-[#dde7f3] rounded-[14px] bg-white">
+            <table className="w-full border-collapse bg-white text-left">
               <thead>
-                <tr>
-                  <th>Tên danh mục</th>
-                  <th>Cấp</th>
-                  <th>Danh mục cha</th>
-                  <th>Đường dẫn</th>
-                  <th>Thao tác</th>
+                <tr className="border-b border-[#e6edf5]">
+                  <th className="bg-[#f2f7ff] text-[#4a5c75] p-3 text-xs font-bold uppercase tracking-wider">Tên danh mục</th>
+                  <th className="bg-[#f2f7ff] text-[#4a5c75] p-3 text-xs font-bold uppercase tracking-wider">Cấp</th>
+                  <th className="bg-[#f2f7ff] text-[#4a5c75] p-3 text-xs font-bold uppercase tracking-wider">Danh mục cha</th>
+                  <th className="bg-[#f2f7ff] text-[#4a5c75] p-3 text-xs font-bold uppercase tracking-wider">Đường dẫn</th>
+                  <th className="bg-[#f2f7ff] text-[#4a5c75] p-3 text-xs font-bold uppercase tracking-wider">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -345,25 +344,24 @@ function AdminListCategoriesPage() {
                     : "-";
 
                   return (
-                    <tr key={category._id}>
-                      <td className="category-name-cell" style={{ paddingLeft: `${12 + depth * 26}px` }}>
+                    <tr key={category._id} className="border-b border-[#e6edf5] transition-colors duration-150 hover:bg-[#f8fbff]">
+                      <td className="p-3 font-semibold whitespace-nowrap" style={{ paddingLeft: `${12 + depth * 26}px` }}>
                         {isEditing ? (
                           <input
-                            className="table-input"
+                            className="w-full p-2 border border-[#c7d3e0] rounded-lg focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] bg-white"
                             value={editingCategory.name}
                             onChange={(event) =>
                               setEditingCategory((prev) => ({ ...prev, name: event.target.value }))
                             }
                           />
                         ) : (
-                          <div className="category-name-wrap">
+                          <div className="inline-flex items-center gap-2">
                             {hasChildren ? (
                               <button
                                 type="button"
-                                className="category-expand-btn"
+                                className="w-6 h-6 inline-flex items-center justify-center rounded-md border border-[#d0d9e4] bg-white text-[#2b3d53] font-bold cursor-pointer transition-colors duration-150 hover:bg-[#eef5ff] outline-none"
                                 onClick={() => toggleExpand(category._id)}
                                 aria-label={isExpanded ? "Thu gọn danh mục" : "Mở rộng danh mục"}
-                                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                               >
                                 {isExpanded ? (
                                   <FontAwesomeIcon icon={faChevronDown} style={{ fontSize: "11px" }} />
@@ -372,7 +370,7 @@ function AdminListCategoriesPage() {
                                 )}
                               </button>
                             ) : (
-                              <span className="category-expand-placeholder" aria-hidden="true">
+                              <span className="w-6 inline-flex items-center justify-center text-[#9aa9bc] font-bold" aria-hidden="true">
                                 •
                               </span>
                             )}
@@ -382,15 +380,17 @@ function AdminListCategoriesPage() {
                           </div>
                         )}
                       </td>
-                      <td>
-                        <span className={`category-level-badge level-${level + 1}`}>
+                      <td className="p-3">
+                        <span className={`inline-flex items-center justify-center min-w-[52px] px-2 py-1 rounded-full text-[11px] font-bold ${
+                          level === 0 ? "bg-[#e6f4ea] text-[#256d1b]" : level === 1 ? "bg-[#fff4e6] text-[#8a4b00]" : "bg-[#e8f0fe] text-[#1f4ea5]"
+                        }`}>
                           {levelLabel(level)}
                         </span>
                       </td>
-                      <td>
+                      <td className="p-3">
                         {isEditing ? (
                           <select
-                            className="table-select"
+                            className="w-full p-2 pr-9 border border-[#c7d3e0] rounded-lg bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
                             value={editingCategory.parentId || ""}
                             onChange={(event) =>
                               setEditingCategory((prev) => ({
@@ -410,25 +410,15 @@ function AdminListCategoriesPage() {
                           parentName
                         )}
                       </td>
-                      <td className="category-path-cell">{getCategoryPath(category)}</td>
-                      <td>
-                        <div className="table-actions">
+                      <td className="p-3 text-[#2b3d53] min-w-[260px]">{getCategoryPath(category)}</td>
+                      <td className="p-3">
+                        <div className="flex gap-2">
                           {isEditing ? (
                             <>
                               <button
                                 type="button"
                                 onClick={handleSaveEdit}
-                                style={{
-                                  background: "var(--success-color, #22c55e)",
-                                  color: "white",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "4px",
-                                  padding: "6px 12px",
-                                  borderRadius: "6px",
-                                  border: "none",
-                                  cursor: "pointer"
-                                }}
+                                className="bg-status-success text-white inline-flex items-center gap-1 py-1.5 px-3 rounded-md border-0 cursor-pointer font-semibold transition-all duration-150 hover:-translate-y-px hover:shadow-[0_8px_16px_rgba(10,27,43,0.1)]"
                                 title="Lưu thay đổi"
                               >
                                 <FontAwesomeIcon icon={faCheck} />
@@ -437,17 +427,7 @@ function AdminListCategoriesPage() {
                               <button
                                 type="button"
                                 onClick={() => setEditingCategory(null)}
-                                style={{
-                                  background: "var(--text-secondary, #6b7280)",
-                                  color: "white",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "4px",
-                                  padding: "6px 12px",
-                                  borderRadius: "6px",
-                                  border: "none",
-                                  cursor: "pointer"
-                                }}
+                                className="bg-[#6b7280] text-white inline-flex items-center gap-1 py-1.5 px-3 rounded-md border-0 cursor-pointer font-semibold transition-all duration-150 hover:-translate-y-px hover:shadow-[0_8px_16px_rgba(10,27,43,0.1)]"
                                 title="Hủy chỉnh sửa"
                               >
                                 <FontAwesomeIcon icon={faXmark} />
@@ -466,14 +446,7 @@ function AdminListCategoriesPage() {
                                     originalParentId: category.parentId || null,
                                   })
                                 }
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "4px",
-                                  padding: "6px 12px",
-                                  borderRadius: "6px",
-                                  cursor: "pointer"
-                                }}
+                                className="border border-[#d0d9e4] bg-white text-admin-ink inline-flex items-center gap-1 py-1.5 px-3 rounded-md cursor-pointer font-semibold transition-all duration-150 hover:-translate-y-px hover:shadow-[0_8px_16px_rgba(10,27,43,0.1)]"
                                 title="Chỉnh sửa danh mục"
                               >
                                 <FontAwesomeIcon icon={faPen} />
@@ -481,16 +454,8 @@ function AdminListCategoriesPage() {
                               </button>
                               <button
                                 type="button"
-                                className="danger-btn"
                                 onClick={() => setCategoryPendingDelete(category)}
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "4px",
-                                  padding: "6px 12px",
-                                  borderRadius: "6px",
-                                  cursor: "pointer"
-                                }}
+                                className="bg-admin-accent-soft text-[#9a3412] border border-[rgba(154,52,18,0.18)] inline-flex items-center gap-1 py-1.5 px-3 rounded-md cursor-pointer font-semibold transition-all duration-150 hover:-translate-y-px hover:shadow-[0_8px_16px_rgba(10,27,43,0.1)]"
                                 title="Xóa danh mục"
                               >
                                 <FontAwesomeIcon icon={faTrash} />
@@ -505,7 +470,7 @@ function AdminListCategoriesPage() {
                 })}
                 {flatCategoryTree.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="table-empty-cell">
+                    <td colSpan="5" className="text-center text-[#657589] p-5">
                       Không tìm thấy danh mục phù hợp.
                     </td>
                   </tr>
@@ -517,22 +482,27 @@ function AdminListCategoriesPage() {
       </section>
 
       {categoryPendingDelete && (
-        <div className="confirm-modal-backdrop" role="presentation">
-          <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title">
-            <h3 id="delete-title">Xác nhận xóa danh mục</h3>
-            <p>
+        <div className="fixed inset-0 bg-[rgba(9,17,27,0.5)] flex items-center justify-center z-[999] p-4" role="presentation">
+          <div className="w-[min(460px,100%)] bg-white border border-admin-line rounded-xl p-5.5 shadow-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+            <h3 id="delete-title" className="text-lg font-bold text-admin-ink m-0 mb-2">Xác nhận xóa danh mục</h3>
+            <p className="text-sm text-admin-muted m-0 mb-3.5">
               Bạn có chắc chắn muốn xóa danh mục <strong>{categoryPendingDelete.name}</strong>?
             </p>
-            <div className="confirm-modal-actions">
+            <div className="flex justify-end gap-2.5">
               <button
                 type="button"
-                className="secondary-btn"
+                className="py-2.5 px-3.5 rounded-lg border border-[#d0d9e4] cursor-pointer font-semibold bg-[#e8edf3] text-[#0f2233] transition-all duration-150 hover:-translate-y-px hover:shadow-md disabled:opacity-50"
                 onClick={() => setCategoryPendingDelete(null)}
                 disabled={deleting}
               >
                 Hủy
               </button>
-              <button type="button" className="danger-btn" onClick={handleDelete} disabled={deleting}>
+              <button
+                type="button"
+                className="py-2.5 px-3.5 rounded-lg cursor-pointer font-semibold bg-gradient-to-r from-admin-primary to-[#0f314f] text-white border-0 transition-all duration-150 hover:-translate-y-px hover:shadow-md disabled:opacity-50"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
                 {deleting ? "Đang xóa..." : "Xóa"}
               </button>
             </div>

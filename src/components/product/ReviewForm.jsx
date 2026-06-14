@@ -69,23 +69,23 @@ function ReviewForm({ productId, eligibility, onReviewSubmitted }) {
 
   if (!auth?.token) {
     return (
-      <p className="shopx-subtitle">
-        Vui lòng <Link to="/login">đăng nhập</Link> để gửi đánh giá sau khi đơn hàng đã giao.
+      <p className="text-shop-muted text-sm leading-[1.55]">
+        Vui lòng <Link to="/login" className="text-shop-primary font-bold hover:underline">đăng nhập</Link> để gửi đánh giá sau khi đơn hàng đã giao.
       </p>
     );
   }
 
   if (!eligibility.canReview) {
     return (
-      <p className="shopx-subtitle">Bạn chỉ có thể đánh giá sản phẩm sau khi đã nhận hàng thành công.</p>
+      <p className="text-shop-muted text-sm leading-[1.55]">Bạn chỉ có thể đánh giá sản phẩm sau khi đã nhận hàng thành công.</p>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginBottom: "16px" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 170px", gap: "10px", marginBottom: "10px" }}>
+    <form onSubmit={handleSubmit} className="mb-4">
+      <div className="grid grid-cols-[1fr_170px] gap-2.5 mb-2.5 max-[480px]:grid-cols-1">
         <select
-          className="shopx-select"
+          className="w-full border border-shop-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-shop-primary"
           value={reviewForm.orderId}
           onChange={(event) => setReviewForm((prev) => ({ ...prev, orderId: event.target.value }))}
           required
@@ -97,7 +97,7 @@ function ReviewForm({ productId, eligibility, onReviewSubmitted }) {
           ))}
         </select>
         <select
-          className="shopx-select"
+          className="w-full border border-shop-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-shop-primary"
           value={reviewForm.rating}
           onChange={(event) => setReviewForm((prev) => ({ ...prev, rating: Number(event.target.value) }))}
         >
@@ -110,17 +110,17 @@ function ReviewForm({ productId, eligibility, onReviewSubmitted }) {
       </div>
 
       <textarea
-        className="shopx-textarea"
+        className="w-full border border-shop-line rounded-xl p-[10px_11px] text-sm bg-white resize-y focus:outline-none focus:border-shop-primary"
         rows={4}
         placeholder="Chia sẻ trải nghiệm của bạn..."
         value={reviewForm.comment}
         onChange={(event) => setReviewForm((prev) => ({ ...prev, comment: event.target.value }))}
       />
 
-      {error ? <p className="shopx-msg shopx-msg--error">{error}</p> : null}
-      {message ? <p className="shopx-msg shopx-msg--ok">{message}</p> : null}
+      {error ? <p className="mt-2 text-[13px] text-[#b91c1c]">{error}</p> : null}
+      {message ? <p className="mt-2 text-[13px] text-shop-success">{message}</p> : null}
 
-      <button type="submit" disabled={submitting} className="shopx-btn shopx-btn--primary" style={{ marginTop: "10px" }}>
+      <button type="submit" disabled={submitting} className="rounded-[14px] border border-shop-line bg-white text-shop-ink px-3 py-2.5 text-sm font-bold cursor-pointer transition-all duration-150 hover:-translate-y-px hover:shadow-xs hover:bg-[#f0f6ff] disabled:cursor-not-allowed disabled:opacity-70 mt-2.5">
         {submitting ? "Đang gửi..." : "Gửi đánh giá"}
       </button>
     </form>

@@ -19,8 +19,6 @@ import {
   faCircleXmark,
   faClock,
 } from "@fortawesome/free-solid-svg-icons";
-import "../../css/admin/dashboard.css";
-
 const AUTO_REFRESH_MS = 30000;
 
 const quickActions = [
@@ -404,23 +402,29 @@ function AdminDashboard() {
   }, [sections]);
 
   return (
-    <main className="container page-content">
-      <section className="hero-card admin-dashboard admin-page-enter" aria-label="Tổng quan quản trị" aria-busy={loading}>
-        <header className="admin-dashboard-header">
+    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
+      <section
+        className="bg-admin-surface border border-admin-line rounded-3xl shadow-admin p-6 grid gap-4 animate-admin-rise bg-[radial-gradient(circle_at_92%_-10%,rgba(16,55,92,0.15),transparent_38%),radial-gradient(circle_at_0%_100%,rgba(20,109,80,0.09),transparent_30%),#ffffff]"
+        aria-label="Tổng quan quản trị"
+        aria-busy={loading}
+      >
+        <header className="flex flex-col md:flex-row justify-between items-start gap-3">
           <div>
-            <h2>Bảng điều khiển Admin</h2>
-            <p>
+            <h2 className="text-2xl font-bold tracking-tight text-admin-ink mt-0 mb-1">Bảng điều khiển Admin</h2>
+            <p className="text-admin-muted mt-2 mb-0 text-sm md:text-base">
               Xin chào <strong>{auth?.user?.name || "Admin"}</strong>. Dữ liệu bên dưới đang đồng bộ theo thời gian thực để theo dõi vận hành nhanh.
             </p>
-            <p className="dashboard-meta-note">
+            <p className="text-xs md:text-sm text-admin-muted mt-2.5">
               Cập nhật lúc: <strong>{formatDateTime(payload?.generatedAt)}</strong>
             </p>
           </div>
-          <div className="dashboard-header-actions">
-            <span className="dashboard-badge">Dữ liệu trực tuyến</span>
+          <div className="grid gap-2 justify-items-start md:justify-items-end">
+            <span className="inline-flex items-center px-2.5 py-1.5 rounded-full border border-[#c8d9ef] text-[#0f3f84] text-xs font-bold bg-[#f0f6ff]">
+              Dữ liệu trực tuyến
+            </span>
             <button
               type="button"
-              className="dashboard-refresh-btn"
+              className="inline-flex items-center justify-center min-h-[36px] px-3.5 rounded-xl border border-[#cdd9e8] bg-[#f9fbfe] text-[#3f4f67] text-xs font-bold cursor-pointer transition-all duration-150 hover:-translate-y-px hover:bg-[#eef4fb] hover:shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
               onClick={() => loadDashboard({ silent: true })}
               disabled={refreshing}
             >
@@ -431,39 +435,61 @@ function AdminDashboard() {
         </header>
 
         {errorMessage ? (
-          <p className="form-message" role="status" aria-live="polite">
+          <p className="text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl p-3" role="status" aria-live="polite">
             {errorMessage}
           </p>
         ) : null}
 
-        <section className="admin-metric-grid" aria-label="Chỉ số nhanh">
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3" aria-label="Chỉ số nhanh">
           {metrics.map((metric) => (
-            <article key={metric.label} className={`admin-metric-card ${metric.tone}`}>
-              <div className="metric-header-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-                <p style={{ margin: 0 }}>{metric.label}</p>
-                <FontAwesomeIcon icon={metric.icon} style={{ fontSize: "18px", opacity: 0.6 }} />
+            <article
+              key={metric.label}
+              className={`grid gap-1.5 rounded-2xl border border-[#dfebf8] bg-gradient-to-b from-white to-[#f7faff] p-4 transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                metric.tone === "success"
+                  ? "[&>strong]:text-admin-success"
+                  : metric.tone === "info"
+                  ? "[&>strong]:text-blue-700"
+                  : metric.tone === "warning"
+                  ? "[&>strong]:text-amber-700"
+                  : "[&>strong]:text-red-700"
+              }`}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <p className="m-0 text-admin-muted text-xs md:text-sm font-medium">{metric.label}</p>
+                <FontAwesomeIcon icon={metric.icon} className="text-lg opacity-60" />
               </div>
-              <strong>{metric.value}</strong>
-              <span>{metric.trend}</span>
+              <strong className="text-admin-ink text-xl md:text-2xl font-extrabold leading-none">{metric.value}</strong>
+              <span className="text-admin-muted text-[11px] md:text-xs">{metric.trend}</span>
             </article>
           ))}
         </section>
 
-        <section className="admin-dashboard-layout">
-          <article className="dashboard-panel">
-            <div className="panel-heading">
-              <h3>Cảnh báo cần xử lý</h3>
-              <span>Top {alerts.length} ưu tiên</span>
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+          <article className="rounded-2xl border border-[#e1ebf6] bg-white p-4">
+            <div className="flex justify-between items-center gap-2.5 mb-2.5">
+              <h3 className="m-0 text-base font-bold text-admin-ink">Cảnh báo cần xử lý</h3>
+              <span className="text-admin-muted text-xs">Top {alerts.length} ưu tiên</span>
             </div>
-            <div className="dashboard-alert-list">
+            <div className="grid gap-2.5">
               {alerts.map((alert) => (
-                <div key={alert.title} className={`dashboard-alert-item ${alert.level}`}>
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "4px" }}>
-                    <FontAwesomeIcon icon={alert.level === "danger" ? faCircleXmark : alert.level === "warning" ? faTriangleExclamation : faBell} />
-                    <h4 style={{ margin: 0 }}>{alert.title}</h4>
+                <div
+                  key={alert.title}
+                  className={`rounded-xl border p-3 ${
+                    alert.level === "danger"
+                      ? "border-[#f2b8b8] bg-[#fff3f3] [&>div>h4]:text-red-800"
+                      : alert.level === "warning"
+                      ? "border-[#f6d5a8] bg-[#fff8eb] [&>div>h4]:text-amber-800"
+                      : "border-[#c6dbf7] bg-[#f3f8ff] [&>div>h4]:text-blue-800"
+                  }`}
+                >
+                  <div className="flex gap-2 items-center mb-1">
+                    <FontAwesomeIcon
+                      icon={alert.level === "danger" ? faCircleXmark : alert.level === "warning" ? faTriangleExclamation : faBell}
+                    />
+                    <h4 className="m-0 text-sm font-semibold">{alert.title}</h4>
                   </div>
-                  <p>{alert.description}</p>
-                  <Link to={alert.to}>
+                  <p className="mt-1.5 mb-0 text-admin-muted text-[13px] leading-relaxed">{alert.description}</p>
+                  <Link to={alert.to} className="mt-2 inline-flex items-center text-xs font-bold text-[#0f3f84] hover:underline">
                     Xem chi tiết <FontAwesomeIcon icon={faChevronRight} style={{ fontSize: "10px", marginLeft: "4px" }} />
                   </Link>
                 </div>
@@ -471,16 +497,16 @@ function AdminDashboard() {
             </div>
           </article>
 
-          <article className="dashboard-panel">
-            <div className="panel-heading">
-              <h3>Hoạt động gần đây</h3>
-              <span>Top 8 mới nhất</span>
+          <article className="rounded-2xl border border-[#e1ebf6] bg-white p-4">
+            <div className="flex justify-between items-center gap-2.5 mb-2.5">
+              <h3 className="m-0 text-base font-bold text-admin-ink">Hoạt động gần đây</h3>
+              <span className="text-admin-muted text-xs">Top 8 mới nhất</span>
             </div>
-            <ul className="dashboard-activity-list">
+            <ul className="m-0 p-0 list-none grid gap-2.5">
               {activities.map((activity) => (
-                <li key={activity.key}>
-                  <p>{activity.action}</p>
-                  <div>
+                <li key={activity.key} className="border border-[#e7edf6] rounded-xl p-2.5">
+                  <p className="m-0 text-[#1f3348] text-[13px] font-semibold">{activity.action}</p>
+                  <div className="mt-1.5 flex justify-between gap-2.5 text-admin-muted text-xs">
                     <span>{activity.actor}</span>
                     <span>
                       <FontAwesomeIcon icon={faClock} style={{ marginRight: "4px", fontSize: "11px", opacity: 0.7 }} />
@@ -490,37 +516,39 @@ function AdminDashboard() {
                 </li>
               ))}
               {activities.length === 0 ? (
-                <li className="dashboard-activity-empty">Chưa có hoạt động nào để hiển thị.</li>
+                <li className="text-admin-muted text-[13px] py-4 text-center">Chưa có hoạt động nào để hiển thị.</li>
               ) : null}
             </ul>
           </article>
         </section>
 
-        <section className="dashboard-panel dashboard-revenue-panel" aria-label="Doanh thu và phân bổ sản phẩm bán ra">
-          <div className="panel-heading">
-            <h3>Doanh thu</h3>
-            <span>Tổng bán ra: {Number(totalSoldUnits || 0).toLocaleString("vi-VN")} sản phẩm</span>
+        <section className="rounded-2xl border border-[#e1ebf6] bg-white p-4 grid gap-3" aria-label="Doanh thu và phân bổ sản phẩm bán ra">
+          <div className="flex justify-between items-center gap-2.5 mb-1.5">
+            <h3 className="m-0 text-base font-bold text-admin-ink">Doanh thu</h3>
+            <span className="text-admin-muted text-xs font-medium">Tổng bán ra: {Number(totalSoldUnits || 0).toLocaleString("vi-VN")} sản phẩm</span>
           </div>
 
-          <div className="revenue-filter-bar" role="group" aria-label="Bộ lọc doanh thu">
-            <div className="revenue-filter-control">
-              <label htmlFor="revenue-period-type">Kiểu xem</label>
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end" role="group" aria-label="Bộ lọc doanh thu">
+            <div className="grid gap-1.5 min-w-0 sm:min-w-[150px]">
+              <label htmlFor="revenue-period-type" className="text-admin-muted text-xs font-bold">Kiểu xem</label>
               <select
                 id="revenue-period-type"
                 value={periodType}
                 onChange={(event) => setPeriodType(event.target.value)}
+                className="w-full border border-admin-line rounded-xl p-[8px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
               >
                 <option value="month">Theo tháng</option>
                 <option value="year">Theo năm</option>
               </select>
             </div>
 
-            <div className="revenue-filter-control">
-              <label htmlFor="revenue-year">Năm</label>
+            <div className="grid gap-1.5 min-w-0 sm:min-w-[150px]">
+              <label htmlFor="revenue-year" className="text-admin-muted text-xs font-bold">Năm</label>
               <select
                 id="revenue-year"
                 value={selectedYear}
                 onChange={(event) => setSelectedYear(Number(event.target.value))}
+                className="w-full border border-admin-line rounded-xl p-[8px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
               >
                 {yearOptions.map((year) => (
                   <option key={year} value={year}>{year}</option>
@@ -529,12 +557,13 @@ function AdminDashboard() {
             </div>
 
             {periodType === "month" ? (
-              <div className="revenue-filter-control">
-                <label htmlFor="revenue-month">Tháng</label>
+              <div className="grid gap-1.5 min-w-0 sm:min-w-[150px]">
+                <label htmlFor="revenue-month" className="text-admin-muted text-xs font-bold">Tháng</label>
                 <select
                   id="revenue-month"
                   value={selectedMonth}
                   onChange={(event) => setSelectedMonth(Number(event.target.value))}
+                  className="w-full border border-admin-line rounded-xl p-[8px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
                 >
                   {Array.from({ length: 12 }, (_, index) => index + 1).map((monthNumber) => (
                     <option key={monthNumber} value={monthNumber}>{getMonthLabel(monthNumber)}</option>
@@ -544,69 +573,73 @@ function AdminDashboard() {
             ) : null}
           </div>
 
-          <div className="revenue-summary-grid">
-            <article className="revenue-summary-card">
-              <p>Doanh thu kỳ đã chọn</p>
-              <strong>{formatCurrency(revenue?.totals?.selectedPeriodRevenue)}</strong>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <article className="rounded-xl border border-[#dde7f4] bg-gradient-to-b from-white to-[#f7fbff] p-3">
+              <p className="m-0 text-admin-muted text-xs font-medium">Doanh thu kỳ đã chọn</p>
+              <strong className="mt-1.5 block text-[#0f2233] text-lg md:text-xl font-bold leading-tight">{formatCurrency(revenue?.totals?.selectedPeriodRevenue)}</strong>
             </article>
-            <article className="revenue-summary-card">
-              <p>Đơn đã giao kỳ đã chọn</p>
-              <strong>{Number(revenue?.totals?.selectedPeriodOrders || 0).toLocaleString("vi-VN")}</strong>
+            <article className="rounded-xl border border-[#dde7f4] bg-gradient-to-b from-white to-[#f7fbff] p-3">
+              <p className="m-0 text-admin-muted text-xs font-medium">Đơn đã giao kỳ đã chọn</p>
+              <strong className="mt-1.5 block text-[#0f2233] text-lg md:text-xl font-bold leading-tight">{Number(revenue?.totals?.selectedPeriodOrders || 0).toLocaleString("vi-VN")}</strong>
             </article>
-            <article className="revenue-summary-card">
-              <p>Doanh thu tháng này</p>
-              <strong>{formatCurrency(revenue?.totals?.thisMonth)}</strong>
+            <article className="rounded-xl border border-[#dde7f4] bg-gradient-to-b from-white to-[#f7fbff] p-3">
+              <p className="m-0 text-admin-muted text-xs font-medium">Doanh thu tháng này</p>
+              <strong className="mt-1.5 block text-[#0f2233] text-lg md:text-xl font-bold leading-tight">{formatCurrency(revenue?.totals?.thisMonth)}</strong>
             </article>
-            <article className="revenue-summary-card">
-              <p>Doanh thu năm nay</p>
-              <strong>{formatCurrency(revenue?.totals?.thisYear)}</strong>
+            <article className="rounded-xl border border-[#dde7f4] bg-gradient-to-b from-white to-[#f7fbff] p-3">
+              <p className="m-0 text-admin-muted text-xs font-medium">Doanh thu năm nay</p>
+              <strong className="mt-1.5 block text-[#0f2233] text-lg md:text-xl font-bold leading-tight">{formatCurrency(revenue?.totals?.thisYear)}</strong>
             </article>
           </div>
 
-          <div className="revenue-chart-shell">
-            <div className="revenue-chart-meta">
+          <div className="border border-[#e1ebf6] rounded-2xl bg-[#fbfdff] p-4">
+            <div className="text-admin-muted text-xs mb-3 font-semibold">
               {periodType === "month"
                 ? `Biểu đồ tròn sản phẩm bán ra trong ${getMonthLabel(selectedMonth)}/${selectedYear}`
                 : `Biểu đồ tròn sản phẩm bán ra trong năm ${selectedYear}`}
             </div>
-            <div className="revenue-pie-layout">
-              <div className="revenue-pie-wrap">
-                <div className="revenue-pie" style={{ background: pieBackground }}>
-                  <div className="revenue-pie-center">
-                    <strong>{Number(totalSoldUnits || 0).toLocaleString("vi-VN")}</strong>
-                    <span>đã bán</span>
+            <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4 items-start">
+              <div className="border border-[#dbe6f4] rounded-2xl bg-gradient-to-b from-white to-[#f7fbff] p-4 flex justify-center">
+                <div className="w-[180px] h-[180px] rounded-full relative border border-[#d5e2f2] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.8)]" style={{ background: pieBackground }}>
+                  <div className="absolute inset-[25%] rounded-full bg-white border border-[#dbe6f4] grid place-items-center text-center shadow-[0_6px_14px_rgba(15,49,79,0.08)]">
+                    <strong className="text-[#0f2233] text-base md:text-lg font-bold leading-tight">{Number(totalSoldUnits || 0).toLocaleString("vi-VN")}</strong>
+                    <span className="text-admin-muted text-[10px] md:text-xs font-bold uppercase tracking-wider">đã bán</span>
                   </div>
                 </div>
               </div>
-              <div className="revenue-legend">
+              <div className="grid gap-2 max-h-[260px] overflow-y-auto pr-1 scrollbar-thin">
                 {pieSlices.length > 0 ? (
                   pieSlices.map((slice) => (
-                    <div key={slice.key} className="revenue-legend-item">
-                      <span className="revenue-legend-dot" style={{ background: slice.color }} />
-                      <div className="revenue-legend-content">
-                        <p className="revenue-legend-title" title={slice.label}>{slice.label}</p>
-                        <p className="revenue-legend-meta">
+                    <div key={slice.key} className="grid grid-cols-[12px_1fr] gap-2 items-start border border-[#e3ebf7] rounded-xl bg-white p-2.5 shadow-xs">
+                      <span className="w-3 h-3 rounded-full mt-1 shrink-0" style={{ background: slice.color }} />
+                      <div className="min-w-0">
+                        <p className="m-0 text-[#0f2233] text-[13px] font-bold truncate" title={slice.label}>{slice.label}</p>
+                        <p className="m-0 mt-1 text-admin-muted text-xs leading-relaxed">
                           {Number(slice.soldQuantity || 0).toLocaleString("vi-VN")} sp • {formatPercent(slice.percent)} • {formatCompactCurrency(slice.revenue)} đ
                         </p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="revenue-legend-empty">Chưa có dữ liệu sản phẩm đã bán để dựng biểu đồ.</p>
+                  <p className="text-admin-muted text-xs py-4 text-center">Chưa có dữ liệu sản phẩm đã bán để dựng biểu đồ.</p>
                 )}
               </div>
             </div>
           </div>
         </section>
 
-        <section className="dashboard-panel quick-actions-panel" aria-label="Tác vụ nhanh">
-          <div className="panel-heading">
-            <h3>Tác vụ nhanh</h3>
-            <span>Điều hướng</span>
+        <section className="rounded-2xl border border-[#e1ebf6] bg-white p-4 pb-5" aria-label="Tác vụ nhanh">
+          <div className="flex justify-between items-center gap-2.5 mb-3">
+            <h3 className="m-0 text-base font-bold text-admin-ink">Tác vụ nhanh</h3>
+            <span className="text-admin-muted text-xs">Điều hướng</span>
           </div>
-          <div className="quick-actions-grid">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
             {quickActions.map((action) => (
-              <Link key={action.label} to={action.to} className="quick-action-link" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+              <Link
+                key={action.label}
+                to={action.to}
+                className="inline-flex items-center justify-center rounded-xl border border-[#d3e1f0] bg-[#f6faff] text-[#0f3f84] font-bold min-h-[42px] text-xs md:text-sm hover:bg-[#eef6ff] transition-all hover:-translate-y-px hover:shadow-xs gap-2"
+              >
                 <FontAwesomeIcon icon={action.icon} />
                 <span>{action.label}</span>
               </Link>

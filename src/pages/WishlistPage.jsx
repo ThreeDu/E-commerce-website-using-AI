@@ -6,8 +6,6 @@ import { useNotification } from "../context/NotificationContext";
 import { fetchWishlist, removeFromWishlist } from "../services/wishlistService";
 import { getProductImageSrc } from "../utils/productUtils";
 import { parsePrice, formatPrice } from "../utils/priceUtils";
-import "../css/wishlist-page.css";
-
 function WishlistPage() {
   const { auth } = useAuth();
   const { addToCart } = useCart();
@@ -63,53 +61,53 @@ function WishlistPage() {
 
   if (isLoading) {
     return (
-      <main className="container page-content wishlist-page">
-        <h1 className="wishlist-page__title">Danh sách yêu thích</h1>
-        <div className="loading">Đang tải...</div>
+      <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10 p-8 max-w-[1200px] max-[768px]:p-6 max-[768px]:px-3">
+        <h1 className="text-[2rem] font-bold text-[#111827] mb-8 max-[768px]:text-2xl max-[768px]:mb-6">Danh sách yêu thích</h1>
+        <div className="text-center p-8 text-[#6b7280] text-base">Đang tải...</div>
       </main>
     );
   }
 
   return (
-    <main className="container page-content wishlist-page">
-      <h1 className="wishlist-page__title">Danh sách yêu thích</h1>
+    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10 p-8 max-w-[1200px] max-[768px]:p-6 max-[768px]:px-3">
+      <h1 className="text-[2rem] font-bold text-[#111827] mb-8 max-[768px]:text-2xl max-[768px]:mb-6">Danh sách yêu thích</h1>
 
       {wishlist.length === 0 ? (
-        <div className="wishlist-empty">
-          <div className="wishlist-empty__icon">❤️</div>
-          <p className="wishlist-empty__text">Danh sách yêu thích của bạn trống.</p>
-          <Link to="/products" className="wishlist-empty__cta">
+        <div className="text-center py-12 px-4 bg-[#f9fafb] rounded-lg flex flex-col items-center gap-4">
+          <div className="text-[4rem] opacity-60">❤️</div>
+          <p className="text-lg text-[#6b7280] mb-4">Danh sách yêu thích của bạn trống.</p>
+          <Link to="/products" className="inline-block py-3 px-6 bg-[#3b82f6] text-white no-underline rounded font-medium transition-colors hover:bg-[#2563eb]">
             Khám phá sản phẩm
           </Link>
         </div>
       ) : (
-        <div className="wishlist-grid">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-6 mb-8 max-[768px]:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] max-[768px]:gap-4 max-[480px]:grid-cols-2 max-[480px]:gap-3">
           {wishlist.map((product) => (
-            <div key={product._id} className="wishlist-item">
-              <div className="wishlist-item__image-container">
+            <div key={product._id} className="bg-white border border-[#e5e7eb] rounded-lg overflow-hidden transition-all flex flex-col group hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:border-[#d1d5db]">
+              <div className="w-full h-[180px] bg-[#f3f4f6] flex items-center justify-center overflow-hidden max-[768px]:h-[150px]">
                 <img
                   src={getProductImageSrc(product)}
                   alt={product.name}
-                  className="wishlist-item__image"
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
                   onError={(e) => {
                     e.currentTarget.src = "/placeholder.svg";
                   }}
                 />
               </div>
-              <div className="wishlist-item__content">
-                <h3 className="wishlist-item__name">{product.name}</h3>
-                <div className="wishlist-item__price">
+              <div className="p-4 flex flex-col gap-3 grow max-[480px]:p-3">
+                <h3 className="text-[0.9375rem] font-semibold text-[#111827] leading-[1.4] line-clamp-2 m-0 max-[768px]:text-sm">{product.name}</h3>
+                <div className="text-base font-bold text-[#dc2626]">
                   {formatPrice(parsePrice(product.price))}
                 </div>
-                <div className="wishlist-item__actions">
+                <div className="flex gap-2 mt-auto max-[480px]:flex-col">
                   <button
-                    className="wishlist-item__add-to-cart"
+                    className="flex-1 p-2 border-none rounded bg-[#10b981] text-white text-xs font-medium cursor-pointer transition-colors hover:bg-[#059669]"
                     onClick={() => handleAddToCart(product)}
                   >
                     Thêm vào giỏ
                   </button>
                   <button
-                    className="wishlist-item__remove"
+                    className="flex-1 p-2 rounded bg-[#f3f4f6] text-[#374151] border border-[#d1d5db] text-xs font-medium cursor-pointer transition-colors hover:bg-[#e5e7eb]"
                     onClick={() => handleRemove(product._id)}
                   >
                     Xóa
@@ -121,8 +119,8 @@ function WishlistPage() {
         </div>
       )}
 
-      <div className="wishlist-footer">
-        <Link to="/products" className="wishlist-footer__link">
+      <div className="text-center mt-12 pt-8 border-t border-[#e5e7eb]">
+        <Link to="/products" className="text-[#3b82f6] no-underline font-medium transition-colors hover:text-[#2563eb]">
           ← Quay lại mua sắm
         </Link>
       </div>

@@ -18,8 +18,6 @@ import {
   faBoxArchive,
   faRotateLeft,
 } from "@fortawesome/free-solid-svg-icons";
-import "../../../css/admin/products.css";
-
 const ITEMS_PER_PAGE = 8;
 const IMPORT_TEMPLATE_COLUMNS = [
   "name",
@@ -541,73 +539,75 @@ function AdminListProductPage() {
   };
 
   return (
-    <main className="container page-content admin-products-page">
-      <section className="hero-card dashboard-surface admin-page-enter" aria-busy={loading}>
-        <div className="dashboard-header-row">
+    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
+      <section className="bg-white border border-admin-line rounded-[18px] p-6 shadow-[0_12px_32px_rgba(15,23,42,0.08)] animate-admin-rise" aria-busy={loading}>
+        <div className="flex flex-col md:flex-row justify-between items-stretch md:items-start gap-4 mb-3.5">
           <div>
-            <h2>
-              <FontAwesomeIcon icon={faBoxArchive} style={{ marginRight: "10px", color: "var(--primary-color, #4f46e5)" }} />
+            <h2 className="text-[1.55rem] font-bold tracking-wide text-[#13263a] m-0">
+              <FontAwesomeIcon icon={faBoxArchive} style={{ marginRight: "10px", color: "var(--color-admin-primary, #0f766e)" }} />
               Quản lý sản phẩm
             </h2>
-            <p className="dashboard-subtitle">Theo dõi kho hàng và giá bán trong một bảng điều khiển tập trung.</p>
+            <p className="mt-1.5 mb-0 text-[#5d6b82] text-sm">Theo dõi kho hàng và giá bán trong một bảng điều khiển tập trung.</p>
           </div>
-          <div className="bulk-action-buttons">
-            <Link to="/admin/products/import" className="secondary-btn" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <div className="flex gap-2">
+            <Link to="/admin/products/import" className="inline-flex items-center gap-1.5 border border-[#d0d9e4] rounded-lg p-[8px_12px] cursor-pointer bg-[#e8edf3] text-[#0f2233] font-semibold text-sm hover:-translate-y-px transition-all duration-150">
               <FontAwesomeIcon icon={faFileImport} />
               Nhập sản phẩm
             </Link>
-            <button type="button" className="secondary-btn" onClick={handleExportTemplate} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <button type="button" className="inline-flex items-center gap-1.5 border border-[#d0d9e4] rounded-lg p-[8px_12px] cursor-pointer bg-[#e8edf3] text-[#0f2233] font-semibold text-sm hover:-translate-y-px transition-all duration-150" onClick={handleExportTemplate}>
               <FontAwesomeIcon icon={faFileExport} />
               Xuất sản phẩm
             </button>
-            <Link to="/admin/products/add" className="primary-link-btn" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <Link to="/admin/products/add" className="inline-block no-underline bg-gradient-to-br from-[#10375c] to-[#1c5d96] text-white p-[10px_14px] rounded-xl font-semibold shadow-[0_8px_18px_rgba(16,55,92,0.22)] cursor-pointer hover:-translate-y-px transition-all duration-150" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
               <FontAwesomeIcon icon={faPlus} />
               Thêm sản phẩm
             </Link>
           </div>
         </div>
 
-        <div className="dashboard-metric-grid">
-          <article className="metric-card">
-            <span>Tổng sản phẩm</span>
-            <strong>{totalProducts}</strong>
-            <small className="metric-note">Toàn bộ sản phẩm trong kho</small>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 my-[6px_10px] items-stretch">
+          <article className="bg-white border border-[#13263a]/12 rounded-[9px] p-[7px_10px] min-h-[58px] h-full flex flex-col justify-center items-start gap-0.5 shadow-xs">
+            <span className="text-[#7b8797] text-[10px] font-semibold leading-none ml-0.75">Tổng sản phẩm</span>
+            <strong className="text-lg font-bold leading-none ml-0.75 text-[#0f2233]">{totalProducts}</strong>
+            <small className="text-[#a3afbf] text-[9px] leading-[1.1] ml-0.75">Toàn bộ sản phẩm trong kho</small>
           </article>
-          <article className="metric-card success">
-            <span>Còn hàng</span>
-            <strong>{inStockCount}</strong>
-            <small className="metric-note">Chiếm {percent(inStockCount)}</small>
+          <article className="bg-white border border-[#13263a]/12 rounded-[9px] p-[7px_10px] min-h-[58px] h-full flex flex-col justify-center items-start gap-0.5 shadow-xs">
+            <span className="text-[#7b8797] text-[10px] font-semibold leading-none ml-0.75">Còn hàng</span>
+            <strong className="text-lg font-bold leading-none ml-0.75 text-[#166534]">{inStockCount}</strong>
+            <small className="text-[#a3afbf] text-[9px] leading-[1.1] ml-0.75">Chiếm {percent(inStockCount)}</small>
           </article>
-          <article className="metric-card warning">
-            <span>Sắp hết</span>
-            <strong>{lowStockCount}</strong>
-            <small className="metric-note">Chiếm {percent(lowStockCount)}</small>
+          <article className="bg-white border border-[#13263a]/12 rounded-[9px] p-[7px_10px] min-h-[58px] h-full flex flex-col justify-center items-start gap-0.5 shadow-xs">
+            <span className="text-[#7b8797] text-[10px] font-semibold leading-none ml-0.75">Sắp hết</span>
+            <strong className="text-lg font-bold leading-none ml-0.75 text-[#b45309]">{lowStockCount}</strong>
+            <small className="text-[#a3afbf] text-[9px] leading-[1.1] ml-0.75">Chiếm {percent(lowStockCount)}</small>
           </article>
-          <article className="metric-card danger">
-            <span>Hết hàng</span>
-            <strong>{outStockCount}</strong>
-            <small className="metric-note">Chiếm {percent(outStockCount)}</small>
+          <article className="bg-white border border-[#13263a]/12 rounded-[9px] p-[7px_10px] min-h-[58px] h-full flex flex-col justify-center items-start gap-0.5 shadow-xs">
+            <span className="text-[#7b8797] text-[10px] font-semibold leading-none ml-0.75">Hết hàng</span>
+            <strong className="text-lg font-bold leading-none ml-0.75 text-[#b42318]">{outStockCount}</strong>
+            <small className="text-[#a3afbf] text-[9px] leading-[1.1] ml-0.75">Chiếm {percent(outStockCount)}</small>
           </article>
         </div>
 
-        <div className="dashboard-filter-bar">
-          <div className="filter-control search-control">
-            <label htmlFor="product-search">Tìm kiếm</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-3.5 mb-5.5 items-end">
+          <div className="grid gap-2 min-w-0 col-span-1 sm:col-span-2">
+            <label htmlFor="product-search" className="text-[12px] uppercase tracking-wider text-[#6b7a8d] font-bold block mb-1">Tìm kiếm</label>
             <input
               id="product-search"
               type="text"
               placeholder="Tên sản phẩm hoặc danh mục..."
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
+              className="h-[42px] rounded-xl border border-[#d7e1ed] px-3.25 bg-white w-full text-sm focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
             />
           </div>
 
-          <div className="filter-control">
-            <label htmlFor="product-category-level-1">Danh mục cấp 1</label>
+          <div className="grid gap-2 min-w-0">
+            <label htmlFor="product-category-level-1" className="text-[12px] uppercase tracking-wider text-[#6b7a8d] font-bold block mb-1">Danh mục cấp 1</label>
             <select
               id="product-category-level-1"
               value={categoryLevel1}
               onChange={(event) => handleCategoryLevel1Change(event.target.value)}
+              className="h-[42px] rounded-xl border border-[#d7e1ed] px-3.25 bg-white w-full text-sm focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
             >
               <option value="all">Tất cả cấp 1</option>
               {level1Options.map((category) => (
@@ -619,12 +619,13 @@ function AdminListProductPage() {
           </div>
 
           {categoryLevel1 !== "all" && (
-            <div className="filter-control">
-              <label htmlFor="product-category-level-2">Danh mục cấp 2</label>
+            <div className="grid gap-2 min-w-0">
+              <label htmlFor="product-category-level-2" className="text-[12px] uppercase tracking-wider text-[#6b7a8d] font-bold block mb-1">Danh mục cấp 2</label>
               <select
                 id="product-category-level-2"
                 value={categoryLevel2}
                 onChange={(event) => handleCategoryLevel2Change(event.target.value)}
+                className="h-[42px] rounded-xl border border-[#d7e1ed] px-3.25 bg-white w-full text-sm focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
               >
                 <option value="all">Tất cả cấp 2</option>
                 {level2Options.map((category) => (
@@ -637,12 +638,13 @@ function AdminListProductPage() {
           )}
 
           {categoryLevel2 !== "all" && (
-            <div className="filter-control">
-              <label htmlFor="product-category-level-3">Danh mục cấp 3</label>
+            <div className="grid gap-2 min-w-0">
+              <label htmlFor="product-category-level-3" className="text-[12px] uppercase tracking-wider text-[#6b7a8d] font-bold block mb-1">Danh mục cấp 3</label>
               <select
                 id="product-category-level-3"
                 value={categoryLevel3}
                 onChange={(event) => setCategoryLevel3(event.target.value)}
+                className="h-[42px] rounded-xl border border-[#d7e1ed] px-3.25 bg-white w-full text-sm focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
               >
                 <option value="all">Tất cả cấp 3</option>
                 {level3Options.map((category) => (
@@ -654,12 +656,13 @@ function AdminListProductPage() {
             </div>
           )}
 
-          <div className="filter-control">
-            <label htmlFor="product-price-sort">Sắp xếp giá</label>
+          <div className="grid gap-2 min-w-0">
+            <label htmlFor="product-price-sort" className="text-[12px] uppercase tracking-wider text-[#6b7a8d] font-bold block mb-1">Sắp xếp giá</label>
             <select
               id="product-price-sort"
               value={priceSort}
               onChange={(event) => setPriceSort(event.target.value)}
+              className="h-[42px] rounded-xl border border-[#d7e1ed] px-3.25 bg-white w-full text-sm focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
             >
               <option value="default">Mặc định</option>
               <option value="asc">Giá thấp đến cao</option>
@@ -667,9 +670,14 @@ function AdminListProductPage() {
             </select>
           </div>
 
-          <div className="filter-control">
-            <label htmlFor="product-status">Trạng thái kho</label>
-            <select id="product-status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+          <div className="grid gap-2 min-w-0">
+            <label htmlFor="product-status" className="text-[12px] uppercase tracking-wider text-[#6b7a8d] font-bold block mb-1">Trạng thái kho</label>
+            <select
+              id="product-status"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="h-[42px] rounded-xl border border-[#d7e1ed] px-3.25 bg-white w-full text-sm focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
+            >
               <option value="all">Tất cả trạng thái</option>
               <option value="in-stock">Còn hàng</option>
               <option value="low-stock">Sắp hết</option>
@@ -678,14 +686,14 @@ function AdminListProductPage() {
           </div>
         </div>
 
-        <div className="bulk-action-bar">
-          <p>
+        <div className="my-[8px_14px] flex flex-col md:flex-row justify-between items-start md:items-center gap-2.5 p-[10px_12px] rounded-xl border border-[#dbe6f3] bg-[#f8fbff]">
+          <p className="m-0 text-[#4f6078] text-sm">
             Đã chọn <strong>{selectedProducts.length}</strong> sản phẩm
           </p>
-          <div className="bulk-action-buttons">
+          <div className="flex gap-2">
             <button
               type="button"
-              className="danger-btn"
+              className="border border-[#df6b6b] rounded-lg p-[8px_12px] cursor-pointer bg-[#fff7f7] text-[#b42318] font-semibold text-sm hover:-translate-y-px transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
               disabled={selectedProducts.length === 0 || deleting}
               onClick={() =>
                 setProductPendingDelete({
@@ -693,17 +701,15 @@ function AdminListProductPage() {
                   name: `${selectedProducts.length} sản phẩm đã chọn`,
                 })
               }
-              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
             >
               <FontAwesomeIcon icon={faTrash} />
               Xóa đã chọn
             </button>
             <button
               type="button"
-              className="secondary-btn"
+              className="border border-[#d0d9e4] rounded-lg p-[8px_12px] cursor-pointer bg-[#e8edf3] text-[#0f2233] font-semibold text-sm hover:-translate-y-px transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
               disabled={selectedProducts.length === 0}
               onClick={() => setSelectedProductIds([])}
-              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
             >
               <FontAwesomeIcon icon={faRotateLeft} />
               Bỏ chọn
@@ -715,12 +721,12 @@ function AdminListProductPage() {
           <p>Đang tải danh sách sản phẩm...</p>
         ) : (
           <>
-            <div className="dashboard-table-card">
-              <div className="users-table-wrap">
-                <table className="users-table dashboard-table">
+            <div className="border border-[#e2eaf4] rounded-2xl overflow-hidden bg-white w-full max-w-full">
+              <div className="w-full max-w-full overflow-x-auto bg-white">
+                <table className="w-full table-fixed min-w-0 text-[13px] border-collapse bg-white">
                   <thead>
                     <tr>
-                      <th>
+                      <th className="w-[5%] text-center bg-[#f8fbff] text-[12px] uppercase tracking-wider text-[#6f7f94] font-semibold p-2 break-words whitespace-normal align-middle">
                         <input
                           type="checkbox"
                           aria-label="Chọn tất cả sản phẩm trong trang"
@@ -728,93 +734,99 @@ function AdminListProductPage() {
                           onChange={toggleSelectAllOnPage}
                         />
                       </th>
-                      <th>Ảnh</th>
-                      <th>Sản phẩm</th>
-                      <th>Giá & giảm</th>
-                      <th>Tồn kho</th>
-                      <th>Thao tác</th>
+                      <th className="w-[10%] text-center bg-[#f8fbff] text-[12px] uppercase tracking-wider text-[#6f7f94] font-semibold p-2 break-words whitespace-normal align-middle">Ảnh</th>
+                      <th className="w-[35%] text-left bg-[#f8fbff] text-[12px] uppercase tracking-wider text-[#6f7f94] font-semibold p-2 break-words whitespace-normal align-middle">Sản phẩm</th>
+                      <th className="w-[20%] text-left bg-[#f8fbff] text-[12px] uppercase tracking-wider text-[#6f7f94] font-semibold p-2 break-words whitespace-normal align-middle">Giá & giảm</th>
+                      <th className="w-[14%] text-left bg-[#f8fbff] text-[12px] uppercase tracking-wider text-[#6f7f94] font-semibold p-2 break-words whitespace-normal align-middle">Tồn kho</th>
+                      <th className="w-[16%] text-left bg-[#f8fbff] text-[12px] uppercase tracking-wider text-[#6f7f94] font-semibold p-2 break-words whitespace-normal align-middle">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedProducts.map((product) => (
-                      <tr key={product._id}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            aria-label={`Chọn sản phẩm ${product.name}`}
-                            checked={selectedProductIds.includes(product._id)}
-                            onChange={() => toggleProductSelect(product._id)}
-                          />
-                        </td>
-                        <td>
-                          <Link to={`/products/${product._id}`} className="product-detail-link" title={`Xem chi tiết ${product.name}`}>
-                            <img
-                              src={getProductImageSrc(product)}
-                              alt={product.name}
-                              className="admin-product-thumb"
-                              onError={(event) => {
-                                event.currentTarget.onerror = null;
-                                event.currentTarget.src = "/placeholder.svg";
-                              }}
+                    {paginatedProducts.map((product) => {
+                      const stockStatus = getStockStatus(product.stock);
+                      const stockClass = stockStatus === "in-stock"
+                        ? "text-[#166534] bg-[#e7f9ef]"
+                        : stockStatus === "low-stock"
+                          ? "text-[#b45309] bg-[#fff3dd]"
+                          : "text-[#b42318] bg-[#ffe8e8]";
+                      return (
+                        <tr key={product._id} className="transition-colors duration-180 hover:bg-[#f8fbff]">
+                          <td className="text-center p-2 break-words whitespace-normal align-middle border-b border-[#edf2f8]">
+                            <input
+                              type="checkbox"
+                              aria-label={`Chọn sản phẩm ${product.name}`}
+                              checked={selectedProductIds.includes(product._id)}
+                              onChange={() => toggleProductSelect(product._id)}
                             />
-                          </Link>
-                        </td>
-                        <td>
-                          <Link
-                            to={`/products/${product._id}`}
-                            className="cell-title truncate-text product-detail-link"
-                            title={product.name}
-                          >
-                            {product.name}
-                          </Link>
-                          <div className="cell-subtext truncate-text" title={product.category || "Chưa phân loại"}>
-                            {product.category || "Chưa phân loại"}
-                          </div>
-                        </td>
-                        <td>
-                          <div className="price-stack">
-                            <span className="pill final-price-pill">
-                              {Number(product.finalPrice ?? product.price).toLocaleString("vi-VN")} đ
-                            </span>
-                            <span className="cell-subtext truncate-text" title={`Giá gốc: ${Number(product.price).toLocaleString("vi-VN")} đ`}>
-                              Giá gốc: {Number(product.price).toLocaleString("vi-VN")} đ
-                            </span>
-                            <span className="cell-subtext">Giảm: {product.discountPercent ?? 0}%</span>
-                          </div>
-                        </td>
-                        <td>
-                          <span className={`pill stock-pill ${getStockStatus(product.stock)}`}>
-                            {product.stock ?? 0} - {getStockStatusLabel(product.stock)}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="table-actions">
-                            <Link
-                              to={`/admin/products/edit/${product._id}`}
-                              className="table-link-btn"
-                              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
-                              title="Chỉnh sửa sản phẩm"
-                            >
-                              <FontAwesomeIcon icon={faPen} />
-                              Sửa
+                          </td>
+                          <td className="text-center p-2 break-words whitespace-normal align-middle border-b border-[#edf2f8]">
+                            <Link to={`/products/${product._id}`} className="no-underline" title={`Xem chi tiết ${product.name}`}>
+                              <img
+                                src={getProductImageSrc(product)}
+                                alt={product.name}
+                                className="w-11 h-11 object-cover rounded-lg border border-[#d6dfeb]"
+                                onError={(event) => {
+                                  event.currentTarget.onerror = null;
+                                  event.currentTarget.src = "/placeholder.svg";
+                                }}
+                              />
                             </Link>
-                            <button
-                              type="button"
-                              className="danger-btn"
-                              onClick={() => setProductPendingDelete(product)}
-                              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
-                              title="Xóa sản phẩm"
+                          </td>
+                          <td className="text-left p-2 break-words whitespace-normal align-middle border-b border-[#edf2f8]">
+                            <Link
+                              to={`/products/${product._id}`}
+                              className="font-bold text-[#0f2233] block whitespace-normal overflow-visible break-words hover:text-blue-700 no-underline"
+                              title={product.name}
                             >
-                              <FontAwesomeIcon icon={faTrash} />
-                              Xóa
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              {product.name}
+                            </Link>
+                            <div className="mt-1 text-[#62728a] text-[13px] block whitespace-normal overflow-visible break-words" title={product.category || "Chưa phân loại"}>
+                              {product.category || "Chưa phân loại"}
+                            </div>
+                          </td>
+                          <td className="text-left p-2 break-words whitespace-normal align-middle border-b border-[#edf2f8]">
+                            <div className="grid gap-1 min-w-0">
+                              <span className="inline-flex items-center rounded-full p-[3px_6px] font-bold text-[11px] text-[#166534] bg-[#e7f9ef]">
+                                {Number(product.finalPrice ?? product.price).toLocaleString("vi-VN")} đ
+                              </span>
+                              <span className="mt-1 text-[#62728a] text-[13px] block whitespace-normal overflow-visible break-words" title={`Giá gốc: ${Number(product.price).toLocaleString("vi-VN")} đ`}>
+                                Giá gốc: {Number(product.price).toLocaleString("vi-VN")} đ
+                              </span>
+                              <span className="mt-1 text-[#62728a] text-[13px]">Giảm: {product.discountPercent ?? 0}%</span>
+                            </div>
+                          </td>
+                          <td className="text-left p-2 break-words whitespace-normal align-middle border-b border-[#edf2f8]">
+                            <span className={`inline-flex items-center rounded-full p-[3px_6px] font-bold text-[11px] ${stockClass}`}>
+                              {product.stock ?? 0} - {getStockStatusLabel(product.stock)}
+                            </span>
+                          </td>
+                          <td className="text-left p-2 break-words whitespace-normal align-middle border-b border-[#edf2f8]">
+                            <div className="flex gap-1 justify-start items-center flex-nowrap w-full">
+                              <Link
+                                to={`/admin/products/edit/${product._id}`}
+                                className="p-[5px_8px] text-[11px] gap-0.75 whitespace-nowrap shrink-0 rounded-md inline-flex items-center border border-[#b5ccf0] bg-[#f6f9ff] text-[#0f3f84] font-semibold cursor-pointer"
+                                title="Chỉnh sửa sản phẩm"
+                              >
+                                <FontAwesomeIcon icon={faPen} />
+                                Sửa
+                              </Link>
+                              <button
+                                type="button"
+                                className="p-[5px_8px] text-[11px] gap-0.75 whitespace-nowrap shrink-0 rounded-md inline-flex items-center border border-[#df6b6b] bg-[#fff7f7] text-[#b42318] font-semibold cursor-pointer"
+                                onClick={() => setProductPendingDelete(product)}
+                                title="Xóa sản phẩm"
+                              >
+                                <FontAwesomeIcon icon={faTrash} />
+                                Xóa
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {paginatedProducts.length === 0 && (
                       <tr>
-                        <td colSpan="6" className="table-empty-cell">
+                        <td colSpan="6" className="text-center text-[#657589] p-6">
                           Không tìm thấy sản phẩm phù hợp bộ lọc.
                         </td>
                       </tr>
@@ -824,30 +836,28 @@ function AdminListProductPage() {
               </div>
             </div>
 
-            <div className="dashboard-pagination">
-              <p>
+            <div className="p-3.5 border-t border-[#edf2f8] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <p className="m-0 text-[#62728a] text-sm">
                 Hiển thị <strong>{paginatedProducts.length}</strong> / {filteredProducts.length} sản phẩm
               </p>
-              <div className="pagination-actions">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className="secondary-btn pager-btn"
+                  className="inline-flex items-center justify-center min-h-[34px] min-w-[92px] px-3.5 py-1.75 rounded-xl border border-[#cdd9e8] bg-[#f9fbfe] text-[#5f6f85] text-[13px] font-bold tracking-wide cursor-pointer transition-all duration-150 hover:-translate-y-px hover:bg-[#eef4fb] hover:text-[#3f4f67] hover:shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
                   <FontAwesomeIcon icon={faChevronLeft} />
                   Trước
                 </button>
-                <span className="page-indicator">
+                <span className="min-w-[100px] text-center text-[#4b5b73] font-semibold text-sm">
                   Trang {currentPage}/{totalPages}
                 </span>
                 <button
                   type="button"
-                  className="secondary-btn pager-btn"
+                  className="inline-flex items-center justify-center min-h-[34px] min-w-[92px] px-3.5 py-1.75 rounded-xl border border-[#cdd9e8] bg-[#f9fbfe] text-[#5f6f85] text-[13px] font-bold tracking-wide cursor-pointer transition-all duration-150 hover:-translate-y-px hover:bg-[#eef4fb] hover:text-[#3f4f67] hover:shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
                   Sau
                   <FontAwesomeIcon icon={faChevronRight} />
@@ -859,22 +869,22 @@ function AdminListProductPage() {
       </section>
 
       {productPendingDelete && (
-        <div className="confirm-modal-backdrop" role="presentation">
-          <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title">
-            <h3 id="delete-title">Xác nhận xóa sản phẩm</h3>
-            <p>
+        <div className="fixed inset-0 bg-[#09111b]/50 flex items-center justify-center z-[999] p-4" role="presentation">
+          <div className="w-full max-w-[460px] bg-white rounded-xl p-4.5 shadow-[0_18px_36px_rgba(13,29,44,0.22)]" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+            <h3 id="delete-title" className="m-0 mb-2 font-bold text-lg text-[#0f2233]">Xác nhận xóa sản phẩm</h3>
+            <p className="m-0 mb-3.5 text-[#6c7d90] text-sm">
               Bạn có chắc chắn muốn xóa <strong>{productPendingDelete.name}</strong>?
             </p>
-            <div className="confirm-modal-actions">
+            <div className="flex justify-end gap-2.5">
               <button
                 type="button"
-                className="secondary-btn"
+                className="p-[10px_14px] rounded-lg border border-[#d0d9e4] bg-[#e8edf3] text-[#0f2233] font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 onClick={() => setProductPendingDelete(null)}
                 disabled={deleting}
               >
                 Hủy
               </button>
-              <button type="button" className="danger-btn" onClick={handleDelete} disabled={deleting}>
+              <button type="button" className="p-[10px_14px] rounded-lg border border-[#b42318] bg-[#b42318] text-white font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm" onClick={handleDelete} disabled={deleting}>
                 {deleting ? "Đang xóa..." : "Xóa"}
               </button>
             </div>

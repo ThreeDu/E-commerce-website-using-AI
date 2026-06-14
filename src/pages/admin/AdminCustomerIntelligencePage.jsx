@@ -39,9 +39,6 @@ import {
   faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 
-import "../../css/admin/intelligence.css";
-
-
 const API_BASE = "/api/auth/admin/intelligence";
 
 function AdminCustomerIntelligencePage() {
@@ -196,9 +193,9 @@ function AdminCustomerIntelligencePage() {
 
   if (loading) {
     return (
-      <main className="container page-content">
-        <div className="intel-loading">
-          <p>Đang tải dữ liệu Intelligence...</p>
+      <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
+        <div className="flex flex-col items-center justify-center min-h-[40vh] text-admin-muted">
+          <p className="font-semibold">Đang tải dữ liệu Intelligence...</p>
         </div>
       </main>
     );
@@ -294,54 +291,39 @@ function AdminCustomerIntelligencePage() {
     return pages;
   };
 
-
   return (
-    <main className="container page-content intel-page">
-      <div className="intel-header">
-        <h1 className="intel-header__title">
-          <FontAwesomeIcon icon={faBrain} style={{ marginRight: "10px", color: "var(--primary-color, #4f46e5)" }} />
+    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10 px-1">
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
+        <h1 className="m-0 text-2xl md:text-3xl font-bold tracking-tight text-admin-ink">
+          <FontAwesomeIcon icon={faBrain} className="mr-2 text-admin-primary" />
           Dự đoán tỷ lệ rời bỏ và đánh giá tiềm năng khách hàng
         </h1>
-        <div className="intel-header__actions">
+        <div className="flex items-center gap-2.5">
           {overview?.last_training?.trained_at ? (
-            <span className="intel-model-info">
+            <span className="text-xs text-admin-muted text-right">
               Trained: {new Date(overview.last_training.trained_at).toLocaleString("vi-VN")}
             </span>
           ) : null}
           <button
-            className="intel-guide-btn"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#cbd5e1] bg-white text-[#475569] font-semibold text-sm cursor-pointer hover:bg-[#f8fafc] hover:border-[#94a3b8] hover:text-[#1e293b] hover:shadow-xs transition-all duration-150"
             onClick={() => setShowGuideModal(true)}
-            style={{
-              padding: "10px 16px",
-              borderRadius: "8px",
-              border: "1px solid #cbd5e1",
-              background: "#fff",
-              color: "#475569",
-              fontWeight: "600",
-              fontSize: "14px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              transition: "all 0.2s"
-            }}
           >
             <FontAwesomeIcon icon={faInfoCircle} />
             Chú thích thuật ngữ
           </button>
           <button
-            className="intel-train-btn"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg border border-transparent bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white font-bold text-sm cursor-pointer transition-opacity duration-150 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
             onClick={handleTrain}
             disabled={training}
           >
             {training ? (
               <>
-                <FontAwesomeIcon icon={faSync} spin style={{ marginRight: "6px" }} />
+                <FontAwesomeIcon icon={faSync} spin className="mr-1.5" />
                 Đang training...
               </>
             ) : (
               <>
-                <FontAwesomeIcon icon={faSync} style={{ marginRight: "6px" }} />
+                <FontAwesomeIcon icon={faSync} className="mr-1.5" />
                 Train Model
               </>
             )}
@@ -350,30 +332,30 @@ function AdminCustomerIntelligencePage() {
       </div>
 
       {!modelsReady ? (
-        <div className="intel-empty">
-          <div className="intel-empty__icon">
-            <FontAwesomeIcon icon={faRobot} style={{ color: "var(--primary-color, #4f46e5)" }} />
+        <div className="w-full text-center p-6 sm:p-12 bg-[#f8fafc] rounded-2xl border border-[#e2e8f0] max-w-xl mx-auto my-10 shadow-xs animate-admin-rise">
+          <div className="text-5xl mb-4">
+            <FontAwesomeIcon icon={faRobot} className="text-admin-primary" />
           </div>
-          <h2 className="intel-empty__title">Chưa có model</h2>
-          <p className="intel-empty__text">
+          <h2 className="m-0 mb-2 text-xl font-bold text-[#1e293b]">Chưa có model</h2>
+          <p className="m-0 mb-6 text-sm text-[#64748b] leading-relaxed">
             Nhấn nút <strong>"Train Model"</strong> để bắt đầu phân tích dữ liệu
             khách hàng bằng Machine Learning. Hệ thống cần ít nhất 5 khách hàng có
             lịch sử hoạt động.
           </p>
-          <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+          <div className="flex gap-3 justify-center">
             <button
-              className="intel-train-btn"
+              className="inline-flex items-center justify-center gap-1.5 px-5 py-3 rounded-lg border border-transparent bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white font-bold text-sm cursor-pointer transition-opacity duration-150 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
               onClick={handleTrain}
               disabled={training}
             >
               {training ? (
                 <>
-                  <FontAwesomeIcon icon={faSync} spin style={{ marginRight: "6px" }} />
+                  <FontAwesomeIcon icon={faSync} spin className="mr-1.5" />
                   Đang training...
                 </>
               ) : (
                 <>
-                  <FontAwesomeIcon icon={faBrain} style={{ marginRight: "6px" }} />
+                  <FontAwesomeIcon icon={faBrain} className="mr-1.5" />
                   Bắt đầu Training
                 </>
               )}
@@ -383,52 +365,50 @@ function AdminCustomerIntelligencePage() {
       ) : (
         <>
           {/* Summary Cards */}
-          <div className="intel-summary-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "16px", marginBottom: "24px" }}>
-            <div className="intel-summary-card" style={{ padding: "16px", borderRadius: "10px", backgroundColor: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-              <p className="intel-summary-card__label" style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0" }}>Tổng khách hàng</p>
-              <p className="intel-summary-card__value" style={{ fontSize: "24px", fontWeight: "700", margin: 0, color: "#1e293b" }}>{overview?.total_customers || 0}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-7">
+            <div className="bg-white border border-[#e2e8f0] rounded-xl p-5 text-center shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-sm">
+              <p className="m-0 mb-1 text-[11px] text-[#64748b] font-bold uppercase tracking-wider">Tổng khách hàng</p>
+              <strong className="m-0 text-3xl font-extrabold leading-none text-admin-ink">{overview?.total_customers || 0}</strong>
             </div>
-            <div className="intel-summary-card" style={{ padding: "16px", borderRadius: "10px", backgroundColor: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-              <p className="intel-summary-card__label" style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0" }}>Nguy cơ rời bỏ cao</p>
-              <p className="intel-summary-card__value intel-summary-card__value--red" style={{ fontSize: "24px", fontWeight: "700", margin: 0, color: "#ef4444" }}>
+            <div className="bg-white border border-[#e2e8f0] rounded-xl p-5 text-center shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-sm">
+              <p className="m-0 mb-1 text-[11px] text-[#64748b] font-bold uppercase tracking-wider">Nguy cơ rời bỏ cao</p>
+              <strong className="m-0 text-3xl font-extrabold leading-none text-red-600">
                 {overview?.churn_distribution?.high || 0}
-              </p>
+              </strong>
             </div>
-            <div className="intel-summary-card" style={{ padding: "16px", borderRadius: "10px", backgroundColor: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-              <p className="intel-summary-card__label" style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0" }}>Tiềm năng cao</p>
-              <p className="intel-summary-card__value intel-summary-card__value--blue" style={{ fontSize: "24px", fontWeight: "700", margin: 0, color: "#3b82f6" }}>
+            <div className="bg-white border border-[#e2e8f0] rounded-xl p-5 text-center shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-sm">
+              <p className="m-0 mb-1 text-[11px] text-[#64748b] font-bold uppercase tracking-wider">Tiềm năng cao</p>
+              <strong className="m-0 text-3xl font-extrabold leading-none text-blue-600">
                 {overview?.potential_distribution?.high || 0}
-              </p>
+              </strong>
             </div>
-            <div className="intel-summary-card" style={{ padding: "16px", borderRadius: "10px", backgroundColor: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-              <p className="intel-summary-card__label" style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0" }}>CLV Trung bình</p>
-              <p className="intel-summary-card__value" style={{ fontSize: "24px", fontWeight: "700", margin: 0, color: "#8b5cf6" }}>
+            <div className="bg-white border border-[#e2e8f0] rounded-xl p-5 text-center shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-sm">
+              <p className="m-0 mb-1 text-[11px] text-[#64748b] font-bold uppercase tracking-wider">CLV Trung bình</p>
+              <strong className="m-0 text-3xl font-extrabold leading-none text-purple-600">
                 {clvData?.avg_clv_score || 0}
-              </p>
+              </strong>
             </div>
-            <div className="intel-summary-card" style={{ padding: "16px", borderRadius: "10px", backgroundColor: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-              <p className="intel-summary-card__label" style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0" }}>KH At Risk</p>
-              <p className="intel-summary-card__value" style={{ fontSize: "24px", fontWeight: "700", margin: 0, color: "#f97316" }}>
+            <div className="bg-white border border-[#e2e8f0] rounded-xl p-5 text-center shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-sm">
+              <p className="m-0 mb-1 text-[11px] text-[#64748b] font-bold uppercase tracking-wider">KH At Risk</p>
+              <strong className="m-0 text-3xl font-extrabold leading-none text-orange-500">
                 {segments?.distribution?.at_risk || 0}
-              </p>
+              </strong>
             </div>
-            <div className="intel-summary-card" style={{ padding: "16px", borderRadius: "10px", backgroundColor: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-              <p className="intel-summary-card__label" style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0" }}>Giỏ hàng bỏ rơi</p>
-              <p className="intel-summary-card__value" style={{ fontSize: "24px", fontWeight: "700", margin: 0, color: "#64748b" }}>
-                {abandonedCount}
-              </p>
+            <div className="bg-white border border-[#e2e8f0] rounded-xl p-5 text-center shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-sm">
+              <p className="m-0 mb-1 text-[11px] text-[#64748b] font-bold uppercase tracking-wider">Giỏ hàng bỏ rơi</p>
+              <strong className="m-0 text-3xl font-extrabold leading-none text-slate-500">{abandonedCount}</strong>
             </div>
           </div>
 
           {/* Segment Distribution Donut Chart */}
           {segments?.distribution && (
-            <div className="intel-charts" style={{ display: "grid", gridTemplateColumns: "1fr", marginBottom: "24px" }}>
-              <div className="intel-chart-card" style={{ padding: "24px", borderRadius: "12px", backgroundColor: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-                <h3 className="intel-chart-card__title" style={{ fontSize: "18px", fontWeight: "600", color: "#1e293b", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <FontAwesomeIcon icon={faUserFriends} style={{ color: "#4f46e5" }} />
+            <div className="grid grid-cols-1 mb-6">
+              <div className="bg-white border border-[#e2e8f0] rounded-2xl p-6 shadow-xs">
+                <h3 className="m-0 mb-4 text-base font-bold text-[#1e293b] flex items-center gap-2">
+                  <FontAwesomeIcon icon={faUserFriends} className="text-admin-primary" />
                   Phân khúc khách hàng (RFM Segmentation)
                 </h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "32px", alignItems: "center" }}>
+                <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-8 items-center">
                   <ResponsiveContainer width="100%" height={260}>
                     <PieChart>
                       <Pie
@@ -447,19 +427,18 @@ function AdminCustomerIntelligencePage() {
                       <Tooltip formatter={(value) => [`${value} Khách hàng`, 'Số lượng']} />
                     </PieChart>
                   </ResponsiveContainer>
-                  
-                  {/* Segment Details Table */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+
+                  <div className="flex flex-col gap-3">
                     {Object.keys(segmentNames).map(key => {
                       const count = segments.distribution[key] || 0;
                       const percentage = overview?.total_customers ? ((count / overview.total_customers) * 100).toFixed(1) : 0;
                       return (
-                        <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "14px", borderBottom: "1px solid #f1f5f9", paddingBottom: "8px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            <span style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: segmentNames[key].color }} />
-                            <strong style={{ color: "#334155" }}>{segmentNames[key].label}</strong>
+                        <div key={key} className="flex items-center justify-between text-sm border-b border-[#f1f5f9] pb-2">
+                          <div className="flex items-center gap-2.5">
+                            <span className="w-2.5 height-2.5 rounded-full" style={{ backgroundColor: segmentNames[key].color, height: "10px", width: "10px" }} />
+                            <strong className="text-[#334155]">{segmentNames[key].label}</strong>
                           </div>
-                          <span style={{ color: "#64748b", fontWeight: "500" }}>
+                          <span className="text-admin-muted font-semibold">
                             {count} KH ({percentage}%)
                           </span>
                         </div>
@@ -472,9 +451,9 @@ function AdminCustomerIntelligencePage() {
           )}
 
           {/* Charts */}
-          <div className="intel-charts">
-            <div className="intel-chart-card">
-              <h3 className="intel-chart-card__title">Phân bố Churn Risk</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-7">
+            <div className="bg-white border border-[#e2e8f0] rounded-2xl p-5 shadow-xs">
+              <h3 className="m-0 mb-4 text-base font-bold text-[#1e293b]">Phân bố Churn Risk</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={churnChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -490,8 +469,8 @@ function AdminCustomerIntelligencePage() {
               </ResponsiveContainer>
             </div>
 
-            <div className="intel-chart-card">
-              <h3 className="intel-chart-card__title">Phân bố Potential Score</h3>
+            <div className="bg-white border border-[#e2e8f0] rounded-2xl p-5 shadow-xs">
+              <h3 className="m-0 mb-4 text-base font-bold text-[#1e293b]">Phân bố Potential Score</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={potentialChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -508,43 +487,42 @@ function AdminCustomerIntelligencePage() {
             </div>
           </div>
 
-
           {/* Feature Importance */}
-          <div className="intel-charts">
-            <div className="intel-chart-card">
-              <h3 className="intel-chart-card__title">Churn — Feature Importance</h3>
-              <ul className="intel-feature-list">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-7">
+            <div className="bg-white border border-[#e2e8f0] rounded-2xl p-5 shadow-xs">
+              <h3 className="m-0 mb-4 text-base font-bold text-[#1e293b]">Churn — Feature Importance</h3>
+              <ul className="list-none p-0 m-0">
                 {(overview?.churn_feature_importance || []).map(([name, score]) => (
-                  <li key={name} className="intel-feature-item">
-                    <span className="intel-feature-name">{name}</span>
+                  <li key={name} className="flex items-center gap-2.5 py-1.5 text-[13px] text-[#334155]">
+                    <span className="min-w-[160px] font-semibold">{name}</span>
                     <div style={{ flex: 1 }}>
                       <div
-                        className="intel-feature-bar"
+                        className="h-2 rounded-full bg-gradient-to-r from-[#6366f1] to-[#a78bfa] transition-all duration-300"
                         style={{ width: `${Math.round(score * 100)}%` }}
                       />
                     </div>
-                    <span className="intel-feature-score">{(score * 100).toFixed(1)}%</span>
+                    <span className="min-w-[40px] text-right text-admin-muted text-xs">{(score * 100).toFixed(1)}%</span>
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div className="intel-chart-card">
-              <h3 className="intel-chart-card__title">Potential — Feature Importance</h3>
-              <ul className="intel-feature-list">
+            <div className="bg-white border border-[#e2e8f0] rounded-2xl p-5 shadow-xs">
+              <h3 className="m-0 mb-4 text-base font-bold text-[#1e293b]">Potential — Feature Importance</h3>
+              <ul className="list-none p-0 m-0">
                 {(overview?.potential_feature_importance || []).map(([name, score]) => (
-                  <li key={name} className="intel-feature-item">
-                    <span className="intel-feature-name">{name}</span>
+                  <li key={name} className="flex items-center gap-2.5 py-1.5 text-[13px] text-[#334155]">
+                    <span className="min-w-[160px] font-semibold">{name}</span>
                     <div style={{ flex: 1 }}>
                       <div
-                        className="intel-feature-bar"
+                        className="h-2 rounded-full transition-all duration-300"
                         style={{
                           width: `${Math.round(score * 100)}%`,
                           background: "linear-gradient(90deg, #3b82f6, #93c5fd)",
                         }}
                       />
                     </div>
-                    <span className="intel-feature-score">{(score * 100).toFixed(1)}%</span>
+                    <span className="min-w-[40px] text-right text-admin-muted text-xs">{(score * 100).toFixed(1)}%</span>
                   </li>
                 ))}
               </ul>
@@ -552,19 +530,19 @@ function AdminCustomerIntelligencePage() {
           </div>
 
           {/* Customer Table */}
-          <div className="intel-table-card">
-            <div className="intel-table-card__header" style={{ marginBottom: "20px" }}>
-              <h3 className="intel-table-card__title">
-                <FontAwesomeIcon icon={faUserCheck} style={{ marginRight: "8px", color: "var(--primary-color, #4f46e5)" }} />
+          <div className="bg-white border border-[#e2e8f0] rounded-2xl p-5 overflow-x-auto shadow-xs mb-7">
+            <div className="flex justify-between items-center margin-bottom-16 flex-wrap gap-3 mb-5">
+              <h3 className="m-0 text-base font-bold text-[#1e293b] flex items-center gap-2">
+                <FontAwesomeIcon icon={faUserCheck} className="text-admin-primary" />
                 Danh sách khách hàng ({filteredCustomers.length})
               </h3>
             </div>
 
-            <div className="intel-table-actions-row">
-              <div className="intel-table-filters">
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-5 w-full">
+              <div className="flex flex-wrap items-center gap-3">
                 {/* Search Input */}
-                <div className="intel-search-wrapper">
-                  <FontAwesomeIcon icon={faSearch} className="intel-search-icon" />
+                <div className="relative flex items-center">
+                  <FontAwesomeIcon icon={faSearch} className="absolute left-3.5 text-admin-muted text-sm" />
                   <input
                     type="text"
                     placeholder="Tìm theo tên hoặc email..."
@@ -573,20 +551,20 @@ function AdminCustomerIntelligencePage() {
                       setSearchTerm(e.target.value);
                       setCurrentPage(1);
                     }}
-                    className="intel-search-input"
+                    className="pl-9 pr-3 py-2 border border-admin-line rounded-xl text-sm bg-[#f8fafc] text-admin-ink w-full sm:w-[260px] transition-all duration-300 focus:outline-none focus:bg-white focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] focus:w-full sm:focus:w-[300px]"
                   />
                 </div>
 
                 {/* Segment Filter */}
-                <div className="intel-filter-wrapper">
-                  <FontAwesomeIcon icon={faFilter} style={{ color: "#64748b", fontSize: "13px" }} />
+                <div className="flex items-center gap-1.5">
+                  <FontAwesomeIcon icon={faFilter} className="text-admin-muted text-xs" />
                   <select
                     value={selectedSegment}
                     onChange={(e) => {
                       setSelectedSegment(e.target.value);
                       setCurrentPage(1);
                     }}
-                    className="intel-filter-select"
+                    className="w-full border border-admin-line rounded-xl p-[8px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled cursor-pointer"
                   >
                     <option value="">Tất cả phân khúc</option>
                     {Object.keys(segmentNames).map((key) => (
@@ -599,12 +577,16 @@ function AdminCustomerIntelligencePage() {
               </div>
 
               {/* Sort controls */}
-              <div className="intel-table-sort">
-                <label>
-                  <FontAwesomeIcon icon={faSortAmountDown} style={{ marginRight: "4px", color: "var(--text-secondary, #6b7280)" }} />
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-[13px] text-admin-muted">
+                  <FontAwesomeIcon icon={faSortAmountDown} className="mr-1 text-admin-muted" />
                   Sắp xếp:
                 </label>
-                <select value={sortBy} onChange={handleSortChange}>
+                <select
+                  value={sortBy}
+                  onChange={handleSortChange}
+                  className="border border-[#cbd5e1] rounded-lg p-[6px_10px] text-[13px] bg-white focus:outline-none focus:border-admin-primary"
+                >
                   <option value="churn_score">Churn Risk</option>
                   <option value="potential_score">Potential Score</option>
                   <option value="clv_score">CLV Score</option>
@@ -615,31 +597,16 @@ function AdminCustomerIntelligencePage() {
                 <button
                   type="button"
                   onClick={handleOrderToggle}
-                  style={{
-                    padding: "8px 12px",
-                    border: "1px solid #cbd5e1",
-                    borderRadius: "8px",
-                    background: "#fff",
-                    cursor: "pointer",
-                    fontSize: "13px",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    fontWeight: "600",
-                    color: "#334155",
-                    transition: "all 0.2s"
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f8fafc"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#fff"}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 border border-[#cbd5e1] rounded-lg bg-white text-xs font-bold text-admin-ink hover:bg-[#f8fafc] transition-all cursor-pointer"
                 >
                   {sortOrder === "desc" ? (
                     <>
-                      <FontAwesomeIcon icon={faArrowDown} style={{ color: "var(--danger-color, #ef4444)" }} />
+                      <FontAwesomeIcon icon={faArrowDown} className="text-red-500" />
                       Giảm dần
                     </>
                   ) : (
                     <>
-                      <FontAwesomeIcon icon={faArrowUp} style={{ color: "var(--success-color, #22c55e)" }} />
+                      <FontAwesomeIcon icon={faArrowUp} className="text-admin-success" />
                       Tăng dần
                     </>
                   )}
@@ -647,9 +614,9 @@ function AdminCustomerIntelligencePage() {
               </div>
             </div>
 
-            <table className="intel-table">
+            <table className="w-full text-left border-collapse table-auto text-sm">
               <thead>
-                <tr>
+                <tr className="[&>th]:p-3 [&>th]:border-b-2 [&>th]:border-[#e2e8f0] [&>th]:text-xs [&>th]:font-semibold [&>th]:uppercase [&>th]:tracking-wider [&>th]:text-[#475569] [&>th]:whitespace-nowrap">
                   <th>Khách hàng</th>
                   <th>Phân khúc</th>
                   <th>Churn Risk</th>
@@ -662,24 +629,20 @@ function AdminCustomerIntelligencePage() {
                   <th>Không HĐ (ngày)</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {currentCustomers.map((c) => (
-                  <tr key={c._id}>
+                  <tr key={c._id} className="hover:bg-[#f8fafc] [&>td]:p-3 [&>td]:text-[#334155] [&>td]:align-middle">
                     <td>
-                      <strong>{c.name}</strong>
+                      <strong className="text-admin-ink">{c.name}</strong>
                       <br />
-                      <span style={{ fontSize: "12px", color: "#94a3b8" }}>{c.email}</span>
+                      <span className="text-xs text-admin-muted">{c.email}</span>
                     </td>
                     <td>
                       {c.segment && segmentNames[c.segment] ? (
-                        <span 
-                          style={{ 
-                            display: "inline-block",
-                            padding: "4px 8px",
-                            fontSize: "12px",
-                            fontWeight: "500",
-                            borderRadius: "6px",
-                            border: `1px solid ${segmentNames[c.segment].color}`,
+                        <span
+                          className="inline-block px-2 py-1 text-xs font-medium rounded-md border"
+                          style={{
+                            borderColor: segmentNames[c.segment].color,
                             color: segmentNames[c.segment].color,
                             backgroundColor: `${segmentNames[c.segment].color}10`
                           }}
@@ -687,21 +650,27 @@ function AdminCustomerIntelligencePage() {
                           {segmentNames[c.segment].label}
                         </span>
                       ) : (
-                        <span style={{ color: "#94a3b8" }}>—</span>
+                        <span className="text-admin-muted">—</span>
                       )}
                     </td>
                     <td>
-                      <span className={`intel-badge intel-badge--${c.churn_level}`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        c.churn_level === "low" ? "bg-green-100 text-green-800" : c.churn_level === "medium" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"
+                      }`}>
                         {c.churn_score}%
                       </span>
                     </td>
                     <td>
-                      <span className={`intel-badge intel-badge--p-${c.potential_level}`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        c.potential_level === "low" ? "bg-slate-100 text-slate-600" : c.potential_level === "medium" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800"
+                      }`}>
                         {c.potential_score}
                       </span>
                     </td>
                     <td>
-                      <span className={`intel-badge intel-badge--p-${c.clv_level || "low"}`} style={{ backgroundColor: c.clv_level === "high" ? "#8b5cf6" : undefined, color: c.clv_level === "high" ? "#fff" : undefined }}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        c.clv_level === "high" ? "bg-purple-100 text-purple-800" : c.clv_level === "medium" ? "bg-blue-100 text-blue-800" : "bg-slate-100 text-slate-600"
+                      }`}>
                         {c.clv_score || 0}
                       </span>
                     </td>
@@ -714,7 +683,7 @@ function AdminCustomerIntelligencePage() {
                 ))}
                 {currentCustomers.length === 0 ? (
                   <tr>
-                    <td colSpan={10} style={{ textAlign: "center", padding: "32px", color: "#64748b", fontWeight: "500" }}>
+                    <td colSpan={10} className="text-center! p-8! text-admin-muted font-medium">
                       Không tìm thấy khách hàng phù hợp.
                     </td>
                   </tr>
@@ -724,14 +693,14 @@ function AdminCustomerIntelligencePage() {
 
             {/* Pagination Controls */}
             {totalPages > 0 && (
-              <div className="intel-pagination-container">
-                <div className="intel-pagination-info">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 mt-4 border-t border-[#f1f5f9]">
+                <div className="text-[13.5px] text-admin-muted font-medium">
                   Hiển thị {totalItems === 0 ? 0 : indexOfFirstItem + 1} - {Math.min(indexOfLastItem, totalItems)} trong tổng số {totalItems} khách hàng
                 </div>
 
-                <div className="intel-pagination-right">
+                <div className="flex flex-wrap items-center gap-4">
                   {/* Page Size Selector */}
-                  <div className="intel-page-size-selector">
+                  <div className="flex items-center gap-2 text-[13.5px] text-admin-muted font-medium">
                     <span>Số hàng:</span>
                     <select
                       value={itemsPerPage}
@@ -739,6 +708,7 @@ function AdminCustomerIntelligencePage() {
                         setItemsPerPage(Number(e.target.value));
                         setCurrentPage(1);
                       }}
+                      className="p-1 border border-[#e2e8f0] rounded-lg bg-white focus:outline-none cursor-pointer"
                     >
                       <option value={10}>10</option>
                       <option value={20}>20</option>
@@ -748,10 +718,10 @@ function AdminCustomerIntelligencePage() {
                   </div>
 
                   {/* Page Navigation Buttons */}
-                  <div className="intel-pagination-pages">
+                  <div className="flex items-center gap-1.5">
                     {/* First Page */}
                     <button
-                      className="intel-pagination-btn"
+                      className="inline-flex items-center justify-center min-w-[36px] h-9 px-2.5 rounded-xl border border-[#cbd5e8] bg-white text-[#5f6f85] text-[13px] font-bold tracking-wide cursor-pointer transition-all duration-150 hover:-translate-y-px hover:bg-[#eef4fb] disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                       onClick={() => setCurrentPage(1)}
                       disabled={activePage === 1}
                       title="Trang đầu"
@@ -761,7 +731,7 @@ function AdminCustomerIntelligencePage() {
 
                     {/* Previous Page */}
                     <button
-                      className="intel-pagination-btn"
+                      className="inline-flex items-center justify-center min-w-[36px] h-9 px-2.5 rounded-xl border border-[#cbd5e8] bg-white text-[#5f6f85] text-[13px] font-bold tracking-wide cursor-pointer transition-all duration-150 hover:-translate-y-px hover:bg-[#eef4fb] disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                       onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       disabled={activePage === 1}
                       title="Trang trước"
@@ -801,18 +771,7 @@ function AdminCustomerIntelligencePage() {
                                 setEditingEllipsis(null);
                               }}
                               autoFocus
-                              className="intel-pagination-btn"
-                              style={{
-                                width: "50px",
-                                height: "36px",
-                                padding: "0",
-                                textAlign: "center",
-                                border: "1px solid var(--primary-color, #4f46e5)",
-                                background: "#fff",
-                                color: "#1d1d1f",
-                                outline: "none",
-                                borderRadius: "8px"
-                              }}
+                              className="inline-flex items-center justify-center w-[50px] h-9 px-1 rounded-xl border border-admin-primary bg-white text-admin-ink text-center text-[13px] font-bold outline-none"
                             />
                           );
                         }
@@ -821,13 +780,12 @@ function AdminCustomerIntelligencePage() {
                           <button
                             key={`dots-${item.id}-${index}`}
                             type="button"
-                            className="intel-pagination-btn"
+                            className="inline-flex items-center justify-center min-w-[36px] h-9 px-2.5 rounded-xl border border-[#cbd5e8] bg-white text-[#94a3b8] text-[13px] font-bold cursor-pointer hover:bg-[#eef4fb]"
                             onClick={() => {
                               setEditingEllipsis(item.id);
                               setInputPageValue("");
                             }}
                             title="Nhấp để nhập trang trực tiếp"
-                            style={{ cursor: "pointer", color: "#94a3b8", fontWeight: "bold" }}
                           >
                             ...
                           </button>
@@ -836,8 +794,10 @@ function AdminCustomerIntelligencePage() {
                       return (
                         <button
                           key={`page-${item.value}`}
-                          className={`intel-pagination-btn ${
-                            activePage === item.value ? "intel-pagination-btn--active" : ""
+                          className={`inline-flex items-center justify-center min-w-[36px] h-9 px-2.5 rounded-xl border text-[13px] font-bold cursor-pointer transition-all duration-150 hover:-translate-y-px ${
+                            activePage === item.value
+                              ? "bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] border-transparent text-white shadow-md hover:translate-y-0"
+                              : "border-[#cbd5e8] bg-white text-[#5f6f85] hover:bg-[#eef4fb]"
                           }`}
                           onClick={() => setCurrentPage(item.value)}
                         >
@@ -848,7 +808,7 @@ function AdminCustomerIntelligencePage() {
 
                     {/* Next Page */}
                     <button
-                      className="intel-pagination-btn"
+                      className="inline-flex items-center justify-center min-w-[36px] h-9 px-2.5 rounded-xl border border-[#cbd5e8] bg-white text-[#5f6f85] text-[13px] font-bold tracking-wide cursor-pointer transition-all duration-150 hover:-translate-y-px hover:bg-[#eef4fb] disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                       onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                       disabled={activePage === totalPages}
                       title="Trang sau"
@@ -858,7 +818,7 @@ function AdminCustomerIntelligencePage() {
 
                     {/* Last Page */}
                     <button
-                      className="intel-pagination-btn"
+                      className="inline-flex items-center justify-center min-w-[36px] h-9 px-2.5 rounded-xl border border-[#cbd5e8] bg-white text-[#5f6f85] text-[13px] font-bold tracking-wide cursor-pointer transition-all duration-150 hover:-translate-y-px hover:bg-[#eef4fb] disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                       onClick={() => setCurrentPage(totalPages)}
                       disabled={activePage === totalPages}
                       title="Trang cuối"
@@ -870,118 +830,117 @@ function AdminCustomerIntelligencePage() {
               </div>
             )}
           </div>
-
         </>
       )}
 
       {showGuideModal && (
-        <div className="intel-modal-overlay" onClick={() => setShowGuideModal(false)}>
-          <div className="intel-modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="intel-modal-header">
-              <h2 className="intel-modal-title">
-                <FontAwesomeIcon icon={faBrain} style={{ marginRight: "10px", color: "var(--primary-color, #4f46e5)" }} />
+        <div className="fixed inset-0 bg-[rgba(15,23,42,0.65)] backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowGuideModal(false)}>
+          <div className="bg-white rounded-2xl shadow-modal w-full max-w-[850px] max-h-[85vh] overflow-hidden border border-[#e2e8f0] flex flex-col animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 border-b border-[#f1f5f9] flex justify-between items-center bg-white shrink-0">
+              <h2 className="m-0 text-lg md:text-xl font-bold text-[#0f172a] flex items-center gap-2">
+                <FontAwesomeIcon icon={faBrain} className="text-admin-primary" />
                 Giải thích chỉ số & Phân loại Phân khúc AI
               </h2>
-              <button className="intel-modal-close" onClick={() => setShowGuideModal(false)}>
+              <button className="bg-none border-none text-admin-muted text-xl cursor-pointer p-1.5 rounded-lg flex items-center justify-center hover:bg-[#f1f5f9] hover:text-[#0f172a] transition-all" onClick={() => setShowGuideModal(false)}>
                 <FontAwesomeIcon icon={faTimes} />
               </button>
             </div>
-            <div className="intel-modal-body">
-              <div className="intel-guide-section">
-                <h3 className="intel-guide-subtitle">1. Các chỉ số dự báo bằng Machine Learning</h3>
-                <div className="intel-guide-grid">
-                  <div className="intel-guide-card">
-                    <div className="intel-guide-card__header">
-                      <span className="intel-guide-badge badge--churn">Churn Risk (Tỷ lệ rời bỏ)</span>
+            <div className="p-6 overflow-y-auto scrollbar-subtle flex-1">
+              <div className="mb-6">
+                <h3 className="m-0 mb-4 text-base font-bold text-[#1e293b] border-l-4 border-[#6366f1] pl-2.5">1. Các chỉ số dự báo bằng Machine Learning</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4.5 flex flex-col gap-3">
+                    <div className="flex items-center">
+                      <span className="inline-block px-2.5 py-1 rounded-xl text-xs font-bold uppercase tracking-wider bg-red-100 text-red-800">Churn Risk (Tỷ lệ rời bỏ)</span>
                     </div>
-                    <p className="intel-guide-card__desc">
+                    <p className="m-0 text-[13px] text-[#334155] leading-relaxed">
                       <strong>Định nghĩa:</strong> Xác suất khách hàng ngừng tương tác hoặc rời bỏ hệ thống trong tương lai gần.
                     </p>
-                    <p className="intel-guide-card__formula">
+                    <p className="m-0 text-[13px] text-[#334155] leading-relaxed">
                       <strong>Cách tính:</strong> AI (Random Forest) phân tích chuỗi hoạt động thời gian thực (số lần tương tác chatbot, lượt xem sản phẩm, số ngày không mua hàng...) và so sánh với lịch sử rời bỏ của các khách hàng cũ để dự báo xác suất từ 0% đến 100%.
                     </p>
-                    <div className="intel-guide-levels">
-                      <div className="level-item"><strong style={{ color: "#16a34a" }}>Thấp (≤ 30%):</strong> Gắn kết tốt, hoạt động đều.</div>
-                      <div className="level-item"><strong style={{ color: "#ea580c" }}>Trung bình (31-70%):</strong> Cần chú ý, gửi nhắc nhở nhẹ.</div>
-                      <div className="level-item"><strong style={{ color: "#dc2626" }}>Cao (> 70%):</strong> Nguy cơ rời đi cực lớn, cần can thiệp khẩn cấp.</div>
+                    <div className="flex flex-col gap-1.5 mt-1 bg-white p-2.5 border border-[#f1f5f9] rounded-lg">
+                      <div className="text-[12.5px] text-[#475569]"><strong className="text-green-600">Thấp (≤ 30%):</strong> Gắn kết tốt, hoạt động đều.</div>
+                      <div className="text-[12.5px] text-[#475569]"><strong className="text-orange-500">Trung bình (31-70%):</strong> Cần chú ý, gửi nhắc nhở nhẹ.</div>
+                      <div className="text-[12.5px] text-[#475569]"><strong className="text-red-600">Cao (> 70%):</strong> Nguy cơ rời đi cực lớn, cần can thiệp khẩn cấp.</div>
                     </div>
                   </div>
 
-                  <div className="intel-guide-card">
-                    <div className="intel-guide-card__header">
-                      <span className="intel-guide-badge badge--potential">Potential (Điểm tiềm năng)</span>
+                  <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4.5 flex flex-col gap-3">
+                    <div className="flex items-center">
+                      <span className="inline-block px-2.5 py-1 rounded-xl text-xs font-bold uppercase tracking-wider bg-purple-100 text-purple-800">Potential (Điểm tiềm năng)</span>
                     </div>
-                    <p className="intel-guide-card__desc">
+                    <p className="m-0 text-[13px] text-[#334155] leading-relaxed">
                       <strong>Định nghĩa:</strong> Triển vọng đóng góp giá trị dài hạn của khách hàng mới để trở thành khách hàng trung thành.
                     </p>
-                    <p className="intel-guide-card__formula">
+                    <p className="m-0 text-[13px] text-[#334155] leading-relaxed">
                       <strong>Cách tính:</strong> Sử dụng mô hình <strong>Gradient Boosting Regressor</strong> để chấm điểm dựa trên hành vi ban đầu (tần suất thêm sản phẩm vào wishlist, xem chi tiết sản phẩm, tốc độ phản hồi chatbot và số lượng giao dịch ban đầu).
                     </p>
-                    <div className="intel-guide-levels">
-                      <div className="level-item"><strong style={{ color: "#16a34a" }}>Cao (≥ 50):</strong> Có triển vọng lớn để phát triển thành khách hàng trung thành.</div>
-                      <div className="level-item"><strong style={{ color: "#64748b" }}>Thấp (&lt; 50):</strong> Khách hàng vãng lai hoặc ít tương tác.</div>
+                    <div className="flex flex-col gap-1.5 mt-1 bg-white p-2.5 border border-[#f1f5f9] rounded-lg">
+                      <div className="text-[12.5px] text-[#475569]"><strong className="text-green-600">Cao (≥ 50):</strong> Có triển vọng lớn để phát triển thành khách hàng trung thành.</div>
+                      <div className="text-[12.5px] text-[#475569]"><strong className="text-slate-500">Thấp (&lt; 50):</strong> Khách hàng vãng lai hoặc ít tương tác.</div>
                     </div>
                   </div>
 
-                  <div className="intel-guide-card" style={{ gridColumn: "1 / -1" }}>
-                    <div className="intel-guide-card__header">
-                      <span className="intel-guide-badge badge--clv">CLV Score (Dự đoán giá trị vòng đời)</span>
+                  <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4.5 flex flex-col gap-3 md:col-span-2">
+                    <div className="flex items-center">
+                      <span className="inline-block px-2.5 py-1 rounded-xl text-xs font-bold uppercase tracking-wider bg-blue-100 text-blue-800">CLV Score (Dự đoán giá trị vòng đời)</span>
                     </div>
-                    <p className="intel-guide-card__desc">
+                    <p className="m-0 text-[13px] text-[#334155] leading-relaxed">
                       <strong>Định nghĩa:</strong> Tổng giá trị kinh tế (số tiền chi tiêu) mà khách hàng dự kiến sẽ mang lại cho cửa hàng trong toàn bộ vòng đời mua sắm tương lai của họ.
                     </p>
-                    <p className="intel-guide-card__formula">
+                    <p className="m-0 text-[13px] text-[#334155] leading-relaxed">
                       <strong>Cách tính:</strong> Sử dụng mô hình <strong>Gradient Boosting Regressor</strong> kết hợp với các chỉ số RFM thực tế để dự báo tổng chi tiêu dài hạn dựa trên: Monetary (tổng số tiền đã chi tiêu), Frequency (tần suất mua hàng), và Recency (mức độ gần đây của đơn hàng cuối).
                     </p>
-                    <p className="intel-guide-card__note">
+                    <p className="m-0 text-[12.5px] text-[#475569] leading-relaxed bg-[#eff6ff] p-3 border-l-3 border-blue-500 rounded-lg">
                       💡 <strong>Ứng dụng:</strong> Giúp tối ưu hóa ngân sách tiếp thị. Chỉ tự động gửi Voucher giảm giá cao cho khách hàng có CLV lớn để giữ chân nguồn doanh thu cốt lõi, tránh lãng phí ngân sách đối với nhóm có CLV thấp.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="intel-guide-section" style={{ marginTop: "28px" }}>
-                <h3 className="intel-guide-subtitle">2. Phân loại Phân khúc khách hàng (Segmentation)</h3>
-                <p style={{ fontSize: "13px", color: "#475569", marginBottom: "16px" }}>
+              <div className="mb-6">
+                <h3 className="m-0 mb-4 text-base font-bold text-[#1e293b] border-l-4 border-[#6366f1] pl-2.5">2. Phân loại Phân khúc khách hàng (Segmentation)</h3>
+                <p className="text-xs text-admin-muted mb-3.5">
                   Hệ thống tự động phân loại khách hàng thành 6 nhóm RFM thông minh:
                 </p>
-                <div className="intel-segments-table-wrapper">
-                  <table className="intel-segments-table">
+                <div className="overflow-x-auto border border-[#e2e8f0] rounded-xl bg-white">
+                  <table className="w-full border-collapse text-sm text-left">
                     <thead>
-                      <tr>
+                      <tr className="[&>th]:bg-[#f8fafc] [&>th]:p-3 [&>th]:font-bold [&>th]:color-[#475569] [&>th]:border-b-2 [&>th]:border-[#e2e8f0] [&>th]:text-xs [&>th]:uppercase [&>th]:tracking-wider">
                         <th>Phân khúc</th>
                         <th>Quy tắc phân loại (Hành vi & Điểm số AI)</th>
                         <th>Đặc điểm hành vi</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      <tr>
-                        <td><span className="intel-segment-pill" style={{ border: "1px solid #22c55e", color: "#22c55e", backgroundColor: "#22c55e10", display: "inline-block", padding: "2px 8px", borderRadius: "12px", fontSize: "12px", fontWeight: "600" }}>🏆 Champion</span></td>
+                    <tbody className="divide-y divide-[#e2e8f0]">
+                      <tr className="[&>td]:p-3.5 [&>td]:text-[#334155] [&>td]:leading-relaxed [&>td]:align-middle">
+                        <td className="whitespace-nowrap"><span className="inline-block px-2.5 py-1 text-xs font-bold rounded-full border border-green-500 text-green-500 bg-green-50">🏆 Champion</span></td>
                         <td>Nghỉ mua ≤ 14 ngày, tần suất mua ≥ 5 lần và nằm trong nhóm 20% chi tiêu cao nhất.</td>
                         <td>Khách hàng giá trị nhất. Mua thường xuyên, chi tiêu cực nhiều và mới hoạt động gần đây.</td>
                       </tr>
-                      <tr>
-                        <td><span className="intel-segment-pill" style={{ border: "1px solid #3b82f6", color: "#3b82f6", backgroundColor: "#3b82f610", display: "inline-block", padding: "2px 8px", borderRadius: "12px", fontSize: "12px", fontWeight: "600" }}>💎 Loyal</span></td>
+                      <tr className="[&>td]:p-3.5 [&>td]:text-[#334155] [&>td]:leading-relaxed [&>td]:align-middle">
+                        <td className="whitespace-nowrap"><span className="inline-block px-2.5 py-1 text-xs font-bold rounded-full border border-blue-500 text-blue-500 bg-blue-50">💎 Loyal</span></td>
                         <td>Nghỉ mua ≤ 30 ngày, tần suất mua ≥ 3 lần.</td>
                         <td>Mua sắm đều đặn, gắn bó lâu dài và phản hồi tốt với các chiến dịch.</td>
                       </tr>
-                      <tr>
-                        <td><span className="intel-segment-pill" style={{ border: "1px solid #a855f7", color: "#a855f7", backgroundColor: "#a855f710", display: "inline-block", padding: "2px 8px", borderRadius: "12px", fontSize: "12px", fontWeight: "600" }}>🌟 Potential Loyalist</span></td>
+                      <tr className="[&>td]:p-3.5 [&>td]:text-[#334155] [&>td]:leading-relaxed [&>td]:align-middle">
+                        <td className="whitespace-nowrap"><span className="inline-block px-2.5 py-1 text-xs font-bold rounded-full border border-purple-500 text-purple-500 bg-purple-50">🌟 Potential Loyalist</span></td>
                         <td>Nghỉ mua ≤ 30 ngày, số đơn từ 1-2 lần, và có điểm tiềm năng AI (CLV) ≥ 50.</td>
                         <td>Khách hàng mới tiềm năng. Mua gần đây, số lượng ít nhưng có điểm tiềm năng cao.</td>
                       </tr>
-                      <tr>
-                        <td><span className="intel-segment-pill" style={{ border: "1px solid #f97316", color: "#f97316", backgroundColor: "#f9731610", display: "inline-block", padding: "2px 8px", borderRadius: "12px", fontSize: "12px", fontWeight: "600" }}>⚠️ At Risk</span></td>
+                      <tr className="[&>td]:p-3.5 [&>td]:text-[#334155] [&>td]:leading-relaxed [&>td]:align-middle">
+                        <td className="whitespace-nowrap"><span className="inline-block px-2.5 py-1 text-xs font-bold rounded-full border border-orange-500 text-orange-500 bg-orange-50">⚠️ At Risk</span></td>
                         <td>Điểm rời bỏ Churn Risk từ 31% đến 70%, đã mua ít nhất 2 đơn.</td>
                         <td>Khách hàng có nguy cơ. Từng mua nhiều nhưng đang giảm dần tần suất hoạt động.</td>
                       </tr>
-                      <tr>
-                        <td><span className="intel-segment-pill" style={{ border: "1px solid #eab308", color: "#eab308", backgroundColor: "#eab30810", display: "inline-block", padding: "2px 8px", borderRadius: "12px", fontSize: "12px", fontWeight: "600" }}>😴 Hibernating</span></td>
+                      <tr className="[&>td]:p-3.5 [&>td]:text-[#334155] [&>td]:leading-relaxed [&>td]:align-middle">
+                        <td className="whitespace-nowrap"><span className="inline-block px-2.5 py-1 text-xs font-bold rounded-full border border-yellow-500 text-yellow-500 bg-yellow-50">😴 Hibernating</span></td>
                         <td>Điểm rời bỏ Churn Risk từ 71% đến 90% hoặc đã ngừng hoạt động trên 45 ngày.</td>
                         <td>Khách hàng ngủ đông. Đã lâu không mua sắm, ít tương tác, khả năng cao sẽ rời đi.</td>
                       </tr>
-                      <tr>
-                        <td><span className="intel-segment-pill" style={{ border: "1px solid #ef4444", color: "#ef4444", backgroundColor: "#ef444410", display: "inline-block", padding: "2px 8px", borderRadius: "12px", fontSize: "12px", fontWeight: "600" }}>❌ Lost</span></td>
+                      <tr className="[&>td]:p-3.5 [&>td]:text-[#334155] [&>td]:leading-relaxed [&>td]:align-middle">
+                        <td className="whitespace-nowrap"><span className="inline-block px-2.5 py-1 text-xs font-bold rounded-full border border-red-500 text-red-500 bg-red-50">❌ Lost</span></td>
                         <td>Khách hàng không thuộc các nhóm trên (mặc định của hệ thống).</td>
                         <td>Mất liên lạc hoàn toàn hoặc khách hàng mới ít hoạt động, tiềm năng thấp.</td>
                       </tr>
@@ -998,3 +957,4 @@ function AdminCustomerIntelligencePage() {
 }
 
 export default AdminCustomerIntelligencePage;
+

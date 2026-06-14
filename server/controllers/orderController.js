@@ -356,15 +356,21 @@ const listMyVouchers = async (req, res) => {
     // 1. Fetch all active discounts that apply to current user
     const discounts = await Discount.find({
       isActive: true,
-      $or: [
-        { startDate: { $lte: now }, endDate: { $gte: now } },
-        { startDate: null, endDate: null },
-        { startDate: { $lte: now }, endDate: null },
-        { startDate: null, endDate: { $gte: now } },
-      ],
-      $or: [
-        { allowedUsers: { $size: 0 } }, // Vouchers for everyone
-        { allowedUsers: authUser._id }  // Vouchers assigned to this user
+      $and: [
+        {
+          $or: [
+            { startDate: { $lte: now }, endDate: { $gte: now } },
+            { startDate: null, endDate: null },
+            { startDate: { $lte: now }, endDate: null },
+            { startDate: null, endDate: { $gte: now } },
+          ]
+        },
+        {
+          $or: [
+            { allowedUsers: { $size: 0 } }, // Vouchers for everyone
+            { allowedUsers: authUser._id }  // Vouchers assigned to this user
+          ]
+        }
       ]
     }).sort({ createdAt: -1 });
 

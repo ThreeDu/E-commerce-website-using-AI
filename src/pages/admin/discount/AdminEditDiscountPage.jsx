@@ -5,8 +5,6 @@ import { useStatusMessageBridge } from "../../../hooks/useStatusMessageBridge";
 import { getAdminDiscountById, updateAdminDiscount } from "../../../services/admin/discountService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
 import UserMultiSelect from "../../../components/admin/UserMultiSelect";
-import "../../../css/admin/discounts.css";
-
 const toInputDateParts = (value) => {
   if (!value) {
     return { date: "", time: "" };
@@ -238,151 +236,175 @@ function AdminEditDiscountPage() {
 
   if (loading) {
     return (
-      <main className="container page-content">
-        <section className="hero-card admin-form-surface">
-          <p>Đang tải thông tin mã giảm giá...</p>
+      <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
+        <section className="relative border border-shop-line rounded-2xl p-6 shadow-admin bg-gradient-to-br from-white to-[#f8fbff] animate-admin-rise">
+          <p className="text-center py-6 text-admin-muted text-sm">Đang tải thông tin mã giảm giá...</p>
         </section>
       </main>
     );
   }
 
   return (
-    <main className="container page-content">
-      <section className="hero-card admin-form-surface">
-        <h2>Sửa mã giảm giá</h2>
-        <p className="admin-surface-subtitle">Điều chỉnh hiệu lực, mức giảm và trạng thái mã để chương trình vận hành đúng kế hoạch.</p>
-        {message && <p className="form-message">{message}</p>}
+    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
+      <section className="relative border border-shop-line rounded-2xl p-6 shadow-admin bg-gradient-to-br from-white to-[#f8fbff] animate-admin-rise">
+        <h2 className="text-xl font-bold text-admin-ink tracking-tight">Sửa mã giảm giá</h2>
+        <p className="text-sm text-admin-muted mt-1.5 mb-0 max-w-[760px] leading-relaxed">Điều chỉnh hiệu lực, mức giảm và trạng thái mã để chương trình vận hành đúng kế hoạch.</p>
+        {message && <p className="mt-3 border border-[#ffd8a8] rounded-xl p-2.5 px-3 bg-[#fff8ef] text-[#9a3412] text-sm">{message}</p>}
 
-        <form className="discount-form" onSubmit={handleSubmit}>
-          <label htmlFor="code">Mã giảm giá</label>
-          <input id="code" name="code" value={formData.code} onChange={handleChange} required />
-          {fieldErrors.code && <p className="field-error">{fieldErrors.code}</p>}
+        <form className="max-w-[760px] grid gap-2.5 mt-4" onSubmit={handleSubmit}>
+          <div>
+            <label htmlFor="code" className="text-[13px] font-bold text-[#1f3348] tracking-wide block mb-1">Mã giảm giá</label>
+            <input
+              id="code"
+              name="code"
+              className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] hover:border-[#b6c9dd] transition-colors"
+              value={formData.code}
+              onChange={handleChange}
+              required
+            />
+            {fieldErrors.code && <p className="mt-1 text-xs font-semibold text-[#b42318]">{fieldErrors.code}</p>}
+          </div>
 
-          <div className="discount-form-grid">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
             <div>
-              <label htmlFor="type">Loại giảm giá</label>
-              <select id="type" name="type" value={formData.type} onChange={handleChange}>
+              <label htmlFor="type" className="text-[13px] font-bold text-[#1f3348] tracking-wide block mb-1">Loại giảm giá</label>
+              <select
+                id="type"
+                name="type"
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] hover:border-[#b6c9dd] transition-colors admin-select-styled"
+                value={formData.type}
+                onChange={handleChange}
+              >
                 <option value="percent">Phần trăm (%)</option>
                 <option value="fixed">Số tiền (đ)</option>
               </select>
             </div>
 
             <div>
-              <label htmlFor="value">Giá trị giảm</label>
+              <label htmlFor="value" className="text-[13px] font-bold text-[#1f3348] tracking-wide block mb-1">Giá trị giảm</label>
               <input
                 id="value"
                 name="value"
                 type="number"
                 min="0"
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] hover:border-[#b6c9dd] transition-colors"
                 value={formData.value}
                 onChange={handleChange}
                 required
               />
-              {fieldErrors.value && <p className="field-error">{fieldErrors.value}</p>}
+              {fieldErrors.value && <p className="mt-1 text-xs font-semibold text-[#b42318]">{fieldErrors.value}</p>}
             </div>
 
             <div>
-              <label htmlFor="minOrderValue">Đơn tối thiểu</label>
+              <label htmlFor="minOrderValue" className="text-[13px] font-bold text-[#1f3348] tracking-wide block mb-1">Đơn tối thiểu</label>
               <input
                 id="minOrderValue"
                 name="minOrderValue"
                 type="number"
                 min="0"
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] hover:border-[#b6c9dd] transition-colors"
                 value={formData.minOrderValue}
                 onChange={handleChange}
               />
-              {fieldErrors.minOrderValue && <p className="field-error">{fieldErrors.minOrderValue}</p>}
+              {fieldErrors.minOrderValue && <p className="mt-1 text-xs font-semibold text-[#b42318]">{fieldErrors.minOrderValue}</p>}
             </div>
 
             <div>
-              <label htmlFor="maxDiscountValue">Giảm tối đa</label>
+              <label htmlFor="maxDiscountValue" className="text-[13px] font-bold text-[#1f3348] tracking-wide block mb-1">Giảm tối đa</label>
               <input
                 id="maxDiscountValue"
                 name="maxDiscountValue"
                 type="number"
                 min="0"
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] hover:border-[#b6c9dd] transition-colors"
                 value={formData.maxDiscountValue}
                 onChange={handleChange}
               />
-              {fieldErrors.maxDiscountValue && <p className="field-error">{fieldErrors.maxDiscountValue}</p>}
+              {fieldErrors.maxDiscountValue && <p className="mt-1 text-xs font-semibold text-[#b42318]">{fieldErrors.maxDiscountValue}</p>}
             </div>
 
             <div>
-              <label htmlFor="startDate">Ngày bắt đầu</label>
+              <label htmlFor="startDate" className="text-[13px] font-bold text-[#1f3348] tracking-wide block mb-1">Ngày bắt đầu</label>
               <input
                 id="startDate"
                 name="startDate"
                 type="date"
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] hover:border-[#b6c9dd] transition-colors"
                 value={formData.startDate}
                 onChange={handleChange}
               />
-              {fieldErrors.startDate && <p className="field-error">{fieldErrors.startDate}</p>}
+              {fieldErrors.startDate && <p className="mt-1 text-xs font-semibold text-[#b42318]">{fieldErrors.startDate}</p>}
             </div>
 
             <div>
-              <label htmlFor="startTime">Giờ bắt đầu</label>
+              <label htmlFor="startTime" className="text-[13px] font-bold text-[#1f3348] tracking-wide block mb-1">Giờ bắt đầu</label>
               <input
                 id="startTime"
                 name="startTime"
                 type="time"
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] hover:border-[#b6c9dd] transition-colors"
                 value={formData.startTime}
                 onChange={handleChange}
               />
             </div>
 
             <div>
-              <label htmlFor="endDate">Ngày kết thúc</label>
+              <label htmlFor="endDate" className="text-[13px] font-bold text-[#1f3348] tracking-wide block mb-1">Ngày kết thúc</label>
               <input
                 id="endDate"
                 name="endDate"
                 type="date"
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] hover:border-[#b6c9dd] transition-colors"
                 value={formData.endDate}
                 onChange={handleChange}
               />
-              {fieldErrors.endDate && <p className="field-error">{fieldErrors.endDate}</p>}
+              {fieldErrors.endDate && <p className="mt-1 text-xs font-semibold text-[#b42318]">{fieldErrors.endDate}</p>}
             </div>
 
             <div>
-              <label htmlFor="endTime">Giờ kết thúc</label>
+              <label htmlFor="endTime" className="text-[13px] font-bold text-[#1f3348] tracking-wide block mb-1">Giờ kết thúc</label>
               <input
                 id="endTime"
                 name="endTime"
                 type="time"
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] hover:border-[#b6c9dd] transition-colors"
                 value={formData.endTime}
                 onChange={handleChange}
               />
             </div>
 
             <div>
-              <label htmlFor="usageLimit">Tổng số lượt dùng</label>
+              <label htmlFor="usageLimit" className="text-[13px] font-bold text-[#1f3348] tracking-wide block mb-1">Tổng số lượt dùng</label>
               <input
                 id="usageLimit"
                 name="usageLimit"
                 type="number"
                 min="0"
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] hover:border-[#b6c9dd] transition-colors"
                 value={formData.usageLimit}
                 onChange={handleChange}
               />
-              {fieldErrors.usageLimit && <p className="field-error">{fieldErrors.usageLimit}</p>}
+              {fieldErrors.usageLimit && <p className="mt-1 text-xs font-semibold text-[#b42318]">{fieldErrors.usageLimit}</p>}
             </div>
 
             <div>
-              <label htmlFor="usageLimitPerUser">Lượt dùng / Người</label>
+              <label htmlFor="usageLimitPerUser" className="text-[13px] font-bold text-[#1f3348] tracking-wide block mb-1">Lượt dùng / Người</label>
               <input
                 id="usageLimitPerUser"
                 name="usageLimitPerUser"
                 type="number"
                 min="0"
+                className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] hover:border-[#b6c9dd] transition-colors"
                 value={formData.usageLimitPerUser}
                 onChange={handleChange}
                 placeholder="0 = không giới hạn"
               />
-              {fieldErrors.usageLimitPerUser && <p className="field-error">{fieldErrors.usageLimitPerUser}</p>}
+              {fieldErrors.usageLimitPerUser && <p className="mt-1 text-xs font-semibold text-[#b42318]">{fieldErrors.usageLimitPerUser}</p>}
             </div>
           </div>
 
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{ display: 'block', marginBottom: '8px' }}>Tài khoản được chỉ định (để trống nếu áp dụng cho mọi người)</label>
+          <div className="mb-4">
+            <label className="block text-[13px] font-bold text-[#1f3348] tracking-wide mb-2">Tài khoản được chỉ định (để trống nếu áp dụng cho mọi người)</label>
             <UserMultiSelect 
               value={formData.allowedUsers} 
               onChange={handleAllowedUsersChange} 
@@ -390,23 +412,24 @@ function AdminEditDiscountPage() {
             />
           </div>
 
-          <label>
+          <label className="flex items-center gap-2 text-[13px] font-bold text-[#1f3348] tracking-wide cursor-pointer my-2">
             <input
               type="checkbox"
               name="isActive"
+              className="w-4 h-4 rounded text-admin-primary focus:ring-admin-primary"
               checked={formData.isActive}
               onChange={handleChange}
-            />{" "}
+            />
             Kích hoạt mã giảm giá
           </label>
 
-          <div className="add-form-actions">
-            <button type="submit" disabled={saving}>
+          <div className="flex gap-2.5 mt-4">
+            <button type="submit" className="min-w-[124px] bg-gradient-to-r from-admin-primary to-[#0f314f] text-white py-2.5 px-3.5 rounded-full font-semibold text-sm transition-all duration-160 hover:-translate-y-0.5 hover:shadow-[0_9px_16px_rgba(9,26,44,0.14)] cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed" disabled={saving}>
               {saving ? "Đang lưu..." : "Lưu cập nhật"}
             </button>
             <button
               type="button"
-              className="secondary-btn"
+              className="min-w-[124px] bg-[#e8edf3] text-admin-ink py-2.5 px-3.5 rounded-full font-semibold text-sm transition-all duration-160 hover:-translate-y-0.5 hover:shadow-[0_9px_16px_rgba(9,26,44,0.14)] cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
               onClick={() => navigate("/admin/discounts")}
               disabled={saving}
             >

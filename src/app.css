@@ -1,0 +1,555 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+@import "tailwindcss";
+
+/* ── Legacy CSS imports (will be progressively removed) ── */
+@import "./css/index.css";
+
+/* ============================================================
+   TAILWIND CSS v4 — THEME CONFIGURATION
+   E-commerce Website — Migrated from Vanilla CSS
+   ============================================================ */
+
+@theme {
+  /* ── Font ── */
+  --font-sans: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+
+  /* ── Spacing Tokens ── */
+  --spacing-xs: 8px;
+  --spacing-sm: 12px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* ── Profile Colors (User Dashboard — indigo palette) ── */
+  --color-profile-primary: #6366f1;
+  --color-profile-primary-light: #818cf8;
+  --color-profile-primary-lighter: #e0e7ff;
+  --color-profile-secondary: #8b5cf6;
+  --color-profile-secondary-light: #c4b5fd;
+
+  /* ── Shop Colors (teal/orange palette) ── */
+  --color-shop-bg: #f8fafc;
+  --color-shop-surface: #ffffff;
+  --color-shop-ink: #1d1d1f;
+  --color-shop-muted: #64748b;
+  --color-shop-line: rgba(148, 163, 184, 0.18);
+  --color-shop-primary: #0f766e;
+  --color-shop-accent: #ff6f3c;
+  --color-shop-accent-soft: #ffe8dc;
+  --color-shop-soft-blue: #eef5ff;
+  --color-shop-soft-orange: #fff1e4;
+  --color-shop-success: #166534;
+
+  /* ── Admin Colors (dark navy/teal) ── */
+  --color-admin-bg: #f8f9fa;
+  --color-admin-surface: #ffffff;
+  --color-admin-ink: #1d1d1f;
+  --color-admin-muted: #6c7d90;
+  --color-admin-line: rgba(0, 0, 0, 0.1);
+  --color-admin-primary: #0f766e;
+  --color-admin-accent: #ff6f3c;
+  --color-admin-accent-soft: #ffe8dc;
+  --color-admin-soft-blue: #eef5ff;
+  --color-admin-soft-orange: #fff1e4;
+  --color-admin-success: #166534;
+  --color-admin-sidebar-start: #0b1f33;
+  --color-admin-sidebar-end: #0f314f;
+
+  /* ── Auth Colors (orange palette) ── */
+  --color-auth-primary: #eb5b00;
+
+  /* ── Accent Colors (shared) ── */
+  --color-accent-blue: #0ea5e9;
+  --color-accent-pink: #ec4899;
+  --color-accent-amber: #f59e0b;
+  --color-accent-green: #10b981;
+
+  /* ── Text Colors ── */
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #6b7280;
+  --color-text-tertiary: #9ca3af;
+
+  /* ── Background Colors ── */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-bg-tertiary: #f3f4f6;
+
+  /* ── Border Colors ── */
+  --color-border: #e5e7eb;
+  --color-border-light: #f3f4f6;
+  --color-border-subtle: rgba(0, 0, 0, 0.1);
+
+  /* ── Status Colors ── */
+  --color-status-success: #20b86a;
+  --color-status-error: #e25645;
+  --color-status-warning: #e9b20f;
+  --color-status-info: #2f87d3;
+
+  /* ── Notification Colors ── */
+  --color-toast-bg: #ffffff;
+  --color-toast-text: #202634;
+  --color-toast-subtext: #5f6f82;
+
+  /* ── Retention Campaign Colors ── */
+  --color-retention-primary: #6366f1;
+  --color-retention-primary-hover: #4f46e5;
+  --color-retention-success: #059669;
+  --color-retention-warning: #d97706;
+  --color-retention-danger: #dc2626;
+  --color-retention-bg: #f8fafc;
+  --color-retention-card-bg: #ffffff;
+  --color-retention-border: #e2e8f0;
+  --color-retention-text: #1e293b;
+  --color-retention-text-muted: #64748b;
+
+  /* ── Shadows ── */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-card: 0 2px 8px 0 rgba(15, 23, 42, 0.06);
+  --shadow-elevated: 0 4px 16px 0 rgba(15, 23, 42, 0.1);
+  --shadow-float: 0 8px 24px 0 rgba(15, 23, 42, 0.12);
+  --shadow-modal: 0 12px 32px 0 rgba(15, 23, 42, 0.15);
+  --shadow-shop: 0 10px 30px rgba(15, 23, 42, 0.06);
+  --shadow-admin: 0 10px 30px rgba(0, 0, 0, 0.05);
+
+  /* ── Border Radius ── */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  --radius-shop-lg: 24px;
+  --radius-shop-md: 18px;
+
+  /* ── Custom Animations ── */
+  --animate-fade-in: fade-in 0.3s ease-out both;
+  --animate-slide-up: slide-up 0.3s ease-out both;
+  --animate-slide-down: slide-down 0.3s ease-out both;
+  --animate-scale-in: scale-in 0.2s ease-out both;
+  --animate-spin-slow: spin 1s linear infinite;
+  --animate-pulse-ring: pulse-ring 2s ease infinite;
+  --animate-neo-sparkle: neo-sparkle 2s ease infinite;
+  --animate-neo-card-reveal: neo-card-reveal 0.5s ease-out both;
+  --animate-neo-badge-glow: neo-badge-glow 2s ease infinite;
+  --animate-chatbot-pop: chatbot-pop 0.25s ease-out both;
+  --animate-chatbot-dot: chatbot-dot 1.2s ease infinite;
+  --animate-toast-slide-in: toast-slide-in 0.35s ease forwards;
+  --animate-toast-slide-down: toast-slide-down 0.35s ease forwards;
+  --animate-shopx-fade-up: shopx-fade-up 0.45s ease both;
+  --animate-admin-rise: admin-rise 0.3s ease-out both;
+  --animate-pulse-badge: pulse-badge 1.5s ease-out infinite;
+  --animate-slide-in-dropdown: slide-in-dropdown 0.22s ease-out both;
+  --animate-intel-fade-in: intel-fade-in 0.3s ease-out both;
+}
+
+/* ============================================================
+   KEYFRAME DEFINITIONS
+   ============================================================ */
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes neo-sparkle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+}
+
+@keyframes neo-card-reveal {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes neo-badge-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  50% { box-shadow: 0 0 12px 4px rgba(34, 197, 94, 0.15); }
+}
+
+@keyframes chatbot-pop {
+  from { opacity: 0; transform: scale(0.9) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes chatbot-dot {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-6px); }
+}
+
+@keyframes toast-slide-in {
+  from { transform: translateX(115%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes toast-slide-down {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes toast-timer {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+@keyframes shopx-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes admin-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-badge {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+@keyframes slide-in-dropdown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes intel-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ============================================================
+   CUSTOM UTILITIES (Tailwind v4 @utility)
+   ============================================================ */
+
+/* Scrollbar thin */
+@utility scrollbar-thin {
+  &::-webkit-scrollbar { width: 5px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: #c7d3e0; border-radius: 10px; }
+}
+
+@utility scrollbar-shop {
+  &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-track { background: #eef3fb; border-radius: 999px; }
+  &::-webkit-scrollbar-thumb { background: #c6d6ea; border-radius: 999px; }
+  &::-webkit-scrollbar-thumb:hover { background: #a7bfdc; }
+}
+
+@utility scrollbar-subtle {
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-track { background: rgba(148, 163, 184, 0.08); border-radius: 999px; }
+  &::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.28); border-radius: 999px; }
+  &::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.4); }
+}
+
+/* Line clamp */
+@utility line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@utility line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@utility line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ============================================================
+   GLOBAL BASE STYLES
+   ============================================================ */
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background: #f8f9fa;
+    color: #0f2233;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Global hover effects for pointer devices */
+  @media (hover: hover) and (pointer: fine) {
+    button:hover:not(:disabled),
+    a.btn:hover:not(:disabled) {
+      transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+    }
+  }
+}
+
+/* ============================================================
+   CUSTOM COMPONENT STYLES
+   (Things Tailwind cannot handle natively)
+   ============================================================ */
+
+@layer components {
+  /* ── Admin sidebar curved corners (pseudo-element trick) ── */
+  .admin-sidebar-link {
+    position: relative;
+  }
+
+  .admin-sidebar-link:hover::before,
+  .admin-sidebar-link.active::before {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: -36px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    box-shadow: 22px 22px 0 8px #ffffff;
+    pointer-events: none;
+  }
+
+  .admin-sidebar-link:hover::after,
+  .admin-sidebar-link.active::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -36px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    box-shadow: 22px -22px 0 8px #ffffff;
+    pointer-events: none;
+  }
+
+  /* ── Toast progress bar ── */
+  .toast-progress-bar {
+    display: block;
+    height: 100%;
+    width: 100%;
+    animation-name: toast-timer;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+
+  /* ── Chatbot markdown tables ── */
+  .chatbot-markdown-content table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 8px 0;
+  }
+
+  .chatbot-markdown-content th,
+  .chatbot-markdown-content td {
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    padding: 6px 10px;
+    text-align: left;
+  }
+
+  .chatbot-markdown-content th {
+    background: #f1f5f9;
+    font-weight: 700;
+    font-size: 12px;
+    color: #475569;
+  }
+
+  .chatbot-markdown-content code {
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+
+  .chatbot-markdown-content pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-radius: 12px;
+    padding: 14px;
+    overflow-x: auto;
+    font-size: 12px;
+  }
+
+  .chatbot-markdown-content pre code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+  }
+
+  .chatbot-markdown-content ul,
+  .chatbot-markdown-content ol {
+    margin: 4px 0;
+    padding-left: 18px;
+  }
+
+  .chatbot-markdown-content li {
+    margin-bottom: 3px;
+  }
+
+  .chatbot-markdown-content p {
+    margin: 0 0 6px;
+    line-height: 1.6;
+  }
+
+  .chatbot-markdown-content p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ── Admin dashboard pie chart (CSS-based) ── */
+  .admin-pie-chart {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: conic-gradient(
+      var(--pie-slice-1, #0f766e) 0deg var(--pie-end-1, 120deg),
+      var(--pie-slice-2, #ff6f3c) var(--pie-end-1, 120deg) var(--pie-end-2, 240deg),
+      var(--pie-slice-3, #6366f1) var(--pie-end-2, 240deg) 360deg
+    );
+    position: relative;
+  }
+
+  .admin-pie-chart::after {
+    content: "";
+    position: absolute;
+    inset: 30%;
+    border-radius: 50%;
+    background: white;
+  }
+
+  /* ── File selector button ── */
+  input[type="file"]::file-selector-button {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    padding: 8px 14px;
+    background: #f8fafc;
+    color: #334155;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  input[type="file"]::file-selector-button:hover {
+    background: #eef4fb;
+  }
+
+  /* ── Custom select dropdown arrow (admin) ── */
+  .admin-select-styled {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 36px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M7 10l5 5 5-5' stroke='%23607489' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 14px;
+  }
+
+  /* ── Description card fade gradient ── */
+  .description-fade-overlay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 110px;
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0) 0%, rgba(248, 250, 252, 0.88) 42%, #f8fafc 100%);
+    pointer-events: none;
+  }
+
+  /* ── Summary list markers ── */
+  .marker-primary li::marker {
+    color: #0f766e;
+  }
+
+  /* ── Admin sidebar layout offset (Modern Glass Sidebar) ── */
+  .admin-sidebar-active .min-h-screen {
+    margin-left: 80px;
+    transition: margin-left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+
+  @media (max-width: 960px) {
+    .admin-sidebar-active .min-h-screen {
+      margin-left: 0;
+    }
+  }
+
+  /* ── Modern Glass Sidebar Custom Styles ── */
+  .admin-sidebar-nav-item {
+    position: relative;
+  }
+
+  .admin-sidebar-nav-item::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 85px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #ffffff;
+    color: #121212;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+    white-space: nowrap;
+    z-index: 1200;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  @media (min-width: 961px) {
+    .admin-sidebar-glass:not(:hover) .admin-sidebar-nav-item:hover::after {
+      opacity: 1;
+      transition-delay: 0.15s;
+    }
+  }
+
+  /* ── Admin theme surface styles ── */
+  .admin-sidebar-active {
+    background: #f8f9fa;
+  }
+
+  /* ── Admin form surface gradient ── */
+  .admin-form-surface {
+    background:
+      radial-gradient(circle at 88% -8%, rgba(255, 111, 60, 0.12), transparent 36%),
+      radial-gradient(circle at -8% 100%, rgba(15, 118, 110, 0.1), transparent 30%),
+      #ffffff;
+    animation: admin-rise 0.35s ease-out both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .admin-form-surface {
+      animation: none;
+    }
+  }
+}
+

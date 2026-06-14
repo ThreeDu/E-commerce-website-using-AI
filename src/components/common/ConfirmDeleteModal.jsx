@@ -26,16 +26,16 @@ function ConfirmDeleteModal({
   }
 
   return (
-    <div className="shopx-modal-backdrop" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="shopx-modal-card">
-        <h4 style={{ margin: "0 0 8px" }}>{title}</h4>
-        <p className="shopx-subtitle" style={{ marginTop: 0 }}>
+    <div className="fixed inset-0 z-[1200] p-[18px] bg-[rgba(15,23,42,0.55)] flex items-center justify-center" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="w-[min(460px,100%)] bg-white rounded-[22px] border border-shop-line shadow-shop p-4">
+        <h4 className="m-0 mb-2">{title}</h4>
+        <p className="mt-0 text-shop-muted text-sm leading-[1.55]">
           {message}
         </p>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "10px" }}>
+        <div className="flex justify-end gap-2 mt-2.5">
           <button
             type="button"
-            className="shopx-btn shopx-btn--ghost"
+            className="rounded-[14px] border border-shop-line py-2.5 px-3 font-sans text-sm font-bold cursor-pointer transition-all duration-150 bg-white text-shop-ink hover:translate-y-[-1px] hover:shadow-card disabled:cursor-not-allowed disabled:opacity-70"
             onClick={onCancel}
             disabled={isLoading}
           >
@@ -43,7 +43,7 @@ function ConfirmDeleteModal({
           </button>
           <button
             type="button"
-            className="shopx-btn shopx-btn--warn"
+            className="rounded-xl border border-[rgba(180,83,83,0.18)] py-2 px-3 text-xs font-bold cursor-pointer transition-all duration-150 bg-red-100 text-red-700 hover:bg-red-200 hover:border-[rgba(180,83,83,0.28)] disabled:cursor-not-allowed disabled:opacity-70"
             onClick={onConfirm}
             disabled={isLoading}
           >

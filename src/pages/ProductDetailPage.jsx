@@ -19,8 +19,6 @@ import ProductInfo from "../components/product/ProductInfo";
 import ProductDescriptionSection from "../components/product/ProductDescriptionSection";
 import ReviewForm from "../components/product/ReviewForm";
 import ReviewList from "../components/product/ReviewList";
-import "../css/shop-experience.css";
-
 function ProductDetailPage() {
   const { id } = useParams();
   const { addToCart } = useCart();
@@ -204,21 +202,25 @@ function ProductDetailPage() {
 
   // ── Render ──
   if (loading) {
-    return <main className="container page-content" style={{ textAlign: "center", padding: "100px 20px" }}><h2>Đang tải thông tin...</h2></main>;
+    return (
+      <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10 text-center py-[100px] px-5">
+        <h2 className="text-xl font-bold text-shop-ink">Đang tải thông tin...</h2>
+      </main>
+    );
   }
 
   if (!product) {
     return (
-      <main className="container page-content" style={{ textAlign: "center", padding: "100px 20px" }}>
-        <h2 style={{ marginBottom: "16px" }}>Không tìm thấy sản phẩm!</h2>
-        <Link to="/products" style={{ color: "#007bff", textDecoration: "none", fontWeight: "bold" }}>Quay lại trang Sản phẩm</Link>
+      <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10 text-center py-[100px] px-5">
+        <h2 className="mb-4 text-xl font-bold text-shop-ink">Không tìm thấy sản phẩm!</h2>
+        <Link to="/products" className="text-shop-primary font-bold hover:underline">Quay lại trang Sản phẩm</Link>
       </main>
     );
   }
 
   return (
-    <main className="container page-content">
-      <div className="shopx-page">
+    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
+      <div className="bg-gradient-to-b from-[#f8fafc] to-[#f3f7fb] rounded-shop-lg p-[30px] max-[720px]:p-[18px] max-[720px]:rounded-[20px]">
         <ProductInfo
           product={product}
           isWishlisted={isWishlisted}
@@ -229,8 +231,8 @@ function ProductDetailPage() {
 
         <ProductDescriptionSection description={product.description} />
 
-        <section className="shopx-panel shopx-review-box">
-          <h3 style={{ marginTop: 0 }}>Đánh giá sản phẩm</h3>
+        <section className="p-[22px] bg-gradient-to-b from-white to-shop-bg border border-shop-line rounded-shop-lg shadow-shop max-[720px]:p-[18px] max-[720px]:rounded-[20px]">
+          <h3 className="m-0 mb-3 text-lg font-extrabold text-shop-ink">Đánh giá sản phẩm</h3>
 
           <ReviewForm
             productId={id}

@@ -15,8 +15,6 @@ import {
   faWarehouse,
   faTicket,
 } from "@fortawesome/free-solid-svg-icons";
-import "../../css/admin/notifications.css";
-
 const AUTO_REFRESH_MS = 30000;
 
 function formatDateTime(value) {
@@ -33,18 +31,26 @@ function formatCurrency(value) {
 
 function NotificationSection({ title, subtitle, items, emptyText, renderItem, tone = "neutral", icon }) {
   return (
-    <article className={`admin-notify-panel ${tone}`}>
+    <article
+      className={`border border-[#dbe6f5] rounded-2xl bg-white p-4 grid gap-3 ${
+        tone === "warning"
+          ? "bg-gradient-to-b from-white to-[#fffdf8] [&>header>div>h3]:text-amber-800"
+          : tone === "danger"
+          ? "bg-gradient-to-b from-white to-[#fff8f8] [&>header>div>h3]:text-red-800"
+          : "bg-gradient-to-b from-white to-[#f8fbff] [&>header>div>h3]:text-blue-800"
+      }`}
+    >
       <header>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "4px" }}>
-          {icon && <FontAwesomeIcon icon={icon} style={{ fontSize: "16px" }} />}
-          <h3 style={{ margin: 0 }}>{title}</h3>
+        <div className="flex gap-2 items-center mb-1">
+          {icon && <FontAwesomeIcon icon={icon} className="text-base" />}
+          <h3 className="m-0 text-base font-bold text-admin-ink">{title}</h3>
         </div>
-        <p>{subtitle}</p>
+        <p className="m-0 mt-1 text-admin-muted text-xs font-medium">{subtitle}</p>
       </header>
       {items.length === 0 ? (
-        <p className="admin-notify-empty">{emptyText}</p>
+        <p className="m-0 border border-dashed border-[#cdd9e8] rounded-xl p-3 text-admin-muted bg-[#fafcff] text-xs">{emptyText}</p>
       ) : (
-        <ul className="admin-notify-list">
+        <ul className="m-0 p-0 list-none grid gap-2">
           {items.map((item) => (
             <li key={item._id}>{renderItem(item)}</li>
           ))}
@@ -157,22 +163,25 @@ function AdminNotificationsPage() {
   );
 
   return (
-    <main className="container page-content">
-      <section className="hero-card admin-notify-page admin-page-enter" aria-busy={loading}>
-        <div className="admin-notify-header">
+    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
+      <section
+        className="bg-admin-surface border border-admin-line rounded-3xl shadow-admin p-6 md:p-8 grid gap-4 animate-admin-rise bg-[radial-gradient(circle_at_88%_-8%,rgba(255,111,60,0.12),transparent_40%),radial-gradient(circle_at_-5%_100%,rgba(15,118,110,0.11),transparent_32%),#ffffff]"
+        aria-busy={loading}
+      >
+        <div className="flex flex-col md:flex-row items-start justify-between gap-3 mb-1">
           <div>
-            <h2>Thông báo quản trị</h2>
-            <p className="dashboard-subtitle">
+            <h2 className="text-2xl font-bold tracking-tight text-admin-ink mt-0 mb-1">Thông báo quản trị</h2>
+            <p className="text-admin-muted mt-1.5 mb-0 text-sm md:text-base">
               Theo dõi thời gian thực các sự kiện quan trọng: đơn mới, đơn hủy, tồn kho và trạng thái mã giảm giá.
             </p>
           </div>
-          <div className="admin-notify-actions">
-            <p>
+          <div className="grid gap-2 justify-items-start md:justify-items-end shrink-0">
+            <p className="m-0 text-admin-muted text-xs md:text-sm">
               Cập nhật lúc: <strong>{formatDateTime(payload?.generatedAt)}</strong>
             </p>
             <button
               type="button"
-              className="secondary-btn"
+              className="inline-flex items-center justify-center min-h-[38px] px-3.5 py-1.5 rounded-xl border border-[#ced8e7] bg-[#f8fbff] text-[#1e3a5f] font-bold text-xs md:text-sm cursor-pointer hover:bg-[#eef4fb] transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
               onClick={() => loadNotifications({ silent: true })}
               disabled={refreshing}
               style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
@@ -184,24 +193,33 @@ function AdminNotificationsPage() {
         </div>
 
         {errorMessage ? (
-          <p className="form-message" role="status" aria-live="polite">
+          <p className="text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl p-3" role="status" aria-live="polite">
             {errorMessage}
           </p>
         ) : null}
 
-        <section className="admin-notify-summary" aria-label="Tổng hợp cảnh báo">
+        <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 my-2" aria-label="Tổng hợp cảnh báo">
           {summaryCards.map((card) => (
-            <article key={card.key} className={`admin-notify-card ${card.tone}`}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
-                <p style={{ margin: 0 }}>{card.label}</p>
-                <FontAwesomeIcon icon={card.icon} style={{ fontSize: "16px", opacity: 0.6 }} />
+            <article
+              key={card.key}
+              className={`rounded-2xl border border-[#dbe6f5] p-3 grid gap-1.5 transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                card.tone === "warning"
+                  ? "bg-[#fff8ec] border-[#f4dbb4] [&>strong]:text-amber-800"
+                  : card.tone === "danger"
+                  ? "bg-[#fff2f2] border-[#f0c6c6] [&>strong]:text-red-800"
+                  : "bg-[#f1f7ff] border-[#d2e4fb] [&>strong]:text-blue-800"
+              }`}
+            >
+              <div className="flex justify-between items-start w-full">
+                <p className="m-0 text-admin-muted text-[11px] leading-snug font-medium">{card.label}</p>
+                <FontAwesomeIcon icon={card.icon} className="text-sm opacity-60" />
               </div>
-              <strong>{card.value}</strong>
+              <strong className="text-[#0f2233] text-2xl font-extrabold leading-none">{card.value}</strong>
             </article>
           ))}
         </section>
 
-        <section className="admin-notify-grid">
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 mt-2">
           <NotificationSection
             title="Đơn hàng mới"
             subtitle="Đơn tạo trong 24 giờ gần nhất"
@@ -210,15 +228,15 @@ function AdminNotificationsPage() {
             tone="info"
             icon={faShoppingBag}
             renderItem={(item) => (
-              <div className="admin-notify-item">
+              <div className="border border-[#e5edf8] rounded-xl bg-white p-3 flex flex-col sm:flex-row justify-between gap-3 shadow-xs">
                 <div>
-                  <p className="admin-notify-item-title">{item.customerName}</p>
-                  <p className="admin-notify-item-meta">#{item._id}</p>
+                  <p className="m-0 font-bold text-admin-ink text-sm">{item.customerName}</p>
+                  <p className="m-0 mt-1 text-admin-muted text-xs">#{item._id}</p>
                 </div>
-                <div className="admin-notify-item-right">
-                  <strong>{formatCurrency(item.totalPrice)} đ</strong>
-                  <span>{formatDateTime(item.createdAt)}</span>
-                  <Link to={`/admin/orders/${item._id}`} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <div className="text-left sm:text-right grid gap-1 sm:justify-items-end">
+                  <strong className="text-admin-ink text-sm font-bold">{formatCurrency(item.totalPrice)} đ</strong>
+                  <span className="text-admin-muted text-[11px]">{formatDateTime(item.createdAt)}</span>
+                  <Link to={`/admin/orders/${item._id}`} className="text-[#0f5ea8] text-xs font-bold hover:underline inline-flex items-center gap-1">
                     <FontAwesomeIcon icon={faEye} /> Xem đơn
                   </Link>
                 </div>
@@ -234,15 +252,15 @@ function AdminNotificationsPage() {
             tone="danger"
             icon={faCircleXmark}
             renderItem={(item) => (
-              <div className="admin-notify-item">
+              <div className="border border-[#e5edf8] rounded-xl bg-white p-3 flex flex-col sm:flex-row justify-between gap-3 shadow-xs">
                 <div>
-                  <p className="admin-notify-item-title">{item.customerName}</p>
-                  <p className="admin-notify-item-meta">#{item._id}</p>
+                  <p className="m-0 font-bold text-admin-ink text-sm">{item.customerName}</p>
+                  <p className="m-0 mt-1 text-admin-muted text-xs">#{item._id}</p>
                 </div>
-                <div className="admin-notify-item-right">
-                  <strong>{formatCurrency(item.totalPrice)} đ</strong>
-                  <span>{formatDateTime(item.cancelledAt || item.updatedAt)}</span>
-                  <Link to={`/admin/orders/${item._id}`} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <div className="text-left sm:text-right grid gap-1 sm:justify-items-end">
+                  <strong className="text-admin-ink text-sm font-bold">{formatCurrency(item.totalPrice)} đ</strong>
+                  <span className="text-admin-muted text-[11px]">{formatDateTime(item.cancelledAt || item.updatedAt)}</span>
+                  <Link to={`/admin/orders/${item._id}`} className="text-[#0f5ea8] text-xs font-bold hover:underline inline-flex items-center gap-1">
                     <FontAwesomeIcon icon={faEye} /> Xem đơn
                   </Link>
                 </div>
@@ -258,14 +276,14 @@ function AdminNotificationsPage() {
             tone="warning"
             icon={faWarehouse}
             renderItem={(item) => (
-              <div className="admin-notify-item">
+              <div className="border border-[#e5edf8] rounded-xl bg-white p-3 flex flex-col sm:flex-row justify-between gap-3 shadow-xs">
                 <div>
-                  <p className="admin-notify-item-title">{item.name}</p>
-                  <p className="admin-notify-item-meta">Còn lại: {Number(item.stock || 0)}</p>
+                  <p className="m-0 font-bold text-admin-ink text-sm">{item.name}</p>
+                  <p className="m-0 mt-1 text-admin-muted text-xs">Còn lại: {Number(item.stock || 0)}</p>
                 </div>
-                <div className="admin-notify-item-right">
-                  <span>{formatDateTime(item.updatedAt)}</span>
-                  <Link to={`/admin/products/edit/${item._id}`} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <div className="text-left sm:text-right grid gap-1 sm:justify-items-end">
+                  <span className="text-admin-muted text-[11px]">{formatDateTime(item.updatedAt)}</span>
+                  <Link to={`/admin/products/edit/${item._id}`} className="text-[#0f5ea8] text-xs font-bold hover:underline inline-flex items-center gap-1">
                     <FontAwesomeIcon icon={faBox} /> Cập nhật kho
                   </Link>
                 </div>
@@ -281,14 +299,14 @@ function AdminNotificationsPage() {
             tone="danger"
             icon={faWarehouse}
             renderItem={(item) => (
-              <div className="admin-notify-item">
+              <div className="border border-[#e5edf8] rounded-xl bg-white p-3 flex flex-col sm:flex-row justify-between gap-3 shadow-xs">
                 <div>
-                  <p className="admin-notify-item-title">{item.name}</p>
-                  <p className="admin-notify-item-meta">Tồn kho: {Number(item.stock || 0)}</p>
+                  <p className="m-0 font-bold text-admin-ink text-sm">{item.name}</p>
+                  <p className="m-0 mt-1 text-admin-muted text-xs">Tồn kho: {Number(item.stock || 0)}</p>
                 </div>
-                <div className="admin-notify-item-right">
-                  <span>{formatDateTime(item.updatedAt)}</span>
-                  <Link to={`/admin/products/edit/${item._id}`} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <div className="text-left sm:text-right grid gap-1 sm:justify-items-end">
+                  <span className="text-admin-muted text-[11px]">{formatDateTime(item.updatedAt)}</span>
+                  <Link to={`/admin/products/edit/${item._id}`} className="text-[#0f5ea8] text-xs font-bold hover:underline inline-flex items-center gap-1">
                     <FontAwesomeIcon icon={faBox} /> Nhập thêm
                   </Link>
                 </div>
@@ -304,23 +322,23 @@ function AdminNotificationsPage() {
             tone="warning"
             icon={faTicket}
             renderItem={(item) => (
-              <div className="admin-notify-item">
+              <div className="border border-[#e5edf8] rounded-xl bg-white p-3 flex flex-col sm:flex-row justify-between gap-3 shadow-xs">
                 <div>
-                  <p className="admin-notify-item-title">{item.code}</p>
-                  <p className="admin-notify-item-meta">
+                  <p className="m-0 font-bold text-admin-ink text-sm">{item.code}</p>
+                  <p className="m-0 mt-1 text-admin-muted text-xs">
                     {Number(item.usageLimit || 0) > 0
                       ? `Đã dùng ${Number(item.usedCount || 0)}/${Number(item.usageLimit || 0)} lượt`
                       : "Không giới hạn số lượt"}
                   </p>
                 </div>
-                <div className="admin-notify-item-right">
-                  <strong>
+                <div className="text-left sm:text-right grid gap-1 sm:justify-items-end">
+                  <strong className="text-admin-ink text-sm font-bold">
                     {item.isNearUsageLimit
                       ? `Còn ${Number(item.remainingUses || 0)} lượt`
                       : "Sắp hết hạn"}
                   </strong>
-                  <span>{item.endDate ? `Hạn: ${formatDateTime(item.endDate)}` : "Không giới hạn ngày"}</span>
-                  <Link to={`/admin/discounts/edit/${item._id}`} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <span className="text-admin-muted text-[11px]">{item.endDate ? `Hạn: ${formatDateTime(item.endDate)}` : "Không giới hạn ngày"}</span>
+                  <Link to={`/admin/discounts/edit/${item._id}`} className="text-[#0f5ea8] text-xs font-bold hover:underline inline-flex items-center gap-1">
                     <FontAwesomeIcon icon={faPen} /> Chỉnh sửa
                   </Link>
                 </div>
@@ -336,25 +354,25 @@ function AdminNotificationsPage() {
             tone="danger"
             icon={faTicket}
             renderItem={(item) => (
-              <div className="admin-notify-item">
+              <div className="border border-[#e5edf8] rounded-xl bg-white p-3 flex flex-col sm:flex-row justify-between gap-3 shadow-xs">
                 <div>
-                  <p className="admin-notify-item-title">{item.code}</p>
-                  <p className="admin-notify-item-meta">
+                  <p className="m-0 font-bold text-admin-ink text-sm">{item.code}</p>
+                  <p className="m-0 mt-1 text-admin-muted text-xs">
                     {Number(item.usageLimit || 0) > 0
                       ? `Đã dùng ${Number(item.usedCount || 0)}/${Number(item.usageLimit || 0)} lượt`
                       : "Không giới hạn số lượt"}
                   </p>
                 </div>
-                <div className="admin-notify-item-right">
-                  <strong>
+                <div className="text-left sm:text-right grid gap-1 sm:justify-items-end">
+                  <strong className="text-admin-ink text-sm font-bold">
                     {item.isExhaustedByUsage && item.isExpiredByDate
                       ? "Hết lượt + hết hạn"
                       : item.isExhaustedByUsage
                         ? "Hết lượt"
                         : "Hết hạn"}
                   </strong>
-                  <span>{item.endDate ? `Hạn: ${formatDateTime(item.endDate)}` : "Không giới hạn ngày"}</span>
-                  <Link to={`/admin/discounts/edit/${item._id}`} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <span className="text-admin-muted text-[11px]">{item.endDate ? `Hạn: ${formatDateTime(item.endDate)}` : "Không giới hạn ngày"}</span>
+                  <Link to={`/admin/discounts/edit/${item._id}`} className="text-[#0f5ea8] text-xs font-bold hover:underline inline-flex items-center gap-1">
                     <FontAwesomeIcon icon={faPen} /> Xử lý
                   </Link>
                 </div>
