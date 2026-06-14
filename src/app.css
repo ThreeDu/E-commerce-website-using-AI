@@ -487,14 +487,48 @@
     color: #0f766e;
   }
 
-  /* ── Admin sidebar layout offset ── */
+  /* ── Admin sidebar layout offset (Modern Glass Sidebar) ── */
   .admin-sidebar-active .min-h-screen {
-    margin-left: 272px;
+    margin-left: 80px;
+    transition: margin-left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
   }
 
   @media (max-width: 960px) {
     .admin-sidebar-active .min-h-screen {
       margin-left: 0;
+    }
+  }
+
+  /* ── Modern Glass Sidebar Custom Styles ── */
+  .admin-sidebar-nav-item {
+    position: relative;
+  }
+
+  .admin-sidebar-nav-item::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 85px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #ffffff;
+    color: #121212;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+    white-space: nowrap;
+    z-index: 1200;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  @media (min-width: 961px) {
+    .admin-sidebar-glass:not(:hover) .admin-sidebar-nav-item:hover::after {
+      opacity: 1;
+      transition-delay: 0.15s;
     }
   }
 

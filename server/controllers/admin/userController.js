@@ -18,8 +18,7 @@ const listUsers = async (req, res) => {
 
     const users = await User.find(query)
       .select("_id name email role loyaltyPoints createdAt")
-      .sort({ createdAt: -1 })
-      .limit(search ? 20 : 100);
+      .sort({ createdAt: -1 });
 
     return res.json({
       message: "Lấy danh sách người dùng thành công.",

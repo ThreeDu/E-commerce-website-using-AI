@@ -251,10 +251,10 @@ function HomePage() {
           id="recommendations"
         >
           <div className="flex justify-between items-center gap-2.5 mb-3.5 max-[680px]:flex-col max-[680px]:items-start">
-            <h3 className="m-0 text-[1.35rem]">
+            <h3 className="m-0 text-[1.35rem] flex items-center gap-1.5">
               <span className="text-[1.2em] animate-[neo-sparkle_2s_ease-in-out_infinite]" aria-hidden="true">✨</span>
-              {" "}Gợi ý cho bạn
-              <span className="inline-flex items-center justify-center py-0.5 px-2 rounded-full text-[10px] font-black tracking-[0.08em] uppercase bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] text-white border border-[rgba(99,102,241,0.3)] shadow-[0_2px_8px_rgba(99,102,241,0.25),inset_0_1px_0_rgba(255,255,255,0.2)] animate-[neo-badge-glow_3s_ease-in-out_infinite]">AI</span>
+              <span>Gợi ý cho bạn</span>
+              <span className="inline-flex items-center justify-center h-[18px] px-1.5 rounded-full text-[10px] font-black tracking-[0.08em] uppercase bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] text-white border border-[rgba(99,102,241,0.3)] shadow-[0_2px_8px_rgba(99,102,241,0.25),inset_0_1px_0_rgba(255,255,255,0.2)] animate-[neo-badge-glow_3s_ease-in-out_infinite] leading-none">AI</span>
             </h3>
             <Link to="/products" className="text-[#0f314f] font-extrabold no-underline">Xem tất cả</Link>
           </div>

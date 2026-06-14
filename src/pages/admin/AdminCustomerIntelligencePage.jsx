@@ -332,7 +332,7 @@ function AdminCustomerIntelligencePage() {
       </div>
 
       {!modelsReady ? (
-        <div className="text-center p-12 bg-[#f8fafc] rounded-2xl border border-[#e2e8f0] max-w-xl mx-auto my-10 shadow-xs animate-admin-rise">
+        <div className="w-full text-center p-6 sm:p-12 bg-[#f8fafc] rounded-2xl border border-[#e2e8f0] max-w-xl mx-auto my-10 shadow-xs animate-admin-rise">
           <div className="text-5xl mb-4">
             <FontAwesomeIcon icon={faRobot} className="text-admin-primary" />
           </div>
@@ -835,8 +835,8 @@ function AdminCustomerIntelligencePage() {
 
       {showGuideModal && (
         <div className="fixed inset-0 bg-[rgba(15,23,42,0.65)] backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowGuideModal(false)}>
-          <div className="bg-white rounded-2xl shadow-modal w-full max-w-[850px] max-h-[85vh] overflow-y-auto border border-[#e2e8f0] animate-slide-up" onClick={(e) => e.stopPropagation()}>
-            <div className="p-5 border-b border-[#f1f5f9] flex justify-between items-center sticky top-0 bg-white z-10">
+          <div className="bg-white rounded-2xl shadow-modal w-full max-w-[850px] max-h-[85vh] overflow-hidden border border-[#e2e8f0] flex flex-col animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 border-b border-[#f1f5f9] flex justify-between items-center bg-white shrink-0">
               <h2 className="m-0 text-lg md:text-xl font-bold text-[#0f172a] flex items-center gap-2">
                 <FontAwesomeIcon icon={faBrain} className="text-admin-primary" />
                 Giải thích chỉ số & Phân loại Phân khúc AI
@@ -845,7 +845,7 @@ function AdminCustomerIntelligencePage() {
                 <FontAwesomeIcon icon={faTimes} />
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto scrollbar-subtle flex-1">
               <div className="mb-6">
                 <h3 className="m-0 mb-4 text-base font-bold text-[#1e293b] border-l-4 border-[#6366f1] pl-2.5">1. Các chỉ số dự báo bằng Machine Learning</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

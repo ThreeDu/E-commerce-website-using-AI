@@ -1,0 +1,6 @@
+{
+  "css.lint.unknownAtRules": "ignore",
+  "files.associations": {
+    "**/tailwind-built.css": "plaintext"
+  }
+}

@@ -24,6 +24,7 @@ function CheckoutPage() {
     paymentMethod: "cod",
   });
   const [formError, setFormError] = useState("");
+  const [errors, setErrors] = useState({ fullName: "", phone: "", address: "" });
   const [couponCode, setCouponCode] = useState("");
   const [couponInfo, setCouponInfo] = useState(null);
   const [couponError, setCouponError] = useState("");
@@ -57,6 +58,9 @@ function CheckoutPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   const totalPrice = selectedItems.reduce((total, item) => {
@@ -117,23 +121,40 @@ function CheckoutPage() {
       return;
     }
 
+    let isValid = true;
+    const newErrors = { fullName: "", phone: "", address: "" };
+
     const trimmedFullName = formData.fullName.trim();
     const trimmedPhone = formData.phone.trim();
     const trimmedAddress = formData.address.trim();
     const phoneRegex = /^(0|\+84)(3|5|7|8|9)\d{8}$/;
 
-    if (trimmedFullName.length < 2) {
-      setFormError("Họ và tên phải có ít nhất 2 ký tự.");
-      return;
+    if (!trimmedFullName) {
+      newErrors.fullName = "Vui lòng nhập họ và tên của bạn.";
+      isValid = false;
+    } else if (trimmedFullName.length < 2) {
+      newErrors.fullName = "Họ và tên phải có ít nhất 2 ký tự.";
+      isValid = false;
     }
 
-    if (!phoneRegex.test(trimmedPhone)) {
-      setFormError("Số điện thoại không hợp lệ. Ví dụ: 0912345678 hoặc +84912345678.");
-      return;
+    if (!trimmedPhone) {
+      newErrors.phone = "Vui lòng nhập số điện thoại giao hàng.";
+      isValid = false;
+    } else if (!phoneRegex.test(trimmedPhone)) {
+      newErrors.phone = "Số điện thoại không hợp lệ (ví dụ: 0912345678).";
+      isValid = false;
     }
 
-    if (trimmedAddress.length < 10) {
-      setFormError("Địa chỉ quá ngắn, vui lòng nhập chi tiết hơn (ít nhất 10 ký tự).");
+    if (!trimmedAddress) {
+      newErrors.address = "Vui lòng nhập địa chỉ giao hàng chi tiết.";
+      isValid = false;
+    } else if (trimmedAddress.length < 10) {
+      newErrors.address = "Địa chỉ giao hàng quá ngắn, vui lòng nhập chi tiết hơn (tối thiểu 10 ký tự).";
+      isValid = false;
+    }
+
+    if (!isValid) {
+      setErrors(newErrors);
       return;
     }
 
@@ -208,23 +229,44 @@ function CheckoutPage() {
           {formError && (
             <p className="mb-4 p-2.5 rounded-xl bg-[#fff1f2] text-[#9f1239] border border-[#fecdd3]">{formError}</p>
           )}
-          <form onSubmit={handlePlaceOrder} id="checkout-form">
+          <form onSubmit={handlePlaceOrder} id="checkout-form" noValidate>
             <div className="grid grid-cols-2 gap-4 max-[768px]:grid-cols-1">
               <div className="mb-4">
                 <label className="block mb-2 font-bold text-[#1e293b]">Họ và tên</label>
-                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required
-                  className="w-full p-2.5 rounded-xl border border-[#e2e8f0] bg-[#f9fafb] text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#4f46e5]" placeholder="Nhập họ và tên..." />
+                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange}
+                  className={`w-full p-2.5 rounded-xl border bg-[#f9fafb] text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#4f46e5] ${
+                    errors.fullName ? "border-red-400 focus:ring-red-400/50" : "border-[#e2e8f0]"
+                  }`} placeholder="Nhập họ và tên..." />
+                {errors.fullName && (
+                  <span className="text-red-500 text-xs font-semibold pl-1 mt-1 block animate-fade-in">
+                    {errors.fullName}
+                  </span>
+                )}
               </div>
               <div className="mb-4">
                 <label className="block mb-2 font-bold text-[#1e293b]">Số điện thoại</label>
-                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required
-                  className="w-full p-2.5 rounded-xl border border-[#e2e8f0] bg-[#f9fafb] text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#4f46e5]" placeholder="Nhập số điện thoại..." />
+                <input type="tel" name="phone" value={formData.phone} onChange={handleChange}
+                  className={`w-full p-2.5 rounded-xl border bg-[#f9fafb] text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#4f46e5] ${
+                    errors.phone ? "border-red-400 focus:ring-red-400/50" : "border-[#e2e8f0]"
+                  }`} placeholder="Nhập số điện thoại..." />
+                {errors.phone && (
+                  <span className="text-red-500 text-xs font-semibold pl-1 mt-1 block animate-fade-in">
+                    {errors.phone}
+                  </span>
+                )}
               </div>
             </div>
             <div className="mb-4">
               <label className="block mb-2 font-bold text-[#1e293b]">Địa chỉ chi tiết</label>
-              <textarea name="address" value={formData.address} onChange={handleChange} required rows="3"
-                className="w-full p-2.5 rounded-xl border border-[#e2e8f0] bg-[#f9fafb] text-[#1e293b] resize-y focus:outline-none focus:ring-2 focus:ring-[#4f46e5]" placeholder="Nhập số nhà, tên đường, phường/xã, quận/huyện..."></textarea>
+              <textarea name="address" value={formData.address} onChange={handleChange} rows="3"
+                className={`w-full p-2.5 rounded-xl border bg-[#f9fafb] text-[#1e293b] resize-y focus:outline-none focus:ring-2 focus:ring-[#4f46e5] ${
+                  errors.address ? "border-red-400 focus:ring-red-400/50" : "border-[#e2e8f0]"
+                }`} placeholder="Nhập số nhà, tên đường, phường/xã, quận/huyện..."></textarea>
+              {errors.address && (
+                <span className="text-red-500 text-xs font-semibold pl-1 mt-1 block animate-fade-in">
+                  {errors.address}
+                </span>
+              )}
             </div>
             <div className="mb-6">
               <label className="block mb-2 font-bold text-[#1e293b]">Phương thức thanh toán</label>
@@ -263,19 +305,19 @@ function CheckoutPage() {
             ))}
           </div>
           <div className="mb-4">
-            <label className="block mb-2 font-bold text-[#1e293b]">Mã giảm giá</label>
-            <div className="flex gap-2">
+            <label className="block mb-2 font-bold text-[#1e293b] text-sm">Mã giảm giá</label>
+            <div className="flex gap-1.5">
               <input
                 type="text"
                 value={couponCode}
                 onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
                 placeholder="Nhập mã..."
-                className="flex-1 p-2.5 rounded-xl border border-[#e2e8f0] bg-[#f9fafb] text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#4f46e5]"
+                className="min-w-0 flex-1 p-2 px-2.5 rounded-xl border border-[#e2e8f0] bg-[#f9fafb] text-[#1e293b] text-xs focus:outline-none focus:ring-2 focus:ring-[#4f46e5]"
               />
               <button
                 type="button"
                 onClick={() => setIsVoucherModalOpen(true)}
-                className="py-2.5 px-3.5 rounded-xl border border-[#b5ccf0] bg-[#f8fbff] text-[#10375c] font-bold cursor-pointer hover:bg-[#eff5ff]"
+                className="py-2 px-3 rounded-xl border border-[#b5ccf0] bg-[#f8fbff] text-[#10375c] font-semibold text-xs cursor-pointer hover:bg-[#eff5ff] shrink-0 whitespace-nowrap"
               >
                 Chọn mã
               </button>
@@ -283,18 +325,18 @@ function CheckoutPage() {
                 type="button"
                 onClick={handleApplyCoupon}
                 disabled={isApplyingCoupon}
-                className="py-2.5 px-3.5 rounded-xl border-none bg-[#4f46e5] text-white font-bold cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 hover:bg-[#4338ca]"
+                className="py-2 px-3 rounded-xl border-none bg-[#4f46e5] text-white font-bold text-xs cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 hover:bg-[#4338ca] shrink-0 whitespace-nowrap"
               >
-                {isApplyingCoupon ? "Đang áp dụng..." : "Áp dụng"}
+                {isApplyingCoupon ? "Đang áp..." : "Áp dụng"}
               </button>
             </div>
             {couponInfo?.coupon?.code && (
               <div className="mt-2 flex items-center justify-between text-[13px] text-[#166534]">
                 <span>Đã áp dụng mã: <strong>{couponInfo.coupon.code}</strong></span>
-                <button type="button" onClick={handleRemoveCoupon} className="border-none bg-transparent text-[#b91c1c] cursor-pointer font-bold hover:underline">Xóa mã</button>
+                <button type="button" onClick={handleRemoveCoupon} className="border-none bg-transparent text-[#b91c1c] cursor-pointer font-bold hover:underline text-xs">Xóa mã</button>
               </div>
             )}
-            {couponError && <p className="mt-2 mb-0 text-[#b91c1c] text-[13px]">{couponError}</p>}
+            {couponError && <p className="mt-2 mb-0 text-[#b91c1c] text-xs">{couponError}</p>}
           </div>
           <div className="flex justify-between mb-4 text-base border-t border-[#e2e8f0] pt-3 leading-[1.7] text-[#334155]">
             <span>Phí vận chuyển:</span><span className="font-bold">Miễn phí</span>
@@ -327,10 +369,17 @@ function CheckoutPage() {
             </div>
             
             <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-1 mt-4 scrollbar-subtle">
-              {vouchers.length === 0 ? (
-                <p className="text-center py-6 text-[#64748b]">Bạn hiện chưa có mã giảm giá nào.</p>
-              ) : (
-                vouchers.map(v => {
+              {(() => {
+                const now = new Date();
+                const activeVouchers = vouchers.filter(
+                  v => !v.endDate || new Date(v.endDate) >= now
+                );
+
+                if (activeVouchers.length === 0) {
+                  return <p className="text-center py-6 text-[#64748b]">Bạn hiện chưa có mã giảm giá nào.</p>;
+                }
+
+                return activeVouchers.map(v => {
                   const minRequired = Number(v.minOrderValue || 0);
                   const isEligible = totalPrice >= minRequired;
                   const missingAmount = minRequired - totalPrice;
@@ -377,8 +426,8 @@ function CheckoutPage() {
                       </button>
                     </div>
                   );
-                })
-              )}
+                });
+              })()}
             </div>
           </div>
         </div>

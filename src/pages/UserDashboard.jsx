@@ -111,7 +111,7 @@ function UserDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { auth, login, logout } = useAuth();
-  const { success, error, warning } = useNotification();
+  const { success, error } = useNotification();
   const profileEditRef = useRef(null);
   
   const [formData, setFormData] = useState({
@@ -133,6 +133,12 @@ function UserDashboard() {
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [activeMenu, setActiveMenu] = useState("profile");
   const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [profileErrors, setProfileErrors] = useState({ name: "" });
+  const [passwordErrors, setPasswordErrors] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
@@ -410,23 +416,47 @@ function UserDashboard() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    if (profileErrors[name]) {
+      setProfileErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
     setPasswordForm((prev) => ({ ...prev, [name]: value }));
+    if (passwordErrors[name]) {
+      setPasswordErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
+    let isValid = true;
+    const newErrors = { currentPassword: "", newPassword: "", confirmPassword: "" };
 
-    if (passwordForm.newPassword.length < 6) {
-      warning("Mật khẩu mới phải có ít nhất 6 ký tự.", { title: "Đổi mật khẩu" });
-      return;
+    if (!passwordForm.currentPassword) {
+      newErrors.currentPassword = "Vui lòng nhập mật khẩu hiện tại.";
+      isValid = false;
     }
 
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      warning("Xác nhận mật khẩu mới không khớp.", { title: "Đổi mật khẩu" });
+    if (!passwordForm.newPassword) {
+      newErrors.newPassword = "Vui lòng nhập mật khẩu mới.";
+      isValid = false;
+    } else if (passwordForm.newPassword.length < 6) {
+      newErrors.newPassword = "Mật khẩu mới phải có ít nhất 6 ký tự.";
+      isValid = false;
+    }
+
+    if (!passwordForm.confirmPassword) {
+      newErrors.confirmPassword = "Vui lòng xác nhận mật khẩu mới.";
+      isValid = false;
+    } else if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      newErrors.confirmPassword = "Mật khẩu xác nhận không khớp.";
+      isValid = false;
+    }
+
+    if (!isValid) {
+      setPasswordErrors(newErrors);
       return;
     }
 
@@ -451,6 +481,7 @@ function UserDashboard() {
 
       success("Đổi mật khẩu thành công.", { title: "Tài khoản" });
       setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setPasswordErrors({ currentPassword: "", newPassword: "", confirmPassword: "" });
       setTimeout(() => {
         setIsPasswordModalOpen(false);
       }, 900);
@@ -461,6 +492,10 @@ function UserDashboard() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.name.trim()) {
+      setProfileErrors({ name: "Vui lòng nhập họ và tên của bạn." });
+      return;
+    }
     try {
       const response = await fetch("/api/auth/profile", {
         method: "PUT",
@@ -507,7 +542,7 @@ function UserDashboard() {
               <button
                 key={item.key}
                 type="button"
-                className={`flex items-center gap-3.5 py-3.5 px-4 bg-transparent border-none rounded-xl cursor-pointer text-sm font-medium transition-all text-[#64748b] hover:bg-[#f8fafc] hover:text-[#1e293b] ${
+                className={`flex items-center gap-3.5 py-3.5 px-4 bg-transparent border-none rounded-xl cursor-pointer text-sm font-medium transition-all text-[#64748b] hover:bg-[#f8fafc] hover:text-[#1e293b] text-left ${
                   item.danger
                     ? "text-[#ef4444] hover:bg-[#ef4444]/10"
                     : ""
@@ -731,7 +766,7 @@ function UserDashboard() {
               </button>
             </div>
 
-            <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+            <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
               <div className="grid grid-cols-2 gap-4 max-[680px]:grid-cols-1">
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold text-[#1f2937] uppercase tracking-wider">Họ và tên</label>
@@ -740,10 +775,16 @@ function UserDashboard() {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    required
                     placeholder="Nhập họ và tên"
-                    className="w-full p-3.5 rounded-xl border border-[#cbd5e1] bg-white text-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-profile-primary transition-all"
+                    className={`w-full p-3.5 rounded-xl border bg-white text-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-profile-primary transition-all ${
+                      profileErrors.name ? "border-red-400 focus:ring-red-450" : "border-[#cbd5e1]"
+                    }`}
                   />
+                  {profileErrors.name && (
+                    <span className="text-red-500 text-xs font-semibold pl-1 mt-0.5 animate-fade-in">
+                      {profileErrors.name}
+                    </span>
+                  )}
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold text-[#1f2937] uppercase tracking-wider">Số điện thoại</label>
@@ -798,7 +839,7 @@ function UserDashboard() {
                 ✕
               </button>
             </div>
-            <form onSubmit={handleChangePassword} className="p-6 flex flex-col gap-4">
+            <form onSubmit={handleChangePassword} className="p-6 flex flex-col gap-4" noValidate>
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-[#1f2937] uppercase tracking-wider">Mật khẩu hiện tại</label>
                 <input
@@ -806,10 +847,16 @@ function UserDashboard() {
                   name="currentPassword"
                   value={passwordForm.currentPassword}
                   onChange={handlePasswordChange}
-                  required
                   placeholder="Nhập mật khẩu hiện tại"
-                  className="w-full p-3.5 rounded-xl border border-[#cbd5e1] bg-white text-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-profile-primary transition-all"
+                  className={`w-full p-3.5 rounded-xl border bg-white text-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-profile-primary transition-all ${
+                    passwordErrors.currentPassword ? "border-red-400 focus:ring-red-400/50" : "border-[#cbd5e1]"
+                  }`}
                 />
+                {passwordErrors.currentPassword && (
+                  <span className="text-red-500 text-xs font-semibold pl-1 mt-0.5 animate-fade-in">
+                    {passwordErrors.currentPassword}
+                  </span>
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-[#1f2937] uppercase tracking-wider">Mật khẩu mới</label>
@@ -818,11 +865,16 @@ function UserDashboard() {
                   name="newPassword"
                   value={passwordForm.newPassword}
                   onChange={handlePasswordChange}
-                  required
-                  minLength={6}
                   placeholder="Nhập mật khẩu mới"
-                  className="w-full p-3.5 rounded-xl border border-[#cbd5e1] bg-white text-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-profile-primary transition-all"
+                  className={`w-full p-3.5 rounded-xl border bg-white text-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-profile-primary transition-all ${
+                    passwordErrors.newPassword ? "border-red-400 focus:ring-red-400/50" : "border-[#cbd5e1]"
+                  }`}
                 />
+                {passwordErrors.newPassword && (
+                  <span className="text-red-500 text-xs font-semibold pl-1 mt-0.5 animate-fade-in">
+                    {passwordErrors.newPassword}
+                  </span>
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-[#1f2937] uppercase tracking-wider">Xác nhận mật khẩu mới</label>
@@ -831,11 +883,16 @@ function UserDashboard() {
                   name="confirmPassword"
                   value={passwordForm.confirmPassword}
                   onChange={handlePasswordChange}
-                  required
-                  minLength={6}
                   placeholder="Xác nhận mật khẩu mới"
-                  className="w-full p-3.5 rounded-xl border border-[#cbd5e1] bg-white text-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-profile-primary transition-all"
+                  className={`w-full p-3.5 rounded-xl border bg-white text-[#1f2937] text-sm focus:outline-none focus:ring-2 focus:ring-profile-primary transition-all ${
+                    passwordErrors.confirmPassword ? "border-red-400 focus:ring-red-400/50" : "border-[#cbd5e1]"
+                  }`}
                 />
+                {passwordErrors.confirmPassword && (
+                  <span className="text-red-500 text-xs font-semibold pl-1 mt-0.5 animate-fade-in">
+                    {passwordErrors.confirmPassword}
+                  </span>
+                )}
               </div>
               <div className="flex gap-3 justify-end mt-2">
                 <button type="button" className="py-3.5 px-6 font-bold rounded-xl text-sm transition-all cursor-pointer bg-[#f3f4f6] text-[#1f2937] border border-[#e5e7eb] hover:bg-[#e5e7eb]" onClick={() => setIsPasswordModalOpen(false)}>
@@ -862,10 +919,17 @@ function UserDashboard() {
             <p className="m-0 mb-4 text-[#6b7280] text-[0.9rem] leading-normal mt-4">Danh sách các mã giảm giá bạn có thể sử dụng ngay.</p>
             
             <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-1">
-              {vouchers.length === 0 ? (
-                <p className="text-center py-6 text-[#6b7280] text-sm">Bạn hiện chưa có mã giảm giá nào.</p>
-              ) : (
-                vouchers.map(v => (
+              {(() => {
+                const now = new Date();
+                const activeVouchers = vouchers.filter(
+                  v => !v.endDate || new Date(v.endDate) >= now
+                );
+
+                if (activeVouchers.length === 0) {
+                  return <p className="text-center py-6 text-[#6b7280] text-sm">Bạn hiện chưa có mã giảm giá nào.</p>;
+                }
+
+                return activeVouchers.map(v => (
                   <div key={v.id} className="border border-dashed border-[#818cf8] rounded-xl p-4 bg-profile-primary-lighter flex justify-between items-center">
                     <div>
                       <h4 className="m-0 mb-1 text-profile-primary font-bold">{v.code}</h4>
@@ -891,8 +955,8 @@ function UserDashboard() {
                       Copy mã
                     </button>
                   </div>
-                ))
-              )}
+                ));
+              })()}
             </div>
 
             <div className="flex gap-3 justify-end mt-6">

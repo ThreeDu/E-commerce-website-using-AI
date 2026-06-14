@@ -11,11 +11,168 @@ const Cart = require("../models/Cart");
 
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/e-commerce-app";
 
-const NUM_USERS = 160; // Increase size to seed more cases
+const NUM_USERS = 200; // Increase size to seed more cases
 const NUM_PRODUCTS = 50;
 const RECENT_WINDOW_DAYS = 30;
 const PREV_WINDOW_START_DAYS = 60;
 
+
+function generateProductSpecs(brand, index) {
+  const brandLower = brand.toLowerCase();
+  
+  if (brandLower === "iphone") {
+    const models = ["15 Pro Max", "15 Pro", "14 Pro Max", "13 Pro"];
+    const model = models[index % models.length];
+    const storages = ["128GB", "256GB", "512GB"];
+    const storage = storages[index % storages.length];
+    const name = `Sản phẩm Mock iPhone ${model} ${storage}`;
+    const desc = `Điện thoại thông minh Apple iPhone cao cấp chính hãng. 
+Thông số kỹ thuật chi tiết:
+- Bộ vi xử lý (Chip): Apple A17 Pro (3nm) siêu tiết kiệm điện và hiệu năng đồ họa đỉnh cao.
+- Màn hình: 6.7 inch Super Retina XDR OLED, tần số quét 120Hz ProMotion, độ sáng 2000 nits.
+- Camera sau: Cụm 3 camera 48MP (chính) + 12MP (góc siêu rộng) + 12MP (telephoto zoom quang 5x), hỗ trợ quay video ProRes 4K.
+- Camera trước: 12MP TrueDepth hỗ trợ nhận diện khuôn mặt Face ID.
+- Bộ nhớ RAM: 8GB LPDDR5.
+- Dung lượng pin: 4441 mAh, hỗ trợ sạc nhanh PD 25W và sạc không dây MagSafe 15W.
+- Hệ điều hành: iOS 17.`;
+    return { name, category: "dien thoai", description: desc };
+  }
+  
+  if (brandLower === "samsung") {
+    const models = ["Galaxy S24 Ultra", "Galaxy S23 Ultra", "Galaxy A54", "Galaxy Z Fold5"];
+    const model = models[index % models.length];
+    const storages = ["256GB", "512GB"];
+    const storage = storages[index % storages.length];
+    const name = `Sản phẩm Mock Samsung ${model} ${storage}`;
+    const desc = `Điện thoại di động Samsung chính hãng tích hợp trí tuệ nhân tạo Galaxy AI.
+Thông số kỹ thuật chi tiết:
+- Bộ vi xử lý (Chip): Snapdragon 8 Gen 3 for Galaxy (4nm) xử lý AI siêu nhanh.
+- Màn hình: 6.8 inch Dynamic AMOLED 2X, tần số quét 120Hz thích ứng, độ phân giải QHD+.
+- Camera sau: 4 camera gồm 200MP (chính) + 50MP + 12MP + 10MP, zoom quang học 5x và 10x, zoom kỹ thuật số 100x.
+- Camera trước: 12MP Dual Pixel tự động lấy nét.
+- Bộ nhớ RAM: 12GB.
+- Dung lượng pin: 5000 mAh, sạc nhanh 45W, sạc ngược không dây.
+- Hệ điều hành: Android 14 với giao diện One UI 6.1.`;
+    return { name, category: "dien thoai", description: desc };
+  }
+  
+  if (brandLower === "xiaomi") {
+    const models = ["14 Pro", "Redmi Note 13 Pro", "Poco F6", "Xiaomi 13T"];
+    const model = models[index % models.length];
+    const storages = ["256GB", "512GB"];
+    const storage = storages[index % storages.length];
+    const name = `Sản phẩm Mock Xiaomi ${model} ${storage}`;
+    const desc = `Điện thoại di động Xiaomi cấu hình mạnh mẽ, camera Leica đẳng cấp.
+Thông số kỹ thuật chi tiết:
+- Bộ vi xử lý (Chip): Snapdragon 8 Gen 3 xử lý đa nhiệm mượt mà.
+- Màn hình: 6.73 inch LTPO AMOLED, tần số quét 120Hz, độ phân giải 2K+.
+- Camera sau: Cụm 3 camera Leica 50MP (chính) + 50MP (tele) + 50MP (siêu rộng).
+- Camera trước: 32MP chụp selfie sắc nét.
+- Bộ nhớ RAM: 12GB LPDDR5X.
+- Dung lượng pin: 4880 mAh, hỗ trợ sạc siêu nhanh HyperCharge 120W (sạc đầy trong 18 phút).
+- Hệ điều hành: Xiaomi HyperOS trên nền Android 14.`;
+    return { name, category: "dien thoai", description: desc };
+  }
+
+  if (brandLower === "oppo") {
+    const models = ["Find X7 Ultra", "Reno11 Pro", "A78", "Find N3 Flip"];
+    const model = models[index % models.length];
+    const storages = ["256GB", "512GB"];
+    const storage = storages[index % storages.length];
+    const name = `Sản phẩm Mock Oppo ${model} ${storage}`;
+    const desc = `Điện thoại di động Oppo chính hãng chụp ảnh chân dung siêu đẹp.
+Thông số kỹ thuật chi tiết:
+- Bộ vi xử lý (Chip): MediaTek Dimensity 9300 hiệu năng vượt trội và mát mẻ.
+- Màn hình: 6.82 inch AMOLED, 120Hz, độ sáng tối đa 4500 nits siêu sáng dưới trời nắng.
+- Camera sau: Hệ thống 4 camera Hasselblad 50MP + 50MP + 50MP + 50MP zoom kính tiềm vọng kép.
+- Camera trước: 32MP cảm biến Sony IMX709.
+- Bộ nhớ RAM: 16GB.
+- Dung lượng pin: 5000 mAh, sạc nhanh SuperVOOC 100W.
+- Hệ điều hành: ColorOS 14 (Android 14).`;
+    return { name, category: "dien thoai", description: desc };
+  }
+
+  if (brandLower === "macbook") {
+    const models = ["MacBook Pro 14 M3", "MacBook Air 13 M2", "MacBook Pro 16 M3 Max"];
+    const model = models[index % models.length];
+    const storages = ["512GB SSD", "1TB SSD"];
+    const storage = storages[index % storages.length];
+    const name = `Sản phẩm Mock Apple ${model} ${storage}`;
+    const desc = `Máy tính xách tay Apple MacBook chính hãng cấu hình mạnh mẽ cho công việc đồ họa.
+Thông số kỹ thuật chi tiết:
+- Bộ vi xử lý (Chip): Apple M3 (8-core CPU, 10-core GPU) xử lý đồ họa mượt mà.
+- Màn hình: 14.2 inch Liquid Retina XDR, độ phân giải 3024 x 1964, công nghệ ProMotion 120Hz.
+- Camera: 1080p FaceTime HD camera.
+- Bộ nhớ RAM: 16GB Unified Memory.
+- Lưu trữ: SSD dung lượng cao ${storage}.
+- Dung lượng pin: Pin Lithium-polymer thời lượng sử dụng lên đến 22 giờ liên tục.
+- Hệ điều hành: macOS Sonoma.`;
+    return { name, category: "laptop", description: desc };
+  }
+
+  if (brandLower === "ipad") {
+    const models = ["iPad Pro 11 M2", "iPad Air 5", "iPad Gen 10"];
+    const model = models[index % models.length];
+    const storages = ["128GB", "256GB"];
+    const storage = storages[index % storages.length];
+    const name = `Sản phẩm Mock Apple ${model} ${storage}`;
+    const desc = `Máy tính bảng Apple iPad chính hãng hỗ trợ Apple Pencil đắc lực cho vẽ và ghi chép.
+Thông số kỹ thuật chi tiết:
+- Bộ vi xử lý (Chip): Apple M2 8-core CPU mang lại sức mạnh vượt bậc.
+- Màn hình: 11 inch Liquid Retina, công nghệ True Tone, ProMotion 120Hz mượt mà.
+- Camera sau: 12MP Wide + 10MP Ultra Wide và cảm biến quét chiều sâu LiDAR.
+- Camera trước: 12MP Ultra Wide với tính năng Center Stage tự động căn giữa cuộc gọi.
+- Bộ nhớ RAM: 8GB RAM.
+- Lưu trữ: Bộ nhớ trong dung lượng cao ${storage}.
+- Dung lượng pin: 28.65 watt-hour sử dụng liên tục 10 giờ qua Wi-Fi.
+- Hệ điều hành: iPadOS 17.`;
+    return { name, category: "tablet", description: desc };
+  }
+
+  if (brandLower === "acer") {
+    const models = ["Nitro 5 Gaming", "Aspire 7", "Swift Go 14"];
+    const model = models[index % models.length];
+    const storages = ["512GB SSD", "1TB SSD"];
+    const storage = storages[index % storages.length];
+    const name = `Sản phẩm Mock Acer ${model} ${storage}`;
+    const desc = `Máy tính xách tay Acer hiệu năng cao dành cho game thủ và lập trình viên.
+Thông số kỹ thuật chi tiết:
+- Bộ vi xử lý (Chip): Intel Core i5-12500H (12 nhân, 16 luồng) tốc độ lên tới 4.5GHz.
+- Card đồ họa (GPU): NVIDIA GeForce RTX 3050 4GB chiến tốt mọi tựa game.
+- Màn hình: 15.6 inch IPS FHD, tần số quét 144Hz chống xé hình khi chơi game.
+- Camera: HD Webcam tích hợp.
+- Bộ nhớ RAM: 16GB DDR4 3200MHz.
+- Lưu trữ: SSD 512GB PCIe NVMe.
+- Dung lượng pin: 57.5 Whr, đi kèm tản nhiệt hai quạt CoolBoost độc quyền.
+- Hệ điều hành: Windows 11 Home bản quyền.`;
+    return { name, category: "laptop", description: desc };
+  }
+
+  if (brandLower === "dell") {
+    const models = ["XPS 13 9315", "Inspiron 15 3520", "Vostro 3430"];
+    const model = models[index % models.length];
+    const storages = ["512GB SSD", "1TB SSD"];
+    const storage = storages[index % storages.length];
+    const name = `Sản phẩm Mock Dell ${model} ${storage}`;
+    const desc = `Máy tính xách tay Dell chính hãng, bền bỉ và ổn định cao cho doanh nghiệp và văn phòng.
+Thông số kỹ thuật chi tiết:
+- Bộ vi xử lý (Chip): Intel Core i7-1250U hiệu suất cao, tiết kiệm điện năng.
+- Card đồ họa: Intel Iris Xe Graphics.
+- Màn hình: 13.4 inch FHD+ IPS, độ sáng 500 nits, chống chói Anti-Reflective.
+- Camera: IR Webcam 720p hỗ trợ nhận diện khuôn mặt Windows Hello.
+- Bộ nhớ RAM: 16GB LPDDR5 5200MHz kênh đôi siêu tốc.
+- Lưu trữ: SSD PCIe NVMe siêu tốc ${storage}.
+- Dung lượng pin: 51 Whr sử dụng bền bỉ cả ngày.
+- Hệ điều hành: Windows 11 Home kèm bản quyền Office Home & Student.`;
+    return { name, category: "laptop", description: desc };
+  }
+
+  return {
+    name: `Sản phẩm Mock ${brand} Pro ${index}`,
+    category: "dien thoai",
+    description: `Sản phẩm Mock ${brand} cấu hình cao. Thông số kỹ thuật chi tiết: Chipset 8 nhân mạnh mẽ, Màn hình Full HD+ sắc nét, Camera độ phân giải cao 50MP, RAM 8GB, Bộ nhớ trong 128GB, Pin 5000 mAh.`,
+  };
+}
 
 async function seed() {
   try {
@@ -35,20 +192,29 @@ async function seed() {
     await Cart.deleteMany({ user: { $in: mockUserIds } });
     await User.deleteMany({ _id: { $in: mockUserIds } });
 
-    
+    // Xóa sản phẩm mock cũ
+    console.log("Xoá sản phẩm mock cũ...");
+    await Product.deleteMany({
+      $or: [
+        { name: /Sản phẩm Mock/i },
+        { name: /Mock Product/i }
+      ]
+    });
+
     // Create Products
-    console.log("Tạo sản phẩm mock...");
+    console.log("Tạo sản phẩm mock với cấu hình chi tiết...");
     const products = [];
     const brands = ["samsung", "iphone", "xiaomi", "macbook", "ipad", "acer", "dell", "oppo"];
     for (let i = 1; i <= NUM_PRODUCTS; i++) {
       const brand = brands[Math.floor(Math.random() * brands.length)];
       const price = Math.floor(Math.random() * 20000000) + 5000000;
+      const specs = generateProductSpecs(brand, i);
       
       let p = new Product({
-        name: `Sản phẩm Mock ${brand} ${i} Pro 256GB`,
+        name: specs.name,
         price: price,
-        description: "Đây là sản phẩm tự động tạo ra để test ML.",
-        category: brand === "macbook" ? "laptop" : "dien thoai",
+        description: specs.description,
+        category: specs.category,
         stock: 100,
         finalPrice: price * 0.9,
       });
@@ -86,6 +252,14 @@ async function seed() {
         orders: { completed: 2, cancelled: 0, completedDaysAgoRange: [2, 20] },
         events: { recent: { product_view: 45, add_to_cart: 14, wishlist_add: 6 }, prev: { product_view: 5 } },
         chatbot: { sessions: 3, messagesPerSession: 4, daysAgoRange: [1, 15] },
+      },
+      {
+        key: "medium_risk",
+        count: 35,
+        profile: { completeness: 0.8, wishlistSize: 2, accountAgeDaysRange: [60, 120] },
+        orders: { completed: 2, cancelled: 0, completedDaysAgoRange: [22, 40] },
+        events: { recent: { product_view: 8, add_to_cart: 2, wishlist_add: 1 }, prev: { product_view: 15, add_to_cart: 4 } },
+        chatbot: { sessions: 1, messagesPerSession: 1, daysAgoRange: [10, 20] },
       },
       {
         key: "at_risk",
