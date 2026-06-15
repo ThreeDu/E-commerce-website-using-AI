@@ -116,6 +116,31 @@ export function CartProvider({ children }) {
 
   // ── Stable callbacks (never re-created) ──
 
+  const reloadCart = useCallback(() => {
+    const token = authRef.current?.token;
+    if (token) {
+      isLoadingRef.current = true;
+      return fetch("/api/auth/cart", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Không thể lấy giỏ hàng từ server");
+          return res.json();
+        })
+        .then((data) => {
+          const items = data.items || [];
+          setCart(items);
+          localStorage.setItem(storageKey, JSON.stringify(items));
+          return items;
+        })
+        .catch((err) => {
+          console.error("Lỗi reload giỏ hàng:", err);
+        });
+    }
+  }, [storageKey]);
+
   const addToCart = useCallback((product) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
@@ -210,6 +235,7 @@ export function CartProvider({ children }) {
       selectAllItems,
       deselectAllItems,
       removeSelectedItems,
+      reloadCart,
     }),
     [
       cart,
@@ -221,6 +247,7 @@ export function CartProvider({ children }) {
       selectAllItems,
       deselectAllItems,
       removeSelectedItems,
+      reloadCart,
     ]
   );
 

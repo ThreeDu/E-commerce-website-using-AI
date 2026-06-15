@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const Product = require("../models/Product");
+const Cart = require("../models/Cart");
+const Order = require("../models/Order");
 const ChatbotEvent = require("./models/ChatbotEvent");
 const compareService = require("./compare");
 const recommenderService = require("./recommender");
@@ -12,6 +14,7 @@ const {
 const {
   normalizeText,
   tokenize,
+  escapeRegExp,
   normalizeHintValue,
   normalizeConversationHistory,
   includesAny,
@@ -323,6 +326,22 @@ function buildRuleReply(intent, recommendedProducts, options = {}) {
     };
   }
 
+  if (intent === "order_status") {
+    return {
+      title: "Tra cứu Đơn hàng",
+      followUp: "Bạn vui lòng đăng nhập để mình hỗ trợ tra cứu đơn hàng gần nhất nhé.",
+      items: [],
+    };
+  }
+
+  if (intent === "add_to_cart") {
+    return {
+      title: "Thêm vào Giỏ hàng",
+      followUp: "Bạn muốn mua sản phẩm nào? Hãy chọn sản phẩm hoặc mô tả tên sản phẩm để mình thêm vào giỏ nhé.",
+      items: [],
+    };
+  }
+
   if (recommendedProducts.length === 0) {
     return {
       title: "Chưa tìm được sản phẩm phù hợp",
@@ -405,12 +424,222 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
   return llmHelper.maybeGenerateLlmReply({ message, intent, recommendedProducts, history });
 }
 
+async function maybeGenerateProductConsultLlmReply(product, specs, history = []) {
+  const enabled = String(process.env.CHATBOT_LLM_ENABLED || "").toLowerCase() === "true";
+  const apiUrl = String(process.env.CHATBOT_LLM_API_URL || "").trim();
+  const apiKey = String(process.env.CHATBOT_LLM_API_KEY || "").trim();
+  const model = String(process.env.CHATBOT_LLM_MODEL || "gpt-4.1-mini").trim();
+
+  if (!enabled || !apiUrl || !apiKey) {
+    return null;
+  }
+
+  const isGemini = apiUrl.includes("generativelanguage.googleapis.com");
+  const systemPrompt = "Bạn là chuyên gia tư vấn công nghệ chuyên nghiệp. Hãy viết một đoạn nhận xét/tư vấn ngắn gọn (khoảng 3-4 câu) về cấu hình và hiệu năng của sản phẩm dưới đây bằng tiếng Việt. Tập trung vào đối tượng sử dụng phù hợp (học sinh, game thủ, văn phòng, v.v.). Trả lời tự nhiên, thân thiện.";
+  
+  const payload = {
+    product: {
+      name: product.name,
+      price: product.price,
+      finalPrice: product.finalPrice,
+      brand: product.brand,
+      description: product.description,
+    },
+    specs
+  };
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), Number(process.env.CHATBOT_LLM_TIMEOUT_MS || 10000));
+
+    const response = await (async () => {
+      if (isGemini) {
+        const endpoint = apiUrl.includes(":generateContent")
+          ? apiUrl
+          : `${apiUrl.replace(/\/$/, "")}/v1beta/models/${model}:generateContent`;
+        const delimiter = endpoint.includes("?") ? "&" : "?";
+        const requestUrl = `${endpoint}${delimiter}key=${encodeURIComponent(apiKey)}`;
+
+        return fetch(requestUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            systemInstruction: {
+              role: "system",
+              parts: [{ text: systemPrompt }],
+            },
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: JSON.stringify(payload, null, 2) }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.7,
+            },
+          }),
+        });
+      }
+
+      return fetch(`${apiUrl.replace(/\/$/, "")}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model,
+          temperature: 0.7,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: JSON.stringify(payload, null, 2) },
+          ],
+        }),
+      });
+    })();
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    const content = isGemini
+      ? (data?.candidates || [])
+          .flatMap((candidate) => candidate?.content?.parts || [])
+          .map((part) => String(part?.text || "").trim())
+          .filter(Boolean)
+          .join("\n")
+      : data?.choices?.[0]?.message?.content;
+
+    return String(content || "").trim() || null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function buildSingleProductSpecsMarkdown(product, extractComparisonSpecSummary, llmComment = null) {
+  const specs = extractComparisonSpecSummary(product);
+  const comment = llmComment || `Thiết bị sở hữu dòng chip **${specs.chip}** cùng **${specs.ram} RAM**, mang lại hiệu năng cực kỳ mạnh mẽ, xử lý mượt mà mọi tác vụ từ văn phòng giải trí đến chơi game đồ họa cao. Dung lượng pin **${specs.battery}** đảm bảo thời gian hoạt động thoải mái cả ngày dài. Hệ thống camera **${specs.camera}** cho chất lượng chụp ảnh sắc nét, cực kỳ phù hợp cho người dùng yêu thích quay phim chụp hình.`;
+  
+  return [
+    `### 📋 Thông số kỹ thuật chi tiết của ${product.name}`,
+    `| Đặc tính | Chi tiết |`,
+    `| --- | --- |`,
+    `| **Giá bán** | **${specs.finalPrice}** |`,
+    `| **Chip xử lý** | ${specs.chip} |`,
+    `| **Bộ nhớ RAM** | ${specs.ram} |`,
+    `| **Bộ nhớ trong (ROM)** | ${specs.rom} |`,
+    `| **Màn hình** | ${specs.screen} |`,
+    `| **Hệ thống Camera** | ${specs.camera} |`,
+    `| **Dung lượng Pin** | ${specs.battery} |`,
+    `| **Tình trạng kho** | ${product.stock > 0 ? `Còn hàng (${product.stock} máy)` : "Hết hàng"} |`,
+    `\n**💡 Nhận xét chi tiết**: ${comment}`
+  ].join("\n");
+}
+
 async function processChatMessage({ message, sessionId, context = {}, userId = null, history = [] }) {
   const session = getOrCreateSession(sessionId);
   const plainMessage = String(message || "").trim();
 
   const providedHistory = normalizeConversationHistory(history, 6);
   const historyContext = providedHistory.length > 0 ? providedHistory : session.history;
+
+  const normalizedMsg = normalizeText(plainMessage);
+  if (normalizedMsg.includes("tu van chi tiet cau hinh san pham") || normalizedMsg.includes("tu van chi tiet cau hinh")) {
+    let productObj = null;
+
+    // First try to extract by hidden database ID: [Mã: ID] or [ID: ID]
+    const idMatch = plainMessage.match(/\[Mã:\s*([a-f0-9]{24})\]/i) || plainMessage.match(/\[ID:\s*([a-f0-9]{24})\]/i);
+    if (idMatch) {
+      const productId = idMatch[1];
+      productObj = await Product.findById(productId);
+    }
+
+    // Fallback to name search if product not found by ID
+    if (!productObj) {
+      let searchName = plainMessage
+        .replace(/\[Mã:\s*[a-f0-9]{24}\]/gi, "")
+        .replace(/\[ID:\s*[a-f0-9]{24}\]/gi, "")
+        .replace(/tư vấn chi tiết cấu hình sản phẩm/gi, "")
+        .replace(/tu van chi tiet cau hinh san pham/gi, "")
+        .replace(/tư vấn chi tiết cấu hình/gi, "")
+        .replace(/tu van chi tiet cau hinh/gi, "")
+        .trim();
+
+      searchName = searchName
+        .replace(/^(của|cua|cho|sản phẩm|san pham|máy|may|thiết bị|thiet bi)\s+/gi, "")
+        .trim();
+
+      if (searchName) {
+        productObj = await Product.findOne({ name: { $regex: new RegExp(escapeRegExp(searchName), "i") } });
+        if (!productObj) {
+          const tokens = searchName.split(/\s+/).filter(w => w.length >= 3);
+          if (tokens.length > 0) {
+            const regexQuery = tokens.map(t => escapeRegExp(t)).join('.*');
+            productObj = await Product.findOne({ name: { $regex: new RegExp(regexQuery, "i") } });
+          }
+        }
+      }
+    }
+
+    if (productObj) {
+      const compareService = require("./compare");
+      const specs = compareService.extractComparisonSpecSummary(productObj);
+      let llmComment = null;
+      try {
+        llmComment = await maybeGenerateProductConsultLlmReply(productObj, specs, historyContext);
+      } catch (_) {
+        llmComment = null;
+      }
+
+      const specsMarkdown = buildSingleProductSpecsMarkdown(productObj, compareService.extractComparisonSpecSummary, llmComment);
+
+      session.history.push({ role: "user", content: plainMessage, at: new Date().toISOString() });
+      session.history.push({
+        role: "assistant",
+        content: specsMarkdown,
+        products: [
+          {
+            _id: productObj._id,
+            name: productObj.name,
+            category: productObj.category,
+            price: productObj.price,
+            brand: productObj.brand,
+            model: productObj.model,
+            variant: productObj.variant,
+            stock: productObj.stock,
+          }
+        ],
+        at: new Date().toISOString()
+      });
+      session.history = session.history.slice(-MAX_HISTORY);
+      session.updatedAt = Date.now();
+
+      return {
+        sessionId: session.id,
+        intent: "product_consult",
+        reply: specsMarkdown,
+        replyStructured: {
+          title: `Chi tiết cấu hình: ${productObj.name}`,
+          followUp: `Bạn có muốn mình tư vấn thêm hoặc so sánh sản phẩm này với dòng khác không?`,
+          items: [{ name: productObj.name, price: formatVnd(productObj.price) }]
+        },
+        products: [productObj],
+        quickReplies: ["So sánh sản phẩm này", "Thêm vào giỏ hàng", "Xem chính sách bảo hành"],
+        metadata: {
+          llmUsed: Boolean(llmComment),
+          productCount: 1,
+          specsConsult: true
+        }
+      };
+    }
+  }
 
   let enrichedMessage = buildHistoryEnrichedMessage(plainMessage, historyContext);
   if (historyContext.length >= 2 && plainMessage.split(" ").length <= 5) {
@@ -502,7 +731,7 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
 
   if (intent !== "greeting") {
     recommendedProducts =
-      intent === "policy"
+      (intent === "policy" || intent === "order_status")
         ? []
         : await recommenderService.findRecommendedProducts(enrichedMessage, context, {
           sessionId: session.id,
@@ -514,25 +743,175 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
         });
   }
 
-  const shouldUseLlm = recommendedProducts.length > 0;
+  const shouldUseLlm = intent !== "compare";
+  let llmReply = null;
+  let toolCall = null;
+  let cartUpdated = false;
 
-  const rawLlmReply = shouldUseLlm
-    ? await maybeGenerateLlmReply({
-        message: plainMessage,
-        intent,
-        recommendedProducts,
-        history: session.history,
-      })
-    : null;
+  if (shouldUseLlm) {
+    const llmResult = await maybeGenerateLlmReply({
+      message: plainMessage,
+      intent,
+      recommendedProducts,
+      history: session.history,
+    });
 
-  let llmReply = rawLlmReply;
-  if (rawLlmReply && recommendedProducts.length > 0) {
-    const replyNormalized = normalizeText(rawLlmReply);
+    if (llmResult) {
+      llmReply = llmResult.text;
+      toolCall = llmResult.toolCall;
+    }
+  }
+
+  if (!toolCall) {
+    if (intent === "order_status") {
+      toolCall = {
+        name: "getOrderStatus",
+        args: {
+          orderId: plainMessage.match(/[a-fA-F0-9]{24}/)?.[0] || null
+        }
+      };
+    } else if (intent === "add_to_cart") {
+      let queryName = plainMessage
+        .replace(/thêm vào giỏ hàng/gi, "")
+        .replace(/them vao gio hang/gi, "")
+        .replace(/thêm vào giỏ/gi, "")
+        .replace(/them vao gio/gi, "")
+        .replace(/thêm giỏ hàng/gi, "")
+        .replace(/them gio hang/gi, "")
+        .replace(/cho vào giỏ/gi, "")
+        .replace(/cho vao gio/gi, "")
+        .replace(/thêm điện thoại/gi, "")
+        .replace(/them dien thoai/gi, "")
+        .replace(/thêm/gi, "")
+        .replace(/them/gi, "")
+        .replace(/vào giỏ hàng/gi, "")
+        .replace(/vao gio hang/gi, "")
+        .replace(/giỏ hàng/gi, "")
+        .replace(/gio hang/gi, "")
+        .trim();
+
+      if (queryName.length >= 3) {
+        toolCall = {
+          name: "addToCart",
+          args: {
+            productId: queryName,
+            quantity: 1
+          }
+        };
+      }
+    }
+  }
+
+  if (toolCall) {
+    const statusMap = {
+      pending: "Đang chờ xử lý",
+      confirmed: "Đã xác nhận",
+      shipping: "Đang giao hàng",
+      delivered: "Đã giao hàng thành công",
+      cancelled: "Đã hủy",
+    };
+
+    if (toolCall.name === "addToCart") {
+      const { productId, quantity = 1 } = toolCall.args;
+      if (!userId) {
+        llmReply = "Bạn cần đăng nhập để thực hiện thêm sản phẩm vào giỏ hàng.";
+      } else {
+        let productObj = null;
+        if (productId && mongoose.Types.ObjectId.isValid(productId)) {
+          productObj = await Product.findById(productId);
+        }
+        if (!productObj && productId) {
+          productObj = await Product.findOne({ name: { $regex: new RegExp(escapeRegExp(productId), "i") } });
+          if (!productObj) {
+            const words = productId.split(/\s+/).filter((w) => w.length >= 3);
+            if (words.length > 0) {
+              const regexQuery = words.map(w => escapeRegExp(w)).join('.*');
+              productObj = await Product.findOne({ name: { $regex: new RegExp(regexQuery, 'i') } });
+            }
+          }
+        }
+
+        if (!productObj) {
+          llmReply = "Không tìm thấy sản phẩm này trong hệ thống.";
+        } else if (productObj.stock < quantity) {
+          llmReply = `Sản phẩm ${productObj.name} hiện chỉ còn ${productObj.stock} sản phẩm trong kho, không đủ số lượng bạn yêu cầu.`;
+        } else {
+          const matchedProductId = productObj._id;
+          let cart = await Cart.findOne({ user: userId });
+          if (!cart) {
+            cart = new Cart({ user: userId, items: [] });
+          }
+          const existingItemIndex = cart.items.findIndex(
+            (item) => String(item.product) === String(matchedProductId)
+          );
+          if (existingItemIndex > -1) {
+            cart.items[existingItemIndex].quantity += quantity;
+          } else {
+            cart.items.push({ product: matchedProductId, quantity });
+          }
+          await cart.save();
+          llmReply = `Đã thêm thành công ${quantity} sản phẩm ${productObj.name} vào giỏ hàng của bạn.`;
+          cartUpdated = true;
+        }
+      }
+    } else if (toolCall.name === "getOrderStatus") {
+      if (!userId) {
+        llmReply = "Bạn cần đăng nhập để tra cứu trạng thái đơn hàng.";
+      } else {
+        const { orderId } = toolCall.args;
+        let order = null;
+
+        if (orderId) {
+          const validObjectId = safeObjectId(orderId);
+          if (validObjectId) {
+            order = await Order.findOne({ _id: validObjectId, user: userId }).lean();
+          }
+          if (!order) {
+            order = await Order.findOne({ user: userId }).sort({ createdAt: -1 }).lean();
+            if (order) {
+              llmReply = `Không tìm thấy đơn hàng với mã "${orderId}". Dưới đây là thông tin đơn hàng mới nhất của bạn:\n\n`;
+            }
+          }
+        } else {
+          order = await Order.findOne({ user: userId }).sort({ createdAt: -1 }).lean();
+        }
+
+        if (!order) {
+          llmReply = "Bạn chưa có đơn hàng nào trên hệ thống của chúng tôi.";
+        } else {
+          const statusText = statusMap[order.status] || order.status;
+          const itemsText = order.orderItems
+            .map((item) => `- ${item.name} (x${item.quantity})`)
+            .join("\n");
+          const dateText = new Date(order.createdAt).toLocaleDateString("vi-VN");
+
+          let replyParts = [
+            `Mã đơn hàng: ${order._id}`,
+            `Ngày đặt: ${dateText}`,
+            `Trạng thái: **${statusText}**`,
+            `Tổng tiền: ${formatVnd(order.totalPrice)}`,
+            `Sản phẩm trong đơn hàng:\n${itemsText}`,
+          ];
+
+          if (order.status === "cancelled" && order.cancelledReason) {
+            replyParts.push(`Lý do hủy: ${order.cancelledReason}`);
+          }
+
+          if (orderId && order._id.toString() === orderId) {
+            llmReply = `Thông tin đơn hàng của bạn:\n\n${replyParts.join("\n")}`;
+          } else {
+            llmReply = (llmReply || "") + `Đơn hàng mới nhất của bạn:\n\n${replyParts.join("\n")}`;
+          }
+        }
+      }
+    }
+  } else if (llmReply && (intent === "product_search" || intent === "product_consult") && recommendedProducts.length > 0) {
+    const replyNormalized = normalizeText(llmReply);
     const hasProductMention = recommendedProducts.some((p) => {
       const tokens = tokenize(p.name).filter((t) => t.length >= 4);
       return tokens.some((t) => replyNormalized.includes(t));
     });
-    if (!hasProductMention && rawLlmReply.length > 80) {
+    if (!hasProductMention && llmReply.length > 80) {
       llmReply = null;
     }
   }
@@ -573,6 +952,7 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
     replyStructured: ruleReplyStructured,
     products: recommendedProducts,
     quickReplies,
+    cartUpdated,
     metadata: {
       llmUsed: Boolean(llmReply),
       productCount: recommendedProducts.length,

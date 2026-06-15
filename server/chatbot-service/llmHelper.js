@@ -1,6 +1,6 @@
 const { normalizeHintValue, extractJsonObjectFromText, formatConversationHistoryForPrompt, normalizeText } = require('./textUtils');
 
-const LLM_TIMEOUT_MS = Number(process.env.CHATBOT_LLM_TIMEOUT_MS || 2500);
+const LLM_TIMEOUT_MS = Number(process.env.CHATBOT_LLM_TIMEOUT_MS || 10000);
 
 function toNumberOrNull(value) {
   const parsed = Number(value);
@@ -138,6 +138,7 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
     category: item.category,
     price: item.price,
     reason: item.reason,
+    description: item.description || '',
   }));
 
   const systemPrompt = intent === 'greeting'
@@ -158,7 +159,11 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
           ...variants.map((v) => `- ${v}`),
         ].join(' ');
       })()
-    : 'Bạn là trợ lý bán hàng e-commerce. Trả lời ngắn gọn bằng tiếng Việt, ưu tiên đề xuất hành động mua hàng, không bịa thông tin ngoài danh sách sản phẩm được cung cấp, và khi liệt kê sản phẩm thì mỗi sản phẩm một dòng, không dùng ký hiệu bullet.';
+    : 'Bạn là chuyên gia tư vấn bán hàng e-commerce chuyên nghiệp. Hãy trả lời tự nhiên, thân thiện bằng tiếng Việt.\n' +
+      'Dưới đây là các công cụ (Tools/Functions) bạn có thể sử dụng để hỗ trợ khách hàng:\n' +
+      '- `addToCart`: Gọi hàm này khi khách hàng yêu cầu thêm sản phẩm vào giỏ hàng (ví dụ: "Thêm sản phẩm này vào giỏ", "mua sản phẩm Samsung S26 Ultra", v.v.). Hãy đối chiếu và chọn sản phẩm phù hợp nhất từ danh sách `products` được cung cấp dưới đây để lấy ID tương ứng làm tham số `productId`.\n' +
+      '- `getOrderStatus`: Gọi hàm này khi khách hàng muốn kiểm tra hoặc theo dõi đơn hàng của họ (ví dụ: "đơn hàng mới nhất thế nào rồi", "tra cứu đơn hàng", v.v.).\n' +
+      'Hãy dựa vào thông tin chi tiết (Chip, Camera, Pin, RAM, ROM) của các sản phẩm để tư vấn chính xác. Trả lời tối đa 5 câu.';
 
   const userPrompt = JSON.stringify(
     {
@@ -168,11 +173,89 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
       recentHistory: history.slice(-4),
       requirements: intent === 'greeting'
         ? 'Trả lời tối đa 3 câu. Chỉ chào hỏi và mời xem phần sản phẩm bên dưới. Không lặp lại tên sản phẩm hoặc giá sản phẩm trong câu trả lời.'
-        : 'Trả lời tối đa 5 câu. Nếu cần, hỏi thêm 1 câu để làm rõ nhu cầu. Khi liệt kê sản phẩm: mỗi sản phẩm một dòng, không dùng ký hiệu bullet.',
+        : 'Trả lời tối đa 5 câu. Nếu khách hàng muốn thêm sản phẩm vào giỏ hoặc kiểm tra đơn hàng, bạn phải gọi công cụ tương ứng (addToCart hoặc getOrderStatus).',
     },
     null,
     2
   );
+
+  const geminiTools = [
+    {
+      functionDeclarations: [
+        {
+          name: 'addToCart',
+          description: 'Thêm sản phẩm vào giỏ hàng của khách hàng.',
+          parameters: {
+            type: 'OBJECT',
+            properties: {
+              productId: {
+                type: 'STRING',
+                description: 'Mã sản phẩm (ID) cần thêm vào giỏ hàng. Lấy từ trường _id hoặc id của sản phẩm trong danh sách contextProducts.'
+              },
+              quantity: {
+                type: 'NUMBER',
+                description: 'Số lượng sản phẩm cần thêm. Mặc định là 1.'
+              }
+            },
+            required: ['productId']
+          }
+        },
+        {
+          name: 'getOrderStatus',
+          description: 'Tra cứu danh sách đơn hàng hoặc trạng thái đơn hàng của khách hàng.',
+          parameters: {
+            type: 'OBJECT',
+            properties: {
+              orderId: {
+                type: 'STRING',
+                description: 'Mã đơn hàng cần kiểm tra (tùy chọn).'
+              }
+            }
+          }
+        }
+      ]
+    }
+  ];
+
+  const openaiTools = [
+    {
+      type: 'function',
+      function: {
+        name: 'addToCart',
+        description: 'Thêm sản phẩm vào giỏ hàng của khách hàng.',
+        parameters: {
+          type: 'object',
+          properties: {
+            productId: {
+              type: 'string',
+              description: 'Mã sản phẩm (ID) cần thêm vào giỏ hàng. Lấy từ trường _id hoặc id của sản phẩm trong danh sách contextProducts.'
+            },
+            quantity: {
+              type: 'number',
+              description: 'Số lượng sản phẩm cần thêm. Mặc định là 1.'
+            }
+          },
+          required: ['productId']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'getOrderStatus',
+        description: 'Tra cứu danh sách đơn hàng hoặc trạng thái đơn hàng của khách hàng.',
+        parameters: {
+          type: 'object',
+          properties: {
+            orderId: {
+              type: 'string',
+              description: 'Mã đơn hàng cần kiểm tra (tùy chọn).'
+            }
+          }
+        }
+      }
+    }
+  ];
 
   const isGemini = apiUrl.includes('generativelanguage.googleapis.com');
 
@@ -205,6 +288,7 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
                 parts: [{ text: userPrompt }],
               },
             ],
+            tools: geminiTools,
             generationConfig: {
               temperature: 0.4,
             },
@@ -226,6 +310,8 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
           ],
+          tools: openaiTools,
+          tool_choice: 'auto',
         }),
       });
     })();
@@ -233,21 +319,51 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
     clearTimeout(timeout);
 
     if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      console.error('maybeGenerateLlmReply API Error. Status:', response.status, 'Body:', errorText);
       return null;
     }
 
     const data = await response.json();
 
-    const content = isGemini
-      ? (data?.candidates || [])
-          .flatMap((candidate) => candidate?.content?.parts || [])
-          .map((part) => String(part?.text || '').trim())
-          .filter(Boolean)
-          .join('\n')
-      : data?.choices?.[0]?.message?.content;
-
-    return String(content || '').trim() || null;
+    if (isGemini) {
+      const candidate = data?.candidates?.[0];
+      const parts = candidate?.content?.parts || [];
+      const functionCallPart = parts.find(p => p.functionCall);
+      const textParts = parts.filter(p => p.text).map(p => p.text).join('\n');
+      
+      if (functionCallPart) {
+        return {
+          text: textParts || null,
+          toolCall: {
+            name: functionCallPart.functionCall.name,
+            args: functionCallPart.functionCall.args
+          }
+        };
+      }
+      return {
+        text: String(textParts || '').trim() || null,
+        toolCall: null
+      };
+    } else {
+      const message = data?.choices?.[0]?.message;
+      if (message?.tool_calls && message.tool_calls.length > 0) {
+        const toolCall = message.tool_calls[0];
+        return {
+          text: message.content || null,
+          toolCall: {
+            name: toolCall.function.name,
+            args: JSON.parse(toolCall.function.arguments || '{}')
+          }
+        };
+      }
+      return {
+        text: String(message?.content || '').trim() || null,
+        toolCall: null
+      };
+    }
   } catch (error) {
+    console.error('maybeGenerateLlmReply Error:', error);
     return null;
   }
 }

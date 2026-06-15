@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const ChatbotEvent = require("./models/ChatbotEvent");
-const { refreshKnnCache, computeKnnScores } = require("./sessionState");
+// Removed sessionState KNN imports
 const {
   normalizeText,
   tokenize,
@@ -44,6 +44,14 @@ function detectIntent(message) {
 
   if (includesAny(text, ["tu van", "goi y", "de xuat", "nen mua gi"])) {
     return "product_consult";
+  }
+
+  if (includesAny(text, ["don hang", "hoa don", "order", "tra cuu don", "kiem tra don", "trang thai don"])) {
+    return "order_status";
+  }
+
+  if (includesAny(text, ["them vao gio", "add to cart", "them gio hang", "cho vao gio", "mua ngay", "mua luon"])) {
+    return "add_to_cart";
   }
 
   return "product_search";
@@ -182,7 +190,7 @@ function buildSemanticSignal(product, queryTokens) {
   };
 }
 
-function rankWithLtr({ product, queryTokens, behaviorProfile, knnScore, budget, totalPurchases }) {
+function rankWithLtr({ product, queryTokens, behaviorProfile, rfScore, budget, totalPurchases }) {
   const semanticSignal = buildSemanticSignal(product, queryTokens);
   const semanticFeature = Math.min(1, semanticSignal.semanticRaw / 8);
 
@@ -208,15 +216,15 @@ function rankWithLtr({ product, queryTokens, behaviorProfile, knnScore, budget, 
 
   const ltrScore = isBudgetDriven
     ? semanticFeature * 0.2 +
-      Math.min(1, Number(knnScore || 0)) * 0.1 +
+      Math.min(1, Number(rfScore || 0)) * 0.25 +
       Math.min(1, behaviorFeature) * 0.1 +
       popularityFeature * 0.1 +
       ratingFeature * 0.05 +
-      priceFitFeature * 0.45
-    : semanticFeature * 0.38 +
-      Math.min(1, Number(knnScore || 0)) * 0.22 +
-      Math.min(1, behaviorFeature) * 0.16 +
-      popularityFeature * 0.14 +
+      priceFitFeature * 0.3
+    : semanticFeature * 0.3 +
+      Math.min(1, Number(rfScore || 0)) * 0.35 +
+      Math.min(1, behaviorFeature) * 0.15 +
+      popularityFeature * 0.1 +
       ratingFeature * 0.06 +
       priceFitFeature * 0.04;
 
@@ -224,7 +232,7 @@ function rankWithLtr({ product, queryTokens, behaviorProfile, knnScore, budget, 
     ltrScore,
     matched: semanticSignal.matched,
     semanticFeature,
-    knnFeature: Math.min(1, Number(knnScore || 0)),
+    rfFeature: Math.min(1, Number(rfScore || 0)),
     behaviorFeature: Math.min(1, behaviorFeature),
     popularityFeature,
   };
@@ -258,8 +266,10 @@ function buildRecommendationReason(item) {
     reasons.push("Phù hợp với nhu cầu tìm kiếm của bạn");
   }
 
-  if (Number(item.knnScore || 0) > 0.2) {
-    reasons.push("Được gợi ý thêm từ các sản phẩm tương tự");
+  if (Number(item.rfScore || 0) > 0.4) {
+    reasons.push("Được gợi ý hàng đầu bằng mô hình AI");
+  } else if (Number(item.rfScore || 0) > 0.15) {
+    reasons.push("Phù hợp với thói quen mua sắm của bạn");
   }
 
   if (Number(item.totalPurchases || 0) > 0) {
@@ -418,6 +428,42 @@ async function getSessionSeedProducts({ sessionId, userId, behaviorProfile }) {
   return Array.from(seedSet).slice(0, 20);
 }
 
+async function fetchMlRecommendationScores(userId, productIds = []) {
+  if (!Array.isArray(productIds) || productIds.length === 0 || !ML_SERVICE_URL) {
+    return new Map();
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const response = await fetch(
+      `${ML_SERVICE_URL.replace(/\/$/, "")}/api/intelligence/recommend`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: userId ? String(userId).trim() : null,
+          productIds: productIds.map(String),
+        }),
+        signal: controller.signal,
+      }
+    );
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      return new Map();
+    }
+
+    const data = await response.json();
+    const scores = data?.scores || {};
+    return new Map(Object.entries(scores));
+  } catch (error) {
+    return new Map();
+  }
+}
+
 async function findRecommendedProducts(message, context = {}, options = {}) {
   const queryTokens = tokenize(message);
   const QUERY_STOPWORDS = new Set([
@@ -515,9 +561,8 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
   }
 
   const purchaseMap = await getPurchaseMapByProductIds(products.map((item) => item._id));
-  await refreshKnnCache();
-  const seedProductIds = await getSessionSeedProducts({ sessionId: options.sessionId, userId: options.userId, behaviorProfile });
-  const knnScores = computeKnnScores(seedProductIds);
+  const productIds = products.map((item) => String(item._id));
+  const rfScores = await fetchMlRecommendationScores(options.userId, productIds);
   const mlSignal = options.mlSignal && typeof options.mlSignal === "object" ? options.mlSignal : null;
   const churnScore = Number(mlSignal?.churn_score ?? mlSignal?.churnScore ?? 0);
   const potentialScore = Number(mlSignal?.potential_score ?? mlSignal?.potentialScore ?? 0);
@@ -535,8 +580,8 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
       const allNumericMatched = numericTokens.length === 0 || numericTokens.every((token) => normalizedName.includes(token));
       const queryCoverage = informativeQueryTokens.length > 0 ? nameOverlap / informativeQueryTokens.length : 0;
       const totalPurchases = purchaseMap.get(String(product._id)) || 0;
-      const knnScore = Number(knnScores.get(String(product._id)) || 0);
-      const ltr = rankWithLtr({ product, queryTokens, behaviorProfile, knnScore, budget: priceConstraint?.maxPrice ?? null, totalPurchases });
+      const rfScore = Number(rfScores.get(String(product._id)) || 0);
+      const ltr = rankWithLtr({ product, queryTokens, behaviorProfile, rfScore, budget: priceConstraint?.maxPrice ?? null, totalPurchases });
 
       const sellingPrice = getEffectivePrice(product);
       const discountFeature = Math.min(1, Number(product.discountPercent || 0) / 30);
@@ -569,7 +614,7 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
       return {
         ...product,
         totalPurchases,
-        knnScore,
+        rfScore,
         ltrScore: ltr.ltrScore + hardMatchOverride + mlBoost,
         nameOverlap,
         queryCoverage,
@@ -621,7 +666,7 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
       totalRatings: item.totalRatings,
       totalViews: item.totalViews,
       totalPurchases: item.totalPurchases,
-      knnScore: item.knnScore,
+      rfScore: item.rfScore,
       reason: buildRecommendationReason(item),
     };
   });

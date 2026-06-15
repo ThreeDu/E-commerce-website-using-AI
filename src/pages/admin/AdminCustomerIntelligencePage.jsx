@@ -193,7 +193,7 @@ function AdminCustomerIntelligencePage() {
 
   if (loading) {
     return (
-      <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
+      <main className="w-full max-w-[1100px] mx-auto px-4 md:px-0 flex-1 py-10">
         <div className="flex flex-col items-center justify-center min-h-[40vh] text-admin-muted">
           <p className="font-semibold">Đang tải dữ liệu Intelligence...</p>
         </div>
@@ -292,7 +292,7 @@ function AdminCustomerIntelligencePage() {
   };
 
   return (
-    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10 px-1">
+    <main className="w-full max-w-[1100px] mx-auto px-4 md:px-0 flex-1 py-10">
       <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
         <h1 className="m-0 text-2xl md:text-3xl font-bold tracking-tight text-admin-ink">
           <FontAwesomeIcon icon={faBrain} className="mr-2 text-admin-primary" />
@@ -332,7 +332,7 @@ function AdminCustomerIntelligencePage() {
       </div>
 
       {!modelsReady ? (
-        <div className="w-full text-center p-6 sm:p-12 bg-[#f8fafc] rounded-2xl border border-[#e2e8f0] max-w-xl mx-auto my-10 shadow-xs animate-admin-rise">
+        <div className="w-full text-center p-6 sm:p-12 bg-[#f8fafc] rounded-2xl border border-[#e2e8f0] max-w-[576px] mx-auto my-10 shadow-xs animate-admin-rise">
           <div className="text-5xl mb-4">
             <FontAwesomeIcon icon={faRobot} className="text-admin-primary" />
           </div>

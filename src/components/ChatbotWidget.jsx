@@ -169,13 +169,71 @@ function writeBehavior(nextBehavior) {
 
 function ChatbotWidget() {
   const location = useLocation();
-  const { cart, addToCart } = useCart();
+  const { cart, addToCart, reloadCart } = useCart();
   const { auth } = useAuth();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState("");
   const [messages, setMessages] = useState([]);
+  const [recording, setRecording] = useState(false);
+  const [compareProduct1, setCompareProduct1] = useState(null);
+
+  const recognition = useMemo(() => {
+    if (typeof window !== "undefined") {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SR) {
+        const rec = new SR();
+        rec.continuous = false;
+        rec.lang = "vi-VN";
+        rec.interimResults = false;
+        return rec;
+      }
+    }
+    return null;
+  }, []);
+
+  useEffect(() => {
+    if (!recognition) return;
+
+    recognition.onstart = () => {
+      setRecording(true);
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      if (transcript) {
+        setInput((prev) => {
+          const space = prev && !prev.endsWith(" ") ? " " : "";
+          return prev + space + transcript;
+        });
+      }
+    };
+
+    recognition.onerror = () => {
+      setRecording(false);
+    };
+
+    recognition.onend = () => {
+      setRecording(false);
+    };
+  }, [recognition]);
+
+  const toggleRecording = useCallback(() => {
+    if (!recognition) {
+      alert("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói.");
+      return;
+    }
+    if (recording) {
+      recognition.stop();
+    } else {
+      try {
+        recognition.start();
+      } catch (e) {
+        // Already started
+      }
+    }
+  }, [recognition, recording]);
 
   const isAdminArea = location.pathname.startsWith("/admin");
 
@@ -339,6 +397,10 @@ function ChatbotWidget() {
         }),
       ]);
 
+      if (data?.cartUpdated && typeof reloadCart === "function") {
+        reloadCart();
+      }
+
       const products = Array.isArray(data?.products) ? data.products : [];
       products.forEach((item) => {
         trackEvent({
@@ -359,7 +421,7 @@ function ChatbotWidget() {
     } finally {
       setPending(false);
     }
-  }, [messages, location.pathname, auth?.token, sessionId, trackEvent]);
+  }, [messages, location.pathname, auth?.token, sessionId, trackEvent, reloadCart]);
 
   const sendMessageThroughMainChat = useCallback(async (text) => submitChatMessage(text, { showUserMessage: true }), [submitChatMessage]);
 
@@ -435,7 +497,7 @@ function ChatbotWidget() {
                     </div>
                   ) : null}
                   <div className={`max-w-[84%] rounded-[18px] p-2.5 px-3 border border-[#0f2233]/10 shadow-sm animate-chatbot-pop ${msg.role === "user" ? "bg-[#efeaff] border-[#0f494f]/12 origin-top-right" : "bg-[#f7faff] origin-top-left"}`}>
-                    {msg.role === "assistant" ? renderAssistantMarkdown(msg.text) : <p className="m-0 text-sm leading-relaxed">{msg.text}</p>}
+                    {msg.role === "assistant" ? renderAssistantMarkdown(msg.text) : <p className="m-0 text-sm leading-relaxed">{msg.text.replace(/\s*\[Mã:\s*[a-f0-9]+\]/gi, "")}</p>}
                     {msg.products.length > 0 ? (
                       <div className="mt-2 grid gap-2">
                         {msg.products.map((product, index) => (
@@ -477,23 +539,63 @@ function ChatbotWidget() {
                               </div>
                             </Link>
 
-                            <button
-                              type="button"
-                              className="border border-black/10 bg-white text-[#0f2233] rounded-lg min-h-[34px] text-xs font-medium cursor-pointer transition-all hover:bg-[#edf4ff] active:scale-97"
-                              onClick={() => {
-                                addToCart({ ...product, id: product._id });
-                                trackEvent({
-                                  eventType: "cart",
-                                  productId: product._id,
-                                  category: product.category,
-                                  metadata: {
-                                    source: "chatbot_add_to_cart",
-                                  },
-                                });
-                              }}
-                            >
-                              Thêm vào giỏ
-                            </button>
+                            <div className="flex gap-1 mt-1.5 w-full">
+                              <button
+                                type="button"
+                                className="flex-1 border border-black/10 bg-white text-[#0f2233] rounded-lg min-h-[30px] text-[11px] font-semibold cursor-pointer transition-all hover:bg-[#edf4ff] active:scale-97"
+                                onClick={() => {
+                                  addToCart({ ...product, id: product._id });
+                                  trackEvent({
+                                    eventType: "cart",
+                                    productId: product._id,
+                                    category: product.category,
+                                    metadata: {
+                                      source: "chatbot_add_to_cart",
+                                    },
+                                  });
+                                }}
+                              >
+                                Thêm giỏ
+                              </button>
+                              
+                              <button
+                                type="button"
+                                className="flex-1 border border-black/10 bg-[#fbf5ff] text-[#6b21a8] rounded-lg min-h-[30px] text-[11px] font-semibold cursor-pointer transition-all hover:bg-[#f3e8ff] active:scale-97"
+                                onClick={() => {
+                                  if (!compareProduct1) {
+                                    setCompareProduct1(product);
+                                    setMessages((prev) => [
+                                      ...prev,
+                                      createMessage("assistant", `Bạn đã chọn **${product.name}** làm sản phẩm đầu tiên. Vui lòng bấm nút **"So sánh"** trên một sản phẩm khác trong danh sách, hoặc gõ tên sản phẩm thứ hai để xem so sánh và nhận xét từ AI.`),
+                                    ]);
+                                  } else {
+                                    if (compareProduct1._id === product._id) {
+                                      setCompareProduct1(null);
+                                      setMessages((prev) => [
+                                        ...prev,
+                                        createMessage("assistant", `Đã hủy chọn so sánh sản phẩm **${product.name}**.`),
+                                      ]);
+                                    } else {
+                                      const prod1 = compareProduct1;
+                                      setCompareProduct1(null);
+                                      sendMessage(`So sánh ${prod1.name} [Mã: ${prod1._id}] và ${product.name} [Mã: ${product._id}]`);
+                                    }
+                                  }
+                                }}
+                              >
+                                So sánh
+                              </button>
+
+                              <button
+                                type="button"
+                                className="flex-1 border border-black/10 bg-[#f0fdf4] text-[#166534] rounded-lg min-h-[30px] text-[11px] font-semibold cursor-pointer transition-all hover:bg-[#dcfce7] active:scale-97"
+                                onClick={() => {
+                                  sendMessage(`Tư vấn chi tiết cấu hình sản phẩm ${product.name} [Mã: ${product._id}]`);
+                                }}
+                              >
+                                Chi tiết
+                              </button>
+                            </div>
                           </article>
                         ))}
                       </div>
@@ -535,8 +637,23 @@ function ChatbotWidget() {
             </div>
           ) : null}
 
+          {compareProduct1 ? (
+            <div className="p-2 px-3 flex items-center justify-between border-t border-purple-100 bg-[#fdf4ff] text-[#6b21a8] text-xs font-semibold animate-fade-in">
+              <span className="truncate">
+                Đang chọn: <strong>{compareProduct1.name}</strong> (Bấm "So sánh" trên thẻ khác)
+              </span>
+              <button
+                type="button"
+                className="text-red-500 hover:text-red-700 font-bold ml-2 cursor-pointer"
+                onClick={() => setCompareProduct1(null)}
+              >
+                Hủy
+              </button>
+            </div>
+          ) : null}
+
           <form
-            className="border-t border-black/8 grid grid-cols-[1fr_auto] gap-2 p-2.5 bg-white"
+            className="border-t border-black/8 grid grid-cols-[1fr_auto_auto] gap-2 p-2.5 bg-white items-center"
             onSubmit={(event) => {
               event.preventDefault();
               sendMessage(input);
@@ -545,16 +662,39 @@ function ChatbotWidget() {
             <input
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Nhập nhu cầu của bạn..."
+              placeholder={recording ? "Đang lắng nghe..." : "Nhập nhu cầu của bạn..."}
               disabled={pending}
-              className="border border-black/10 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dfeeff]"
+              className={`border rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 ${
+                recording ? "border-red-400 bg-red-50 focus:ring-red-200" : "border-black/10 focus:ring-[#dfeeff]"
+              }`}
             />
+            
+            <button
+              type="button"
+              onClick={toggleRecording}
+              disabled={pending}
+              title={recording ? "Dừng ghi âm" : "Ghi âm giọng nói"}
+              className={`border border-black/10 rounded-xl min-w-[40px] h-[36px] flex items-center justify-center cursor-pointer transition-all active:scale-95 ${
+                recording 
+                  ? "bg-red-500 text-white animate-pulse" 
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
+                {recording ? (
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                ) : (
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                )}
+              </svg>
+            </button>
+
             <button
               type="submit"
               disabled={pending || !String(input).trim()}
               aria-label="Gửi"
               title="Gửi"
-              className="border border-black/10 rounded-xl bg-[#dfeeff] text-[#0f314f] min-w-[44px] font-bold cursor-pointer transition-all hover:shadow-sm active:scale-96 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="border border-black/10 rounded-xl bg-[#dfeeff] text-[#0f314f] min-w-[44px] h-[36px] font-bold cursor-pointer transition-all hover:shadow-sm active:scale-96 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {pending ? (
                 "..."

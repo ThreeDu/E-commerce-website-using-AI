@@ -331,8 +331,82 @@ function buildCompareFallbackComment(product1, product2) {
   return comments.slice(0, 2).join(" ");
 }
 
+function buildCompareFallbackConclusion(product1, product2) {
+  const spec1 = extractComparisonSpecSummary(product1);
+  const spec2 = extractComparisonSpecSummary(product2);
+  const price1 = getEffectivePrice(product1);
+  const price2 = getEffectivePrice(product2);
+
+  const lines = ["**💡 Kết luận: Sản phẩm nào phù hợp với bạn?**"];
+
+  // Comparison logic
+  const isP1Cheaper = price1 < price2;
+  const priceDiff = Math.abs(price1 - price2);
+
+  let p1Highlights = [];
+  let p2Highlights = [];
+
+  if (price1 !== price2) {
+    if (isP1Cheaper) {
+      p1Highlights.push(`Tiết kiệm chi phí hơn (rẻ hơn ${formatVnd(priceDiff)})`);
+    } else {
+      p2Highlights.push(`Tiết kiệm chi phí hơn (rẻ hơn ${formatVnd(priceDiff)})`);
+    }
+  }
+
+  // Parse RAM
+  const ramVal1 = parseInt(spec1.ram) || 0;
+  const ramVal2 = parseInt(spec2.ram) || 0;
+  if (ramVal1 > ramVal2) {
+    p1Highlights.push(`RAM lớn hơn (${spec1.ram} so với ${spec2.ram}) giúp đa nhiệm tốt hơn`);
+  } else if (ramVal2 > ramVal1) {
+    p2Highlights.push(`RAM lớn hơn (${spec2.ram} so với ${spec1.ram}) giúp đa nhiệm tốt hơn`);
+  }
+
+  // Parse ROM
+  const romVal1 = parseInt(spec1.rom) || 0;
+  const romVal2 = parseInt(spec2.rom) || 0;
+  if (romVal1 > romVal2) {
+    p1Highlights.push(`Bộ nhớ trong lớn hơn (${spec1.rom} so với ${spec2.rom})`);
+  } else if (romVal2 > romVal1) {
+    p2Highlights.push(`Bộ nhớ trong lớn hơn (${spec2.rom} so với ${spec1.rom})`);
+  }
+
+  // Battery
+  const batVal1 = parseInt(spec1.battery) || 0;
+  const batVal2 = parseInt(spec2.battery) || 0;
+  if (batVal1 > batVal2) {
+    p1Highlights.push(`Dung lượng pin cao hơn (${spec1.battery} so với ${spec2.battery})`);
+  } else if (batVal2 > batVal1) {
+    p2Highlights.push(`Dung lượng pin cao hơn (${spec2.battery} so với ${spec1.battery})`);
+  }
+
+  if (p1Highlights.length > 0) {
+    lines.push(`- **Nên chọn ${product1.name}** nếu bạn ưu tiên: ${p1Highlights.join(", ")}.`);
+  } else {
+    lines.push(`- **Chọn ${product1.name}**: Thiết kế tinh tế, tối ưu cho nhu cầu sử dụng phổ thông.`);
+  }
+
+  if (p2Highlights.length > 0) {
+    lines.push(`- **Nên chọn ${product2.name}** nếu bạn ưu tiên: ${p2Highlights.join(", ")}.`);
+  } else {
+    lines.push(`- **Chọn ${product2.name}**: Hiệu năng ổn định, đáp ứng tốt mọi tác vụ cơ bản.`);
+  }
+
+  // Add a general recommendation sentence
+  if (price1 === price2 && ramVal1 === ramVal2 && romVal1 === romVal2) {
+    lines.push(`\n**Khuyên dùng**: Do hai sản phẩm có thông số kỹ thuật và giá thành gần như tương đương, bạn nên quyết định dựa trên sở thích cá nhân về thương hiệu hoặc các chương trình quà tặng đi kèm.`);
+  } else {
+    lines.push(`\n**Khuyên dùng**: Chọn sản phẩm có thông số vượt trội hơn nếu ngân sách cho phép, hoặc chọn dòng máy giá tốt hơn nếu muốn tối ưu hóa chi phí.`);
+  }
+
+  return lines.join("\n");
+}
+
 function buildCompareReply(product1, product2) {
-  return buildCompareMarkdownTable([product1, product2]);
+  const table = buildCompareMarkdownTable([product1, product2]);
+  const conclusion = buildCompareFallbackConclusion(product1, product2);
+  return `${table}\n\n${conclusion}`;
 }
 
 function parseCompareIntentFromText(message, history = []) {
@@ -778,16 +852,16 @@ async function maybeGenerateCompareReply({ message, product1, product2, history 
     product_2: product2,
     recentHistory: history ? history.slice(-4) : [],
     instructions:
-      "Chỉ dùng dữ liệu JSON đã cung cấp. Không tự bịa thông số. Trả về đúng một bảng Markdown so sánh theo chiều dọc: cột 1 là 'Đặc tính', các cột tiếp theo là tên của các sản phẩm. Các dòng hiển thị đặc tính gồm: Giá bán, Chip, RAM, ROM, Màn hình, Camera, Pin. Dùng '-' nếu không có dữ liệu. Tuyệt đối KHÔNG viết thêm bất kỳ đoạn mô tả, nhận xét hay kết luận nào phía dưới bảng.",
+      "Chỉ dùng dữ liệu JSON đã cung cấp. Không tự bịa thông số. Trả về một bảng Markdown so sánh theo chiều dọc: cột 1 là 'Đặc tính', các cột tiếp theo là tên của các sản phẩm. Các dòng hiển thị đặc tính gồm: Giá bán, Chip, RAM, ROM, Màn hình, Camera, Pin. Dùng '-' nếu không có dữ liệu. Dưới bảng, hãy viết một mục kết luận có tiêu đề '**💡 Kết luận: Sản phẩm nào phù hợp với bạn?**' phân tích chi tiết xem dòng máy nào phù hợp với nhu cầu hay đối tượng khách hàng nào (học sinh, game thủ, quay chụp, tối ưu chi phí, v.v.), giúp người dùng đưa ra quyết định mua sắm tốt nhất.",
   };
 
   const systemPrompt = [
     "Bạn là trợ lý so sánh sản phẩm thương mại điện tử chuyên nghiệp.",
-    "Nhiệm vụ duy nhất của bạn là xuất ra một bảng Markdown so sánh các sản phẩm theo chiều dọc.",
+    "Nhiệm vụ của bạn là xuất ra một bảng Markdown so sánh các sản phẩm theo chiều dọc.",
     "Cột đầu tiên phải có tiêu đề là 'Đặc tính'. Các cột tiếp theo lần lượt là tên của từng sản phẩm được so sánh.",
     "Các dòng (tiêu đề ở cột 'Đặc tính') bắt buộc phải gồm các thông tin: Giá bán, Chip, RAM, ROM, Màn hình, Camera, Pin.",
     "Hãy điền thông số chính xác từ dữ liệu JSON được cung cấp vào các cột sản phẩm tương ứng. Dùng '-' nếu không có thông tin.",
-    "Tuyệt đối KHÔNG được viết thêm bất kỳ văn bản, lời thoại, mô tả, nhận xét, so sánh hay kết luận nào ở phía dưới hoặc xung quanh bảng. Chỉ trả về duy nhất bảng Markdown.",
+    "Ngay phía dưới bảng Markdown, bạn BẮT BUỘC phải viết một phần kết luận chi tiết ngắn gọn (khoảng 3-5 câu) dưới tiêu đề '**💡 Kết luận: Sản phẩm nào phù hợp với bạn?**' so sánh các điểm mạnh cốt lõi và tư vấn sản phẩm nào phù hợp nhất cho đối tượng/nhu cầu nào để hướng dẫn người dùng lựa chọn.",
   ].join(" ");
 
   try {
@@ -868,25 +942,43 @@ async function maybeGenerateCompareReply({ message, product1, product2, history 
 async function handleCompareIntent({ message, session, historyContext }) {
   const MAX_HISTORY = 10;
 
-  // Step 1: Parse which two products the user wants to compare
-  let parsed = parseCompareIntentFromText(message, historyContext);
-  if (!parsed) {
-    parsed = await maybeParseCompareIntentWithLlm(message, historyContext);
+  let product1 = null;
+  let product2 = null;
+
+  // First try to extract by hidden database ID tags: [Mã: ID1] and [Mã: ID2]
+  const idMatches = Array.from(message.matchAll(/\[Mã:\s*([a-f0-9]{24})\]/gi));
+  if (idMatches.length >= 2) {
+    const id1 = idMatches[0][1];
+    const id2 = idMatches[1][1];
+    [product1, product2] = await Promise.all([
+      Product.findById(id1).select("_id name brand series model variant sku slug price finalPrice discountPercent description category image averageRating totalRatings totalViews stock").lean(),
+      Product.findById(id2).select("_id name brand series model variant sku slug price finalPrice discountPercent description category image averageRating totalRatings totalViews stock").lean()
+    ]);
   }
 
-  if (!parsed || !parsed.product_1?.name || !parsed.product_2?.name) {
-    return null;
-  }
+  if (!product1 || !product2) {
+    // Step 1: Parse which two products the user wants to compare
+    let parsed = parseCompareIntentFromText(message, historyContext);
+    if (!parsed) {
+      parsed = await maybeParseCompareIntentWithLlm(message, historyContext);
+    }
 
-  // Step 2: Find the best matching product in DB for each side
-  const [product1, product2] = await Promise.all([
-    findBestCompareProduct(parsed.product_1.name, {
-      brand: parsed.product_1.brand || "",
-    }),
-    findBestCompareProduct(parsed.product_2.name, {
-      brand: parsed.product_2.brand || "",
-    }),
-  ]);
+    if (!parsed || !parsed.product_1?.name || !parsed.product_2?.name) {
+      return null;
+    }
+
+    // Step 2: Find the best matching product in DB for each side
+    const [found1, found2] = await Promise.all([
+      product1 || findBestCompareProduct(parsed.product_1.name, {
+        brand: parsed.product_1.brand || "",
+      }),
+      product2 || findBestCompareProduct(parsed.product_2.name, {
+        brand: parsed.product_2.brand || "",
+      }),
+    ]);
+    product1 = found1;
+    product2 = found2;
+  }
 
   if (!product1 || !product2) {
     const missing = [];
@@ -987,4 +1079,5 @@ module.exports = {
   buildCompareReply,
   buildCompareMarkdownTable,
   buildCompareFallbackComment,
+  extractComparisonSpecSummary,
 };
