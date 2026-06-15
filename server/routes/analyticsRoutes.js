@@ -1,16 +1,26 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
-const { createAnalyticsEvent } = require("../controllers/analyticsController");
+const { createAnalyticsEvent, getMyWeeklyStats } = require("../controllers/analyticsController");
 const {
   getPersonalizedRecommendations,
   getAnonymousRecommendations,
   getTrendingProducts,
 } = require("../services/recommendationService");
-const { getTokenFromHeader } = require("./helpers/authHelpers");
+const { getTokenFromHeader, verifyUserRequest } = require("./helpers/authHelpers");
 
 const router = express.Router();
 
+const requireUser = async (req, res, next) => {
+  const user = await verifyUserRequest(req, res);
+  if (!user) {
+    return;
+  }
+  req.user = user;
+  next();
+};
+
 router.post("/events", createAnalyticsEvent);
+router.get("/my-weekly-stats", requireUser, getMyWeeklyStats);
 
 // @route   GET /api/analytics/recommendations
 // @desc    Return personalized product recommendations
