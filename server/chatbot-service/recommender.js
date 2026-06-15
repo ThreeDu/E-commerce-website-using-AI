@@ -30,7 +30,7 @@ function detectIntent(message) {
     return "product_search";
   }
 
-  if (includesAny(text, ["xin chao", "chao ban", "hello", "hi", "hey"])) {
+  if (/\b(xin\s*chao|chao\s*ban|hello|hi|hey)\b/i.test(text)) {
     return "greeting";
   }
 
@@ -553,6 +553,68 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
 
     if (brandFiltered.length > 0) {
       products = brandFiltered;
+    }
+  }
+
+  // Parse and apply screen size constraint if query contains screen size keywords and values
+  const screenQueryRegex = /(?:màn\s+hình|kích\s+thước|tỷ\s+lệ|kích\s+cỡ|size)\s*(?:khoảng|tầm|rộng|lớn|nhỏ)?\s*(\d+(?:[.,]\d+)?)\s*(?:"|inch\b|in\b)?/i;
+  const screenMatch = String(message || "").match(screenQueryRegex);
+  if (screenMatch) {
+    const requestedScreenSize = parseFloat(screenMatch[1].replace(",", "."));
+    if (!isNaN(requestedScreenSize)) {
+      const compareService = require("./compare");
+      const screenFiltered = products.filter((item) => {
+        const specs = compareService.extractComparisonSpecSummary(item);
+        const sizeMatch = String(specs.screen || "").match(/^(\d+(?:[.,]\d+)?)/);
+        if (sizeMatch) {
+          const sizeValue = parseFloat(sizeMatch[1].replace(",", "."));
+          return Math.abs(sizeValue - requestedScreenSize) < 0.05;
+        }
+        return false;
+      });
+      if (screenFiltered.length > 0) {
+        products = screenFiltered;
+      }
+    }
+  }
+
+  // Parse and apply chip constraint if query contains chip keywords
+  let requestedChip = null;
+  const chipKeywords = [
+    /\bintel\s*core\s*i\d\b/i,
+    /\b(?:amd\s*)?ryzen\s*\d\b/i,
+    /\bsnapdragon\s*\d+\s*(?:gen\s*\d+|elite)?\b/i,
+    /\bexynos\s*\d+\b/i,
+    /\bdimensity\s*\d+\b/i,
+    /\ba\d{2}(?:\s*(?:pro|bionic))?\b/i, // a19 pro, a19 bionic, a18 pro, etc.
+    /\bm\d(?:\s*(?:pro|max|ultra))?\b/i,  // m3 max, m3 pro, m2 max, etc.
+    /\bi\d\b/i,                           // i5, i7, i9
+  ];
+  
+  for (const regex of chipKeywords) {
+    const m = String(message || "").match(regex);
+    if (m) {
+      requestedChip = m[0].trim();
+      break;
+    }
+  }
+  
+  if (!requestedChip) {
+    const genericChipMatch = String(message || "").match(/(?:chip|cpu|vi\s+xử\s+lý|vi\s+xu\s+ly|chipset)\s+([a-z0-9-]+)/i);
+    if (genericChipMatch) {
+      requestedChip = genericChipMatch[1].trim();
+    }
+  }
+
+  if (requestedChip) {
+    const normalizedChip = normalizeText(requestedChip);
+    const chipFiltered = products.filter((item) => {
+      const nameNorm = normalizeText(item.name);
+      const descNorm = normalizeText(item.description);
+      return nameNorm.includes(normalizedChip) || descNorm.includes(normalizedChip);
+    });
+    if (chipFiltered.length > 0) {
+      products = chipFiltered;
     }
   }
 

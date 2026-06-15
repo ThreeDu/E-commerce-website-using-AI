@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const { cleanHtmlBreaks } = require('./textUtils');
 
 // Minimal helper copies used by compare module (kept self-contained)
 function normalizeText(value) {
@@ -168,43 +169,65 @@ function extractChip(rawText) {
 }
 
 function extractCamera(rawText) {
-  const rearRegex = /(?:camera\s+sau|camera\s+chinh|camera\s+chính|cụm\s+\d+\s+camera|camera\s+sau\s+chính|camera\s+sau\s+phụ)\s*:?\s*([^.\n]+)/i;
-  const frontRegex = /(?:camera\s+truoc|camera\s+trước|camera\s+selfie|selfie)\s*:?\s*([^.\n]+)/i;
-  
-  const rearMatch = rawText.match(rearRegex);
-  const frontMatch = rawText.match(frontRegex);
+  const cleanText = String(rawText || "").replace(/\s+/g, " ").trim();
   
   let rearMp = [];
   let frontMp = [];
+
+  const mpRegex = /\b(\d{1,3})\s*(?:MP|megapixel)\b/gi;
+  let match;
   
-  if (rearMatch) {
-    rearMp = Array.from(rearMatch[1].matchAll(/\b(\d{1,3})\s*(?:MP|megapixel)\b/gi)).map(m => `${m[1]}MP`);
-  }
-  if (frontMatch) {
-    frontMp = Array.from(frontMatch[1].matchAll(/\b(\d{1,3})\s*(?:MP|megapixel)\b/gi)).map(m => `${m[1]}MP`);
-  }
-  
-  if (rearMp.length === 0 && frontMp.length === 0) {
-    const globalMp = Array.from(rawText.matchAll(/\b(\d{1,3})\s*(?:MP|megapixel)\b/gi)).map(m => `${m[1]}MP`);
-    if (globalMp.length > 0) {
-      return globalMp.join(" + ");
+  while ((match = mpRegex.exec(cleanText)) !== null) {
+    const mpValue = `${match[1]}MP`;
+    const matchIndex = match.index;
+    
+    // Look at the context before this match (up to 80 characters)
+    const startContext = Math.max(0, matchIndex - 80);
+    let contextText = cleanText.substring(startContext, matchIndex);
+    
+    // Isolate only the current sentence/clause
+    const lastPunct = Math.max(
+      contextText.lastIndexOf("."),
+      contextText.lastIndexOf(";"),
+      contextText.lastIndexOf("\n")
+    );
+    if (lastPunct !== -1) {
+      contextText = contextText.substring(lastPunct + 1);
     }
-    return "Theo hãng công bố";
+    
+    const isFront = /trước|truoc|selfie|front/i.test(contextText);
+    if (isFront) {
+      frontMp.push(mpValue);
+    } else {
+      rearMp.push(mpValue);
+    }
   }
-  
+
+  // Deduplicate
+  const uniq = (arr) => Array.from(new Set(arr));
+  rearMp = uniq(rearMp);
+  frontMp = uniq(frontMp);
+
+  // Format response
   const parts = [];
   if (rearMp.length > 0) {
     parts.push(`Sau: ${rearMp.join(" + ")}`);
-  } else if (rearMatch) {
-    parts.push(`Sau: ${rearMatch[1].split(/[(),:]/)[0].trim()}`);
   }
-  
   if (frontMp.length > 0) {
     parts.push(`Trước: ${frontMp.join(" + ")}`);
-  } else if (frontMatch) {
-    parts.push(`Trước: ${frontMatch[1].split(/[(),:]/)[0].trim()}`);
   }
-  
+
+  if (parts.length === 0) {
+    const globalMp = uniq(Array.from(cleanText.matchAll(/\b(\d{1,3})\s*(?:MP|megapixel)\b/gi)).map(m => `${m[1]}MP`));
+    if (globalMp.length > 0) {
+      if (globalMp.length === 1) {
+        return `Sau: ${globalMp[0]}`;
+      }
+      return `Sau: ${globalMp.slice(0, -1).join(" + ")} | Trước: ${globalMp[globalMp.length - 1]}`;
+    }
+    return "Theo hãng công bố";
+  }
+
   return parts.join(" | ");
 }
 
@@ -215,13 +238,33 @@ function extractComparisonSpecSummary(product) {
     .replace(/\s+/g, " ")
     .trim();
 
+  const isLaptop = /laptop|macbook/i.test(product?.category || "") || /laptop|macbook/i.test(product?.name || "");
+
   const ramPairMatch = rawText.match(/\b(\d{1,2})\s*GB\s*\/\s*(\d{2,4})\s*(GB|TB)\b/i);
   const ramMatch = rawText.match(/\b(\d{1,2})\s*GB\s*(?:RAM|LPDDR|DDR)?\b/i);
   const storageMatches = Array.from(rawText.matchAll(/\b(\d{2,4})\s*(GB|TB)\b/gi));
   const storageMatch = ramPairMatch || storageMatches[storageMatches.length - 1] || null;
-  const screenSizeMatch = rawText.match(/\b(\d+(?:[.,]\d+)?)\s*(?:"|inch|in)\b/i);
-  const screenTechMatch = rawText.match(/\b(dynamic amoled 2x|dynamic amoled|amoled 2x|super retina xdr|super amoled|amoled|oled|ltpo|ltps|retina xdr|retina|poled|p-oled|p oled|lcd)\b/i);
+  const screenSizeMatch = rawText.match(/\b(\d+(?:[.,]\d+)?)\s*(?:"|inch\b|in\b)/i);
+  const screenTechMatch = rawText.match(/\b(dynamic amoled 2x|dynamic amoled|amoled 2x|super retina xdr|super amoled|amoled|oled|ltpo|ltps|retina xdr|retina|poled|p-oled|p oled|lcd|liquid retina xdr)\b/i);
+  const screenResMatch = rawText.match(/\b(quad hd\+|full hd\+|qhd\+|fhd\+|hd\+)\b/i);
+  const screenHzMatch = rawText.match(/\b(\d+(?:-\d+)?\s*Hz)\b/i);
+  const screenNitsMatch = rawText.match(/\b(\d+\s*nits)\b/i);
   const batteryMatch = rawText.match(/\b(\d{3,5})\s*m?a?h\b/i);
+  const laptopBatteryMatch = rawText.match(/\b(\d{2,3})\s*Whr?\b/i);
+
+  // Laptop specific fields
+  const gpuRegex = /(?:card\s+đồ\s+họa|card\s+do\s+hoa|gpu|vga|đồ\s+họa|do\s+hoa)\s*:?\s*([^.,\n()]+)/i;
+  const gpuMatch = rawText.match(gpuRegex);
+  const gpu = gpuMatch ? gpuMatch[1].trim() : "Tích hợp";
+
+  const weightRegex = /(?:trọng\s+lượng|nặng|weight)\s*:?\s*(\d+(?:[.,]\d+)?\s*(?:kg|g|gram))\b/i;
+  const weightMatch = rawText.match(weightRegex);
+  const weight = weightMatch ? weightMatch[1].trim() : "Đang cập nhật";
+
+  const osRegex = /(?:hệ\s+điều\s+hành|os)\s*:?\s*(windows\s*\d*|macos|android\s*\d*|ios\s*\d*|mac\s*os|linus|linux)/i;
+  const osMatch = rawText.match(osRegex);
+  const os = osMatch ? osMatch[1].trim() : "Windows";
+
   const priceValue = Number(getEffectivePrice(product) || 0);
 
   const formatFriendlyValue = (value, fallback = "Đang cập nhật") => {
@@ -253,15 +296,32 @@ function extractComparisonSpecSummary(product) {
   if (screenTechMatch) {
     screenParts.push(String(screenTechMatch[1]).toUpperCase());
   }
+  if (screenResMatch) {
+    screenParts.push(String(screenResMatch[1]).toUpperCase());
+  }
+  if (screenHzMatch) {
+    screenParts.push(String(screenHzMatch[1]));
+  }
+  if (screenNitsMatch) {
+    screenParts.push(String(screenNitsMatch[1]));
+  }
 
   return {
+    isLaptop,
     finalPrice: formatVnd(priceValue),
     chip: formatFriendlyValue(extractChip(rawText), "Theo hãng công bố"),
     ram: formatFriendlyValue(ram, "Theo hãng công bố"),
     rom: formatFriendlyValue(rom, "Đang cập nhật"),
     screen: formatFriendlyValue(screenParts.length > 0 ? screenParts.join(" ") : "", "Đang cập nhật"),
-    camera: formatFriendlyValue(extractCamera(rawText), "Theo hãng công bố"),
-    battery: formatFriendlyValue(batteryMatch ? `${Number(batteryMatch[1])} mAh` : "", "Theo hãng công bố"),
+    camera: isLaptop ? "-" : formatFriendlyValue(extractCamera(rawText), "Theo hãng công bố"),
+    battery: formatFriendlyValue(
+      isLaptop && laptopBatteryMatch ? `${laptopBatteryMatch[1]} Wh` : 
+      batteryMatch ? `${Number(batteryMatch[1])} mAh` : "",
+      "Theo hãng công bố"
+    ),
+    gpu: isLaptop ? formatFriendlyValue(gpu, "Tích hợp") : "-",
+    weight: isLaptop ? formatFriendlyValue(weight, "Đang cập nhật") : "-",
+    os: isLaptop ? formatFriendlyValue(os, "Windows") : "-",
   };
 }
 
@@ -269,20 +329,33 @@ function buildCompareMarkdownTable(products) {
   const rows = Array.isArray(products) ? products : [];
   if (rows.length === 0) return "";
 
+  const summaries = rows.map(p => extractComparisonSpecSummary(p));
+  const isComparingLaptops = summaries.some(s => s.isLaptop);
+
   const headers = ["| Đặc tính", ...rows.map(p => String(p?.name || "-").replace(/\|/g, "\\|"))];
   const alignments = ["| ---", ...rows.map(() => "---")];
 
-  const specRows = [
-    { label: "**Giá bán**", key: "finalPrice" },
-    { label: "**Chip**", key: "chip" },
-    { label: "**RAM**", key: "ram" },
-    { label: "**ROM**", key: "rom" },
-    { label: "**Màn hình**", key: "screen" },
-    { label: "**Camera**", key: "camera" },
-    { label: "**Pin**", key: "battery" }
-  ];
-
-  const summaries = rows.map(p => extractComparisonSpecSummary(p));
+  const specRows = isComparingLaptops
+    ? [
+        { label: "**Giá bán**", key: "finalPrice" },
+        { label: "**CPU (Vi xử lý)**", key: "chip" },
+        { label: "**Card đồ họa (GPU)**", key: "gpu" },
+        { label: "**Bộ nhớ RAM**", key: "ram" },
+        { label: "**Ổ cứng (ROM)**", key: "rom" },
+        { label: "**Màn hình**", key: "screen" },
+        { label: "**Dung lượng Pin**", key: "battery" },
+        { label: "**Trọng lượng**", key: "weight" },
+        { label: "**Hệ điều hành**", key: "os" }
+      ]
+    : [
+        { label: "**Giá bán**", key: "finalPrice" },
+        { label: "**Chip**", key: "chip" },
+        { label: "**RAM**", key: "ram" },
+        { label: "**ROM**", key: "rom" },
+        { label: "**Màn hình**", key: "screen" },
+        { label: "**Camera**", key: "camera" },
+        { label: "**Pin**", key: "battery" }
+      ];
 
   const lines = [
     headers.join(" | ") + " |",
@@ -292,7 +365,8 @@ function buildCompareMarkdownTable(products) {
   specRows.forEach(spec => {
     const cells = [spec.label];
     summaries.forEach(summary => {
-      cells.push(summary[spec.key] || "-");
+      const val = String(summary[spec.key] || "-").replace(/\|/g, "\\|");
+      cells.push(val);
     });
     lines.push("| " + cells.join(" | ") + " |");
   });
@@ -852,7 +926,7 @@ async function maybeGenerateCompareReply({ message, product1, product2, history 
     product_2: product2,
     recentHistory: history ? history.slice(-4) : [],
     instructions:
-      "Chỉ dùng dữ liệu JSON đã cung cấp. Không tự bịa thông số. Trả về một bảng Markdown so sánh theo chiều dọc: cột 1 là 'Đặc tính', các cột tiếp theo là tên của các sản phẩm. Các dòng hiển thị đặc tính gồm: Giá bán, Chip, RAM, ROM, Màn hình, Camera, Pin. Dùng '-' nếu không có dữ liệu. Dưới bảng, hãy viết một mục kết luận có tiêu đề '**💡 Kết luận: Sản phẩm nào phù hợp với bạn?**' phân tích chi tiết xem dòng máy nào phù hợp với nhu cầu hay đối tượng khách hàng nào (học sinh, game thủ, quay chụp, tối ưu chi phí, v.v.), giúp người dùng đưa ra quyết định mua sắm tốt nhất.",
+      "Chỉ dùng dữ liệu JSON đã cung cấp. Không tự bịa thông số. Trả về một bảng Markdown so sánh theo chiều dọc: cột 1 là 'Đặc tính', các cột tiếp theo là tên của các sản phẩm. Các dòng hiển thị đặc tính gồm: Giá bán, Chip, RAM, ROM, Màn hình, Camera, Pin. Dùng '-' nếu không có dữ liệu. Hãy nhớ viết các ký tự '|' bên trong ô dữ liệu là '\\|' để tránh làm hỏng các cột của bảng. Tuyệt đối không dùng các thẻ HTML như '<br>', '<br/>', '<br />' để xuống dòng trong bảng. Hãy dùng dấu gạch đứng đã được escape là '\\|' (ví dụ: 'Sau: 50MP \\| Trước: 12MP') khi muốn phân tách hoặc xuống dòng thông số camera trước và sau. Dưới bảng, hãy viết một mục kết luận có tiêu đề '**💡 Kết luận: Sản phẩm nào phù hợp với bạn?**' phân tích chi tiết xem dòng máy nào phù hợp với nhu cầu hay đối tượng khách hàng nào (học sinh, game thủ, quay chụp, tối ưu chi phí, v.v.), giúp người dùng đưa ra quyết định mua sắm tốt nhất.",
   };
 
   const systemPrompt = [
@@ -861,6 +935,8 @@ async function maybeGenerateCompareReply({ message, product1, product2, history 
     "Cột đầu tiên phải có tiêu đề là 'Đặc tính'. Các cột tiếp theo lần lượt là tên của từng sản phẩm được so sánh.",
     "Các dòng (tiêu đề ở cột 'Đặc tính') bắt buộc phải gồm các thông tin: Giá bán, Chip, RAM, ROM, Màn hình, Camera, Pin.",
     "Hãy điền thông số chính xác từ dữ liệu JSON được cung cấp vào các cột sản phẩm tương ứng. Dùng '-' nếu không có thông tin.",
+    "Bắt buộc viết mọi ký tự '|' trong các ô giá trị dưới dạng '\\|' để tránh làm hỏng cấu trúc cột của bảng Markdown.",
+    "Tuyệt đối KHÔNG được sử dụng các thẻ HTML như '<br>', '<br />', '<br/>' để tạo dòng mới trong ô dữ liệu của bảng. Thay vào đó, hãy dùng ký tự '\\|' (ví dụ: 'Sau: 50MP \\| Trước: 12MP') để hiển thị ngăn cách thông số camera.",
     "Ngay phía dưới bảng Markdown, bạn BẮT BUỘC phải viết một phần kết luận chi tiết ngắn gọn (khoảng 3-5 câu) dưới tiêu đề '**💡 Kết luận: Sản phẩm nào phù hợp với bạn?**' so sánh các điểm mạnh cốt lõi và tư vấn sản phẩm nào phù hợp nhất cho đối tượng/nhu cầu nào để hướng dẫn người dùng lựa chọn.",
   ].join(" ");
 
@@ -1023,7 +1099,7 @@ async function handleCompareIntent({ message, session, historyContext }) {
     llmReplyText = null;
   }
 
-  const replyText = llmReplyText || buildCompareReply(product1, product2);
+  const replyText = cleanHtmlBreaks(llmReplyText || buildCompareReply(product1, product2));
 
   // Step 4: Push to session history
   const compareProducts = [product1, product2];

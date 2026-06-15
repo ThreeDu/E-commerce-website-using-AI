@@ -19,6 +19,7 @@ const {
   normalizeConversationHistory,
   includesAny,
   isModelAnchorToken,
+  cleanHtmlBreaks,
 } = require("./textUtils");
 
 // Chatbot service implementation with structured replies and recommendation logic.
@@ -146,7 +147,25 @@ function parsePriceConstraint(message) {
   }
 
   const moneyMatch = text.match(/(\d+(?:[.,]\d+)?)\s*(trieu|tr|m|million|vnd|dong|k)\b/i);
-  const bareNumberMatch = moneyMatch ? null : text.match(/\b(\d{2,4})\b/);
+  
+  let bareNumberMatch = null;
+  if (!moneyMatch) {
+    const m = text.match(/\b(\d{2,4})\b/);
+    if (m) {
+      const num = parseInt(m[1], 10);
+      const hasPriceKeyword = /\b(tam|khoang|duoi|tren|gia|ngan\s*sach|tai\s*chinh|budget|price|under|above|around|toi\s*da|toi\s*thieu|nho\s*hon|lon\s*hon)\b/i.test(text) ||
+                              (/\b(max|min)\b/i.test(text) && !/\bpro\s+max\b/i.test(text));
+      
+      if (hasPriceKeyword && num < 200) {
+        bareNumberMatch = m;
+      } else if (!hasPriceKeyword && num >= 3 && num <= 100) {
+        const commonExclude = [8, 11, 12, 13, 14, 15, 16, 17, 24, 32, 64];
+        if (!commonExclude.includes(num)) {
+          bareNumberMatch = m;
+        }
+      }
+    }
+  }
 
   let budget = null;
   if (moneyMatch) {
@@ -180,7 +199,7 @@ function buildCategoryConstraint(message) {
   const aliases = {
     "dien thoai": ["dien thoai", "smartphone", "phone", "iphone", "android", "galaxy"],
     laptop: ["laptop", "notebook", "ultrabook"],
-    "phu kien": ["phu kien", "accessory", "tai nghe", "chuot", "ban phim", "webcam", "man hinh", "dong ho"],
+    "phu kien": ["phu kien", "accessory", "tai nghe", "chuot", "ban phim", "webcam", "dong ho"],
   };
 
   for (const [category, keywords] of Object.entries(aliases)) {
@@ -435,7 +454,7 @@ async function maybeGenerateProductConsultLlmReply(product, specs, history = [])
   }
 
   const isGemini = apiUrl.includes("generativelanguage.googleapis.com");
-  const systemPrompt = "Bạn là chuyên gia tư vấn công nghệ chuyên nghiệp. Hãy viết một đoạn nhận xét/tư vấn ngắn gọn (khoảng 3-4 câu) về cấu hình và hiệu năng của sản phẩm dưới đây bằng tiếng Việt. Tập trung vào đối tượng sử dụng phù hợp (học sinh, game thủ, văn phòng, v.v.). Trả lời tự nhiên, thân thiện.";
+  const systemPrompt = "Bạn là chuyên gia tư vấn công nghệ chuyên nghiệp. Hãy viết một đoạn nhận xét/tư vấn ngắn gọn (khoảng 3-4 câu) về cấu hình và hiệu năng của sản phẩm dưới đây bằng tiếng Việt. Tập trung vào đối tượng sử dụng phù hợp (học sinh, game thủ, văn phòng, v.v.). Trả lời tự nhiên, thân thiện. Tuyệt đối không sử dụng bất kỳ thẻ HTML nào bao gồm cả thẻ '<br>'.";
   
   const payload = {
     product: {
@@ -525,19 +544,41 @@ async function maybeGenerateProductConsultLlmReply(product, specs, history = [])
 
 function buildSingleProductSpecsMarkdown(product, extractComparisonSpecSummary, llmComment = null) {
   const specs = extractComparisonSpecSummary(product);
+  const escapePipe = (str) => String(str || "").replace(/\|/g, "\\|");
+  
+  if (specs.isLaptop) {
+    const laptopComment = llmComment || `Thiết bị sở hữu bộ vi xử lý **${specs.chip}** cùng **${specs.ram} RAM** và card đồ họa **${specs.gpu}**, mang lại hiệu năng mạnh mẽ vượt trội cho mọi tác vụ học tập, văn phòng và đồ họa, giải trí. Thời lượng pin **${specs.battery}** cùng trọng lượng chỉ **${specs.weight}** mang lại sự cơ động cao khi di chuyển. Máy được trang bị ổ cứng **${specs.rom}** siêu tốc và chạy trên hệ điều hành **${specs.os}** mượt mà.`;
+    return [
+      `### 📋 Thông số kỹ thuật chi tiết của ${product.name}`,
+      `| Đặc tính | Chi tiết |`,
+      `| --- | --- |`,
+      `| **Giá bán** | **${escapePipe(specs.finalPrice)}** |`,
+      `| **CPU (Vi xử lý)** | ${escapePipe(specs.chip)} |`,
+      `| **Card đồ họa (GPU)** | ${escapePipe(specs.gpu)} |`,
+      `| **Bộ nhớ RAM** | ${escapePipe(specs.ram)} |`,
+      `| **Ổ cứng (ROM)** | ${escapePipe(specs.rom)} |`,
+      `| **Màn hình** | ${escapePipe(specs.screen)} |`,
+      `| **Dung lượng Pin** | ${escapePipe(specs.battery)} |`,
+      `| **Trọng lượng** | ${escapePipe(specs.weight)} |`,
+      `| **Hệ điều hành** | ${escapePipe(specs.os)} |`,
+      `| **Tình trạng kho** | ${product.stock > 0 ? `Còn hàng (${product.stock} máy)` : "Hết hàng"} |`,
+      `\n**💡 Nhận xét chi tiết**: ${laptopComment}`
+    ].join("\n");
+  }
+
   const comment = llmComment || `Thiết bị sở hữu dòng chip **${specs.chip}** cùng **${specs.ram} RAM**, mang lại hiệu năng cực kỳ mạnh mẽ, xử lý mượt mà mọi tác vụ từ văn phòng giải trí đến chơi game đồ họa cao. Dung lượng pin **${specs.battery}** đảm bảo thời gian hoạt động thoải mái cả ngày dài. Hệ thống camera **${specs.camera}** cho chất lượng chụp ảnh sắc nét, cực kỳ phù hợp cho người dùng yêu thích quay phim chụp hình.`;
   
   return [
     `### 📋 Thông số kỹ thuật chi tiết của ${product.name}`,
     `| Đặc tính | Chi tiết |`,
     `| --- | --- |`,
-    `| **Giá bán** | **${specs.finalPrice}** |`,
-    `| **Chip xử lý** | ${specs.chip} |`,
-    `| **Bộ nhớ RAM** | ${specs.ram} |`,
-    `| **Bộ nhớ trong (ROM)** | ${specs.rom} |`,
-    `| **Màn hình** | ${specs.screen} |`,
-    `| **Hệ thống Camera** | ${specs.camera} |`,
-    `| **Dung lượng Pin** | ${specs.battery} |`,
+    `| **Giá bán** | **${escapePipe(specs.finalPrice)}** |`,
+    `| **Chip xử lý** | ${escapePipe(specs.chip)} |`,
+    `| **Bộ nhớ RAM** | ${escapePipe(specs.ram)} |`,
+    `| **Bộ nhớ trong (ROM)** | ${escapePipe(specs.rom)} |`,
+    `| **Màn hình** | ${escapePipe(specs.screen)} |`,
+    `| **Hệ thống Camera** | ${escapePipe(specs.camera)} |`,
+    `| **Dung lượng Pin** | ${escapePipe(specs.battery)} |`,
     `| **Tình trạng kho** | ${product.stock > 0 ? `Còn hàng (${product.stock} máy)` : "Hết hàng"} |`,
     `\n**💡 Nhận xét chi tiết**: ${comment}`
   ].join("\n");
@@ -551,7 +592,19 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
   const historyContext = providedHistory.length > 0 ? providedHistory : session.history;
 
   const normalizedMsg = normalizeText(plainMessage);
-  if (normalizedMsg.includes("tu van chi tiet cau hinh san pham") || normalizedMsg.includes("tu van chi tiet cau hinh")) {
+  const specsKeywords = [
+    "tu van chi tiet cau hinh",
+    "tu van chi tiet",
+    "cau hinh",
+    "thong so",
+    "thong tin",
+    "chi tiet san pham",
+    "chi tiet may",
+    "nhan xet",
+    "danh gia"
+  ];
+  const isSpecsQuery = specsKeywords.some(keyword => normalizedMsg.includes(keyword));
+  if (isSpecsQuery) {
     let productObj = null;
 
     // First try to extract by hidden database ID: [Mã: ID] or [ID: ID]
@@ -570,10 +623,32 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
         .replace(/tu van chi tiet cau hinh san pham/gi, "")
         .replace(/tư vấn chi tiết cấu hình/gi, "")
         .replace(/tu van chi tiet cau hinh/gi, "")
+        .replace(/cấu hình sản phẩm/gi, "")
+        .replace(/cau hinh san pham/gi, "")
+        .replace(/cấu hình/gi, "")
+        .replace(/cau hinh/gi, "")
+        .replace(/thông số kỹ thuật/gi, "")
+        .replace(/thong so ky thuat/gi, "")
+        .replace(/thông số sản phẩm/gi, "")
+        .replace(/thong so san pham/gi, "")
+        .replace(/thông số/gi, "")
+        .replace(/thong so/gi, "")
+        .replace(/thông tin sản phẩm/gi, "")
+        .replace(/thong tin san pham/gi, "")
+        .replace(/thông tin/gi, "")
+        .replace(/thong tin/gi, "")
+        .replace(/chi tiết sản phẩm/gi, "")
+        .replace(/chi tiet san pham/gi, "")
+        .replace(/chi tiết/gi, "")
+        .replace(/chi tiet/gi, "")
+        .replace(/nhận xét/gi, "")
+        .replace(/nhan xet/gi, "")
+        .replace(/đánh giá/gi, "")
+        .replace(/danh gia/gi, "")
         .trim();
 
       searchName = searchName
-        .replace(/^(của|cua|cho|sản phẩm|san pham|máy|may|thiết bị|thiet bi)\s+/gi, "")
+        .replace(/^(của|cua|cho|sản phẩm|san pham|máy tính xách tay|may tinh xach tay|máy tính|may tinh|máy|may|thiết bị|thiet bi|laptop|macbook|điện thoại|dien thoai|phone)\s+/gi, "")
         .trim();
 
       if (searchName) {
@@ -598,7 +673,7 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
         llmComment = null;
       }
 
-      const specsMarkdown = buildSingleProductSpecsMarkdown(productObj, compareService.extractComparisonSpecSummary, llmComment);
+      const specsMarkdown = cleanHtmlBreaks(buildSingleProductSpecsMarkdown(productObj, compareService.extractComparisonSpecSummary, llmComment));
 
       session.history.push({ role: "user", content: plainMessage, at: new Date().toISOString() });
       session.history.push({
@@ -923,7 +998,7 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
     conversationFocus,
     mlSignal,
   });
-  const replyText = llmReply || formatStructuredReply(ruleReplyStructured);
+  const replyText = cleanHtmlBreaks(llmReply || formatStructuredReply(ruleReplyStructured));
   const quickReplies = buildQuickReplies(intent);
 
   session.history.push({ role: "user", content: plainMessage, at: new Date().toISOString() });

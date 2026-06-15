@@ -197,24 +197,38 @@ function ChatbotWidget() {
     if (!recognition) return;
 
     recognition.onstart = () => {
+      console.log("Speech recognition started");
       setRecording(true);
     };
 
     recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
+      console.log("Speech recognition result event:", event);
+      const resultIndex = event.resultIndex;
+      const transcript = event.results[resultIndex][0].transcript;
       if (transcript) {
         setInput((prev) => {
           const space = prev && !prev.endsWith(" ") ? " " : "";
-          return prev + space + transcript;
+          return prev + space + transcript.trim();
         });
       }
     };
 
-    recognition.onerror = () => {
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      if (event.error === "not-allowed") {
+        alert("Không thể truy cập microphone. Vui lòng cấp quyền truy cập microphone cho trang web này trong cài đặt trình duyệt (Click vào biểu tượng ổ khóa ở đầu thanh địa chỉ URL).");
+      } else if (event.error === "network") {
+        alert("Không thể kết nối đến máy chủ nhận diện giọng nói của Google (Lỗi Network). Vui lòng kiểm tra lại đường truyền Internet, tạm thời tắt các dịch vụ VPN/Proxy/Chặn quảng cáo, hoặc thử lại sau.");
+      } else if (event.error === "no-speech") {
+        console.log("No speech detected.");
+      } else {
+        alert("Lỗi nhận diện giọng nói: " + event.error);
+      }
       setRecording(false);
     };
 
     recognition.onend = () => {
+      console.log("Speech recognition ended");
       setRecording(false);
     };
   }, [recognition]);
@@ -638,13 +652,13 @@ function ChatbotWidget() {
           ) : null}
 
           {compareProduct1 ? (
-            <div className="p-2 px-3 flex items-center justify-between border-t border-purple-100 bg-[#fdf4ff] text-[#6b21a8] text-xs font-semibold animate-fade-in">
-              <span className="truncate">
-                Đang chọn: <strong>{compareProduct1.name}</strong> (Bấm "So sánh" trên thẻ khác)
+            <div className="p-2 px-3 flex items-center justify-between border-t border-purple-100 bg-[#fdf4ff] text-[#6b21a8] text-xs font-semibold animate-fade-in gap-2 min-w-0">
+              <span className="truncate min-w-0 flex-1">
+                Đang chọn: <strong>{compareProduct1.name}</strong> (Bấm \"So sánh\" trên thẻ khác)
               </span>
               <button
                 type="button"
-                className="text-red-500 hover:text-red-700 font-bold ml-2 cursor-pointer"
+                className="text-red-500 hover:text-red-700 font-bold shrink-0 cursor-pointer ml-1"
                 onClick={() => setCompareProduct1(null)}
               >
                 Hủy

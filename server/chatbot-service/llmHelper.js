@@ -133,13 +133,29 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
     return null;
   }
 
-  const contextProducts = recommendedProducts.slice(0, 4).map((item) => ({
-    name: item.name,
-    category: item.category,
-    price: item.price,
-    reason: item.reason,
-    description: item.description || '',
-  }));
+  const compareService = require('./compare');
+  const contextProducts = recommendedProducts.slice(0, 4).map((item) => {
+    const specs = compareService.extractComparisonSpecSummary(item);
+    return {
+      name: item.name,
+      category: item.category,
+      price: item.price,
+      reason: item.reason,
+      specs: {
+        chip: specs.chip,
+        ram: specs.ram,
+        rom: specs.rom,
+        screen: specs.screen,
+        camera: specs.camera,
+        battery: specs.battery,
+        gpu: specs.gpu,
+        weight: specs.weight,
+        os: specs.os,
+        isLaptop: specs.isLaptop
+      },
+      description: item.description || '',
+    };
+  });
 
   const systemPrompt = intent === 'greeting'
     ? (() => {

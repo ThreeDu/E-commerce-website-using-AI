@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-import ChatbotWidget from "./features/chatbot-service/ChatbotWidget";
+import ChatbotWidget from "./components/ChatbotWidget";
 import StatusNotificationCenter from "./components/StatusNotificationCenter";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/common/ErrorBoundary";
