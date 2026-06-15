@@ -549,6 +549,20 @@ function ChatbotWidget() {
                                 {Number(product.price || 0) > Number(product.finalPrice || product.price || 0) ? (
                                   <p className="mt-0.5 text-[11px] text-[#6b7280] line-through">{formatVnd(product.price)}</p>
                                 ) : null}
+                                {(product.averageRating && Number(product.averageRating) > 0) || (product.totalPurchases && Number(product.totalPurchases) > 0) ? (
+                                  <div className="flex flex-wrap items-center gap-1 mt-1 mb-1">
+                                    {product.averageRating && Number(product.averageRating) > 0 ? (
+                                      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[#b45309] bg-[#fef3c7] border border-[#fde68a] px-1.5 py-0.5 rounded">
+                                        ★ {Number(product.averageRating).toFixed(1)}
+                                      </span>
+                                    ) : null}
+                                    {product.totalPurchases && Number(product.totalPurchases) > 0 ? (
+                                      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[#c2410c] bg-[#ffedd5] border border-[#fed7aa] px-1.5 py-0.5 rounded">
+                                        🔥 Đã bán: {product.totalPurchases}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                ) : null}
                                 <p className="mt-0.5 text-[11px] text-[#64748b]">{product.reason}</p>
                               </div>
                             </Link>

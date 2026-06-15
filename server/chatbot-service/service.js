@@ -413,9 +413,15 @@ function buildRuleReply(intent, recommendedProducts, options = {}) {
   const categoryLabel = categoryLabels[category] || (category ? category : "sản phẩm");
   const budgetText = formatBudgetVn(budget);
 
-  const title = budgetText
+  let title = budgetText
     ? `Với ngân sách ${budgetText}, bạn có thể tham khảo các ${categoryLabel} sau:`
     : `Một vài ${categoryLabel} phù hợp cho bạn:`;
+
+  if (options?.sortConstraint === "rating") {
+    title = `Danh sách các ${categoryLabel} được đánh giá cao nhất tại hệ thống:`;
+  } else if (options?.sortConstraint === "sales") {
+    title = `Danh sách các ${categoryLabel} bán chạy nhất hiện nay:`;
+  }
 
   const followUp = budgetText
     ? `Bạn có muốn xem chi tiết về các sản phẩm này không, hay bạn đang tìm sản phẩm có giá chính xác ${budgetText}?`
@@ -431,9 +437,19 @@ function buildRuleReply(intent, recommendedProducts, options = {}) {
   };
 }
 
-function buildQuickReplies(intent) {
+function buildQuickReplies(intent, options = {}) {
   if (intent === "policy") {
     return ["Phí vận chuyển", "Thời gian giao hàng", "Chính sách đổi trả"];
+  }
+
+  const sort = options?.sortConstraint || null;
+
+  if (sort === "rating") {
+    return ["Điện thoại đánh giá cao", "Laptop đánh giá cao", "Bán chạy nhất"];
+  }
+  
+  if (sort === "sales") {
+    return ["Điện thoại bán chạy", "Laptop bán chạy", "Đánh giá cao"];
   }
 
   return ["Ngân sách dưới 5 triệu", "Đánh giá cao", "Bán chạy nhất"];
@@ -587,6 +603,14 @@ function buildSingleProductSpecsMarkdown(product, extractComparisonSpecSummary, 
 async function processChatMessage({ message, sessionId, context = {}, userId = null, history = [] }) {
   const session = getOrCreateSession(sessionId);
   const plainMessage = String(message || "").trim();
+  
+  const normMsgForSort = normalizeText(plainMessage);
+  let sortConstraint = null;
+  if (includesAny(normMsgForSort, ["danh gia cao", "top rated", "highly rated", "nhieu sao", "sao cao", "danh gia tot"])) {
+    sortConstraint = "rating";
+  } else if (includesAny(normMsgForSort, ["ban chay nhat", "best seller", "ban chay", "mua nhieu", "nhieu nguoi mua", "hot"])) {
+    sortConstraint = "sales";
+  }
 
   const providedHistory = normalizeConversationHistory(history, 6);
   const historyContext = providedHistory.length > 0 ? providedHistory : session.history;
@@ -603,7 +627,7 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
     "nhan xet",
     "danh gia"
   ];
-  const isSpecsQuery = specsKeywords.some(keyword => normalizedMsg.includes(keyword));
+  const isSpecsQuery = specsKeywords.some(keyword => normalizedMsg.includes(keyword)) && !normalizedMsg.includes("danh gia cao");
   if (isSpecsQuery) {
     let productObj = null;
 
@@ -685,10 +709,16 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
             name: productObj.name,
             category: productObj.category,
             price: productObj.price,
+            finalPrice: productObj.finalPrice || productObj.price,
+            discountPercent: productObj.discountPercent || 0,
+            image: productObj.image,
             brand: productObj.brand,
             model: productObj.model,
             variant: productObj.variant,
             stock: productObj.stock,
+            averageRating: productObj.averageRating || 0,
+            totalPurchases: productObj.totalPurchases || 0,
+            reason: productObj.reason,
           }
         ],
         at: new Date().toISOString()
@@ -815,6 +845,7 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
           memory,
           mlSignal,
           conversationFocus,
+          sortConstraint,
         });
   }
 
@@ -902,6 +933,15 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
             if (words.length > 0) {
               const regexQuery = words.map(w => escapeRegExp(w)).join('.*');
               productObj = await Product.findOne({ name: { $regex: new RegExp(regexQuery, 'i') } });
+            }
+          }
+          
+          // Typo/abbreviation fallback using recommender LTR scoring:
+          if (!productObj) {
+            const recommenderService = require("./recommender");
+            const recommended = await recommenderService.findRecommendedProducts(productId);
+            if (recommended && recommended.length > 0) {
+              productObj = await Product.findById(recommended[0]._id);
             }
           }
         }
@@ -997,9 +1037,13 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
     categoryConstraint: inferredCategory || memory?.category || "",
     conversationFocus,
     mlSignal,
+    sortConstraint,
   });
   const replyText = cleanHtmlBreaks(llmReply || formatStructuredReply(ruleReplyStructured));
-  const quickReplies = buildQuickReplies(intent);
+  const quickReplies = buildQuickReplies(intent, {
+    sortConstraint,
+    categoryConstraint: inferredCategory || memory?.category || "",
+  });
 
   session.history.push({ role: "user", content: plainMessage, at: new Date().toISOString() });
   session.history.push({
@@ -1010,10 +1054,16 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
       name: item.name,
       category: item.category,
       price: item.price,
+      finalPrice: item.finalPrice || item.price,
+      discountPercent: item.discountPercent || 0,
+      image: item.image,
       brand: item.brand,
       model: item.model,
       variant: item.variant,
       stock: item.stock,
+      averageRating: item.averageRating || 0,
+      totalPurchases: item.totalPurchases || 0,
+      reason: item.reason,
     })),
     at: new Date().toISOString(),
   });

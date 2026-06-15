@@ -50,7 +50,10 @@ function detectIntent(message) {
     return "order_status";
   }
 
-  if (includesAny(text, ["them vao gio", "add to cart", "them gio hang", "cho vao gio", "mua ngay", "mua luon"])) {
+  if (
+    includesAny(text, ["them vao gio", "add to cart", "them gio hang", "cho vao gio", "mua ngay", "mua luon"]) ||
+    (/\b(them|cho|bo|add)\b/i.test(text) && /\b(gio|cart)\b/i.test(text))
+  ) {
     return "add_to_cart";
   }
 
@@ -495,6 +498,17 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
   let priceConstraint = parsedPriceConstraint || llmPriceConstraint;
   const categoryConstraint = normalizeHintValue(llmQueryHints?.category || memory?.category || "");
   const brandConstraint = normalizeHintValue(llmQueryHints?.brand || memory?.brand || "");
+  
+  const normMsg = normalizeText(message);
+  let sortConstraint = options.sortConstraint || null;
+  if (!sortConstraint) {
+    if (includesAny(normMsg, ["danh gia cao", "top rated", "highly rated", "nhieu sao", "sao cao", "danh gia tot"])) {
+      sortConstraint = "rating";
+    } else if (includesAny(normMsg, ["ban chay nhat", "best seller", "ban chay", "mua nhieu", "nhieu nguoi mua", "hot"])) {
+      sortConstraint = "sales";
+    }
+  }
+  
   const queryType = classifyQueryType({ informativeQueryTokens, hasNumericToken, priceConstraint });
 
   if (!priceConstraint && memory?.budget) {
@@ -508,7 +522,7 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
 
   if (conversationFocus?.isFollowUp && conversationFocus.anchorProductId) {
     const anchorProduct = await Product.findById(conversationFocus.anchorProductId)
-      .select("_id name brand series model variant sku slug price finalPrice discountPercent description category image averageRating totalRatings totalViews stock")
+      .select("_id name brand series model variant sku slug price finalPrice discountPercent description category image averageRating totalRatings totalViews stock totalPurchases reason")
       .lean();
 
     if (anchorProduct) {
@@ -531,7 +545,7 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
   }
 
   const rawProducts = await Product.find(dbFilter)
-    .select("_id name brand series model variant sku slug price finalPrice discountPercent description category image averageRating totalRatings totalViews stock")
+    .select("_id name brand series model variant sku slug price finalPrice discountPercent description category image averageRating totalRatings totalViews stock totalPurchases reason")
     .sort({ averageRating: -1, stock: -1 })
     .limit(400)
     .lean();
@@ -557,7 +571,7 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
   }
 
   // Parse and apply screen size constraint if query contains screen size keywords and values
-  const screenQueryRegex = /(?:màn\s+hình|kích\s+thước|tỷ\s+lệ|kích\s+cỡ|size)\s*(?:khoảng|tầm|rộng|lớn|nhỏ)?\s*(\d+(?:[.,]\d+)?)\s*(?:"|inch\b|in\b)?/i;
+  const screenQueryRegex = /(?:màn\s+hình|man\s+hinh|màn|man|kích\s+thước|kich\s+thuoc|tỷ\s+lệ|ty\s+le|ti\s+le|kích\s+cỡ|kich\s+co|size)\s*(?:khoảng|khoang|tầm|tam|rộng|rong|lớn|lon|nhỏ|nho)?\s*(\d+(?:[.,]\d+)?)\s*(?:"|inch\b|in\b)?/i;
   const screenMatch = String(message || "").match(screenQueryRegex);
   if (screenMatch) {
     const requestedScreenSize = parseFloat(screenMatch[1].replace(",", "."));
@@ -687,6 +701,15 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
       };
     })
     .sort((a, b) => {
+      if (sortConstraint === "rating") {
+        const ratingB = Number(b.averageRating || 0);
+        const ratingA = Number(a.averageRating || 0);
+        if (ratingB !== ratingA) return ratingB - ratingA;
+      } else if (sortConstraint === "sales") {
+        const salesB = Number(b.totalPurchases || 0);
+        const salesA = Number(a.totalPurchases || 0);
+        if (salesB !== salesA) return salesB - salesA;
+      }
       if (b.ltrScore !== a.ltrScore) return b.ltrScore - a.ltrScore;
       if (Number(a.nameOverlap || 0) !== Number(b.nameOverlap || 0)) return Number(b.nameOverlap || 0) - Number(a.nameOverlap || 0);
       return Number(a.priceDelta || 0) - Number(b.priceDelta || 0);
@@ -703,7 +726,7 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
     dedupedCandidates.push(item);
   });
 
-  const pickedCandidates = dedupedCandidates.filter((item) => item.ltrScore > 0.06);
+  const pickedCandidates = sortConstraint ? dedupedCandidates : dedupedCandidates.filter((item) => item.ltrScore > 0.06);
   const finalCandidates = (pickedCandidates.length > 0 ? pickedCandidates : dedupedCandidates).slice(0, 5).map((item) => {
     const sellingPrice = getEffectivePrice(item);
     const originalPrice = Number(item.price || 0);
