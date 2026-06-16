@@ -212,6 +212,10 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    embedding: {
+      type: [Number],
+      default: undefined,
+    },
     viewedBy: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: "User",

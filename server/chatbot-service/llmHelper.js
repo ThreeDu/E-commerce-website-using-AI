@@ -384,7 +384,74 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
   }
 }
 
+async function generateEmbedding(text) {
+  const llmEnabled = String(process.env.CHATBOT_LLM_ENABLED || '').toLowerCase() === 'true';
+  const apiUrl = String(process.env.CHATBOT_LLM_API_URL || '').trim();
+  const apiKey = String(process.env.CHATBOT_LLM_API_KEY || '').trim();
+
+  if (!llmEnabled || !apiUrl || !apiKey || !text) {
+    return null;
+  }
+
+  const isGemini = apiUrl.includes('generativelanguage.googleapis.com');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
+
+  try {
+    const response = await (async () => {
+      if (isGemini) {
+        const baseUrl = apiUrl.split('/models/')[0];
+        const requestUrl = `${baseUrl.replace(/\/$/, '')}/models/gemini-embedding-001:embedContent?key=${encodeURIComponent(apiKey)}`;
+        return fetch(requestUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            content: {
+              parts: [{ text }]
+            }
+          })
+        });
+      }
+
+      // OpenAI fallback
+      const baseApiUrl = apiUrl.replace(/\/chat\/completions$/, '').replace(/\/$/, '');
+      return fetch(`${baseApiUrl}/embeddings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          input: text,
+          model: 'text-embedding-3-small'
+        })
+      });
+    })();
+
+    clearTimeout(timeout);
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => '');
+      console.error(`Embedding API error (Status: ${response.status}):`, errBody);
+      return null;
+    }
+
+    const data = await response.json();
+    if (isGemini) {
+      return data?.embedding?.values || null;
+    } else {
+      return data?.data?.[0]?.embedding || null;
+    }
+  } catch (error) {
+    clearTimeout(timeout);
+    console.error('generateEmbedding Error:', error);
+    return null;
+  }
+}
+
 module.exports = {
   maybeParseQueryWithLlm,
   maybeGenerateLlmReply,
+  generateEmbedding,
 };

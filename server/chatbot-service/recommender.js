@@ -24,6 +24,20 @@ function getEffectivePrice(product) {
   return originalPrice > 0 ? originalPrice : 0;
 }
 
+function cosineSimilarity(vecA, vecB) {
+  if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
 function detectIntent(message) {
   const text = normalizeText(message);
   if (!text) {
@@ -468,6 +482,17 @@ async function fetchMlRecommendationScores(userId, productIds = []) {
 }
 
 async function findRecommendedProducts(message, context = {}, options = {}) {
+  // Launch embedding API request in parallel
+  const embeddingPromise = (async () => {
+    try {
+      const { generateEmbedding } = require("./llmHelper");
+      return await generateEmbedding(message);
+    } catch (err) {
+      console.error("Embedding generation failed in recommender:", err.message);
+      return null;
+    }
+  })();
+
   const queryTokens = tokenize(message);
   const QUERY_STOPWORDS = new Set([
     "co", "khong", "ngan", "sach", "duoi", "tren", "toi", "da", "min", "max",
@@ -545,12 +570,23 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
   }
 
   const rawProducts = await Product.find(dbFilter)
-    .select("_id name brand series model variant sku slug price finalPrice discountPercent description category image averageRating totalRatings totalViews stock totalPurchases reason")
+    .select("_id name brand series model variant sku slug price finalPrice discountPercent description category image averageRating totalRatings totalViews stock totalPurchases reason embedding")
     .sort({ averageRating: -1, stock: -1 })
     .limit(400)
     .lean();
 
   let products = rawProducts;
+
+  const queryEmbedding = await embeddingPromise;
+  if (queryEmbedding && Array.isArray(queryEmbedding) && queryEmbedding.length > 0) {
+    products.forEach((item) => {
+      if (item.embedding && Array.isArray(item.embedding) && item.embedding.length === queryEmbedding.length) {
+        item.similarityScore = cosineSimilarity(queryEmbedding, item.embedding);
+      } else {
+        item.similarityScore = 0;
+      }
+    });
+  }
   if (categoryConstraint) {
     products = products.filter((item) => {
       const normalizedCategory = normalizeText(item.category);
@@ -687,11 +723,22 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
         }
       }
 
+      let semanticBoost = 0;
+      if (product.similarityScore != null && product.similarityScore > 0) {
+        if (product.similarityScore >= 0.75) {
+          semanticBoost = product.similarityScore * 10;
+        } else if (product.similarityScore >= 0.65) {
+          semanticBoost = product.similarityScore * 5;
+        } else {
+          semanticBoost = product.similarityScore;
+        }
+      }
+
       return {
         ...product,
         totalPurchases,
         rfScore,
-        ltrScore: ltr.ltrScore + hardMatchOverride + mlBoost,
+        ltrScore: ltr.ltrScore + hardMatchOverride + mlBoost + semanticBoost,
         nameOverlap,
         queryCoverage,
         exactMatch,
@@ -752,6 +799,8 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
       totalViews: item.totalViews,
       totalPurchases: item.totalPurchases,
       rfScore: item.rfScore,
+      similarityScore: item.similarityScore || 0,
+      ltrScore: item.ltrScore || 0,
       reason: buildRecommendationReason(item),
     };
   });
