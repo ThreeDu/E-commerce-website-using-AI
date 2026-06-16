@@ -241,7 +241,32 @@ function extractComparisonSpecSummary(product) {
   const isLaptop = /laptop|macbook/i.test(product?.category || "") || /laptop|macbook/i.test(product?.name || "");
 
   const ramPairMatch = rawText.match(/\b(\d{1,2})\s*GB\s*\/\s*(\d{2,4})\s*(GB|TB)\b/i);
-  const ramMatch = rawText.match(/\b(\d{1,2})\s*GB\s*(?:RAM|LPDDR|DDR)?\b/i);
+  
+  let ramMatch = null;
+  const ramPrefixMatch = rawText.match(/(?:bộ\s+nhớ\s+|bo\s+nho\s+)?ram\s*:?\s*(\d{1,2})\s*gb/i);
+  if (ramPrefixMatch) {
+    ramMatch = ramPrefixMatch;
+  }
+  if (!ramMatch) {
+    const ramSuffixMatch = rawText.match(/\b(\d{1,2})\s*gb\s*(?:ram|lpddr|ddr)/i);
+    if (ramSuffixMatch) {
+      ramMatch = ramSuffixMatch;
+    }
+  }
+  if (!ramMatch) {
+    const allGbMatches = Array.from(rawText.matchAll(/\b(\d{1,2})\s*gb\b/gi));
+    for (const match of allGbMatches) {
+      const idx = match.index;
+      const contextBefore = rawText.substring(Math.max(0, idx - 20), idx);
+      if (!/rtx|gtx|gpu|card|vram/i.test(contextBefore)) {
+        ramMatch = match;
+        break;
+      }
+    }
+  }
+  if (!ramMatch) {
+    ramMatch = rawText.match(/\b(\d{1,2})\s*gb\b/i);
+  }
   const storageMatches = Array.from(rawText.matchAll(/\b(\d{2,4})\s*(GB|TB)\b/gi));
   const storageMatch = ramPairMatch || storageMatches[storageMatches.length - 1] || null;
   const screenSizeMatch = rawText.match(/\b(\d+(?:[.,]\d+)?)\s*(?:"|inch\b|in\b)/i);
@@ -255,7 +280,19 @@ function extractComparisonSpecSummary(product) {
   // Laptop specific fields
   const gpuRegex = /(?:card\s+đồ\s+họa|card\s+do\s+hoa|gpu|vga|đồ\s+họa|do\s+hoa)\s*:?\s*([^.,\n()]+)/i;
   const gpuMatch = rawText.match(gpuRegex);
-  const gpu = gpuMatch ? gpuMatch[1].trim() : "Tích hợp";
+  let gpu = gpuMatch ? gpuMatch[1].trim() : "";
+
+  if (!gpu) {
+    const standaloneGpuRegex = /\b((?:geforce\s+)?rtx\s*\d{4}(?:\s*ti)?|(?:geforce\s+)?gtx\s*\d{4}(?:\s*ti)?|intel\s+iris\s+xe|iris\s+xe|intel\s+uhd|uhd\s+graphics|radeon(?:\s+graphics)?|m\d\s*(?:pro|max)?\s+gpu|\d+-core\s+gpu)\b/i;
+    const standaloneGpuMatch = rawText.match(standaloneGpuRegex);
+    if (standaloneGpuMatch) {
+      gpu = standaloneGpuMatch[1].trim();
+    }
+  }
+
+  if (!gpu) {
+    gpu = "Tích hợp";
+  }
 
   const weightRegex = /(?:trọng\s+lượng|nặng|weight)\s*:?\s*(\d+(?:[.,]\d+)?\s*(?:kg|g|gram))\b/i;
   const weightMatch = rawText.match(weightRegex);
@@ -701,6 +738,9 @@ async function maybeParseCompareIntentWithLlm(message, history = []) {
 }
 
 function buildCompareProductFilter(queryText, hints = {}) {
+  const COMPARISON_STOPWORDS = new Set([
+    "san", "pham", "mock", "ssd", "va", "vs", "voi", "so", "sanh", "compare", "giua", "and", "with", "or", "huong", "dan", "chi", "tiet"
+  ]);
   const normalizedQuery = normalizeText(queryText);
   const queryTokens = tokenize(queryText).filter((token) => token.length >= 2);
   const searchTerms = Array.from(
@@ -709,7 +749,7 @@ function buildCompareProductFilter(queryText, hints = {}) {
       ...tokenize(hints.name || ""),
       ...tokenize(hints.brand || ""),
     ])
-  ).filter((token) => token.length >= 2);
+  ).filter((token) => token.length >= 2 && !COMPARISON_STOPWORDS.has(token));
 
   const filter = {
     stock: { $gt: 0 },
@@ -926,7 +966,7 @@ async function maybeGenerateCompareReply({ message, product1, product2, history 
     product_2: product2,
     recentHistory: history ? history.slice(-4) : [],
     instructions:
-      "Chỉ dùng dữ liệu JSON đã cung cấp. Không tự bịa thông số. Trả về một bảng Markdown so sánh theo chiều dọc: cột 1 là 'Đặc tính', các cột tiếp theo là tên của các sản phẩm. Các dòng hiển thị đặc tính gồm: Giá bán, Chip, RAM, ROM, Màn hình, Camera, Pin. Dùng '-' nếu không có dữ liệu. Hãy nhớ viết các ký tự '|' bên trong ô dữ liệu là '\\|' để tránh làm hỏng các cột của bảng. Tuyệt đối không dùng các thẻ HTML như '<br>', '<br/>', '<br />' để xuống dòng trong bảng. Hãy dùng dấu gạch đứng đã được escape là '\\|' (ví dụ: 'Sau: 50MP \\| Trước: 12MP') khi muốn phân tách hoặc xuống dòng thông số camera trước và sau. Dưới bảng, hãy viết một mục kết luận có tiêu đề '**💡 Kết luận: Sản phẩm nào phù hợp với bạn?**' phân tích chi tiết xem dòng máy nào phù hợp với nhu cầu hay đối tượng khách hàng nào (học sinh, game thủ, quay chụp, tối ưu chi phí, v.v.), giúp người dùng đưa ra quyết định mua sắm tốt nhất.",
+      "Chỉ dùng dữ liệu JSON đã cung cấp. Không tự bịa thông số. Trả về một bảng Markdown so sánh theo chiều dọc: cột 1 là 'Đặc tính', các cột tiếp theo là tên của các sản phẩm. Các dòng hiển thị đặc tính gồm: Giá bán, Chip, RAM, ROM, Màn hình, Camera, Pin. Dùng '-' nếu không có dữ liệu. Hãy nhớ viết các ký tự '|' bên trong ô dữ liệu là '\\|' để tránh làm hỏng các cột của bảng. Tuyệt đối không dùng các thẻ HTML như '<br>', '<br/>', '<br />' để xuống dòng trong bảng. Hãy dùng dấu gạch đứng đã được escape là '\\|' (ví dụ: 'Sau: 50MP \\| Trước: 12MP') khi muốn phân tách hoặc xuống dòng thông số camera trước và sau. Đặc biệt lưu ý đối với Laptop: hãy sử dụng chính xác thông số được cung cấp sẵn ở trường 'specs' (ví dụ specs.ram, specs.rom, specs.chip, specs.gpu) để điền vào bảng. Tuyệt đối không nhầm lẫn dung lượng bộ nhớ của Card đồ họa GPU (ví dụ: 4GB VRAM) với dung lượng RAM hệ thống (ví dụ: 16GB RAM). Dưới bảng, hãy viết một mục kết luận có tiêu đề '**💡 Kết luận: Sản phẩm nào phù hợp với bạn?**' phân tích chi tiết xem dòng máy nào phù hợp với nhu cầu hay đối tượng khách hàng nào (học sinh, game thủ, quay chụp, tối ưu chi phí, v.v.), giúp người dùng đưa ra quyết định mua sắm tốt nhất.",
   };
 
   const systemPrompt = [
@@ -937,6 +977,7 @@ async function maybeGenerateCompareReply({ message, product1, product2, history 
     "Hãy điền thông số chính xác từ dữ liệu JSON được cung cấp vào các cột sản phẩm tương ứng. Dùng '-' nếu không có thông tin.",
     "Bắt buộc viết mọi ký tự '|' trong các ô giá trị dưới dạng '\\|' để tránh làm hỏng cấu trúc cột của bảng Markdown.",
     "Tuyệt đối KHÔNG được sử dụng các thẻ HTML như '<br>', '<br />', '<br/>' để tạo dòng mới trong ô dữ liệu của bảng. Thay vào đó, hãy dùng ký tự '\\|' (ví dụ: 'Sau: 50MP \\| Trước: 12MP') để hiển thị ngăn cách thông số camera.",
+    "Chú ý quan trọng về thông số RAM và Card đồ họa (GPU): Đối với laptop, hãy luôn sử dụng cấu hình đã được trích xuất sẵn ở trường 'specs' của mỗi sản phẩm (ví dụ: specs.ram, specs.rom, specs.chip, specs.gpu). Tuyệt đối không được nhầm lẫn dung lượng bộ nhớ của Card đồ họa GPU (ví dụ: 4GB) với dung lượng RAM hệ thống (ví dụ: 16GB RAM). Hãy điền đúng RAM hệ thống (ví dụ: 16GB) cho thuộc tính RAM.",
     "Ngay phía dưới bảng Markdown, bạn BẮT BUỘC phải viết một phần kết luận chi tiết ngắn gọn (khoảng 3-5 câu) dưới tiêu đề '**💡 Kết luận: Sản phẩm nào phù hợp với bạn?**' so sánh các điểm mạnh cốt lõi và tư vấn sản phẩm nào phù hợp nhất cho đối tượng/nhu cầu nào để hướng dẫn người dùng lựa chọn.",
   ].join(" ");
 

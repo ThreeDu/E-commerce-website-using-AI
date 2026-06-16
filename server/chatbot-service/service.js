@@ -470,7 +470,7 @@ async function maybeGenerateProductConsultLlmReply(product, specs, history = [])
   }
 
   const isGemini = apiUrl.includes("generativelanguage.googleapis.com");
-  const systemPrompt = "Bạn là chuyên gia tư vấn công nghệ chuyên nghiệp. Hãy viết một đoạn nhận xét/tư vấn ngắn gọn (khoảng 3-4 câu) về cấu hình và hiệu năng của sản phẩm dưới đây bằng tiếng Việt. Tập trung vào đối tượng sử dụng phù hợp (học sinh, game thủ, văn phòng, v.v.). Trả lời tự nhiên, thân thiện. Tuyệt đối không sử dụng bất kỳ thẻ HTML nào bao gồm cả thẻ '<br>'.";
+  const systemPrompt = "Bạn là chuyên gia tư vấn công nghệ chuyên nghiệp. Hãy viết một đoạn nhận xét/tư vấn ngắn gọn (khoảng 3-4 câu) về cấu hình và hiệu năng của sản phẩm dưới đây bằng tiếng Việt. Tập trung vào đối tượng sử dụng phù hợp (học sinh, game thủ, văn phòng, v.v.). Trả lời tự nhiên, thân thiện. Tuyệt đối không sử dụng bất kỳ thẻ HTML nào bao gồm cả thẻ '<br>'. Đối với laptop, hãy sử dụng thông tin từ đối tượng 'specs' (ví dụ specs.ram, specs.rom, specs.chip, specs.gpu) để nhận xét, tránh nhầm lẫn dung lượng bộ nhớ card đồ họa GPU (ví dụ 4GB VRAM) với dung lượng RAM của hệ thống (ví dụ 16GB RAM).";
   
   const payload = {
     product: {

@@ -274,12 +274,23 @@ const getCustomerStatsForAdmin = async (req, res) => {
     else if (totalSpent >= 5000000) rank = "Vàng";
     else if (totalSpent >= 1500000) rank = "Bạc";
 
+    // 4. Last visit and last order/purchase
+    const lastVisitEvent = await AnalyticsEvent.findOne({ userId: id }).sort({ occurredAt: -1 });
+    const lastVisit = lastVisitEvent ? lastVisitEvent.occurredAt : null;
+
+    const lastOrderDate = orders.length > 0 ? orders[0].createdAt : null;
+    const lastPurchaseOrder = orders.find(order => order.status !== "cancelled");
+    const lastPurchaseDate = lastPurchaseOrder ? lastPurchaseOrder.createdAt : null;
+
     return res.json({
       user,
       totalOrders,
       totalSpent,
       weeklyVisits,
       rank,
+      lastVisit,
+      lastOrderDate,
+      lastPurchaseDate,
       orders
     });
   } catch (error) {
