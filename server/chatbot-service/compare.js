@@ -733,6 +733,7 @@ async function maybeParseCompareIntentWithLlm(message, history = []) {
       },
     };
   } catch (error) {
+    console.error("[LLM] maybeParseCompareIntentWithLlm failed:", error.message);
     return null;
   }
 }
@@ -1052,6 +1053,7 @@ async function maybeGenerateCompareReply({ message, product1, product2, history 
 
     return String(content || "").trim() || null;
   } catch (error) {
+    console.error("[LLM] maybeGenerateCompareReply failed:", error.message);
     return null;
   }
 }
@@ -1073,9 +1075,10 @@ async function handleCompareIntent({ message, session, historyContext }) {
     ]);
   }
 
+  let parsed = null;
   if (!product1 || !product2) {
     // Step 1: Parse which two products the user wants to compare
-    let parsed = parseCompareIntentFromText(message, historyContext);
+    parsed = parseCompareIntentFromText(message, historyContext);
     if (!parsed) {
       parsed = await maybeParseCompareIntentWithLlm(message, historyContext);
     }
@@ -1099,8 +1102,8 @@ async function handleCompareIntent({ message, session, historyContext }) {
 
   if (!product1 || !product2) {
     const missing = [];
-    if (!product1) missing.push(parsed.product_1.name);
-    if (!product2) missing.push(parsed.product_2.name);
+    if (!product1) missing.push(parsed?.product_1?.name || "sản phẩm 1");
+    if (!product2) missing.push(parsed?.product_2?.name || "sản phẩm 2");
 
     const replyText = `Mình chưa tìm thấy sản phẩm "${missing.join('" và "')}" trong hệ thống. Bạn thử nhập lại tên chính xác hơn nhé.`;
 
@@ -1136,7 +1139,8 @@ async function handleCompareIntent({ message, session, historyContext }) {
       product2: { ...product2, specs: spec2 },
       history: historyContext,
     });
-  } catch (_) {
+  } catch (error) {
+    console.error("[LLM] Generating compare reply failed:", error.message);
     llmReplyText = null;
   }
 

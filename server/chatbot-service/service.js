@@ -9,7 +9,6 @@ const llmHelper = require("./llmHelper");
 const {
   getOrCreateSession,
   updateSessionMemory,
-  invalidateKnnCache,
 } = require("./sessionState");
 const {
   normalizeText,
@@ -25,7 +24,12 @@ const {
 // Chatbot service implementation with structured replies and recommendation logic.
 
 const MAX_HISTORY = 10;
-const KNOWN_BRAND_HINTS = ["iphone", "samsung", "xiaomi", "oppo", "vivo", "realme", "macbook", "ipad"];
+const KNOWN_BRAND_HINTS = [
+  "samsung", "iphone", "xiaomi", "oppo", "vivo", "realme", "macbook", "ipad",
+  "acer", "dell", "hp", "asus", "lenovo", "msi", "razer",
+  "google", "oneplus", "huawei", "honor", "nokia", "sony",
+  "nothing", "motorola", "rog",
+];
 const GENERIC_QUERY_TOKENS = new Set([
   ...KNOWN_BRAND_HINTS,
   "galaxy",
@@ -37,7 +41,9 @@ const GENERIC_QUERY_TOKENS = new Set([
   "seri",
 ]);
 
-const PHONE_BRAND_HINTS = new Set(["iphone", "samsung", "xiaomi", "oppo", "vivo", "realme"]);
+const PHONE_BRAND_HINTS = new Set(["iphone", "samsung", "xiaomi", "oppo", "vivo", "realme", "google", "oneplus", "huawei", "honor", "nokia", "sony", "nothing", "motorola", "rog"]);
+const LAPTOP_BRAND_HINTS = new Set(["macbook", "acer", "dell", "hp", "asus", "lenovo", "msi", "razer"]);
+const TABLET_BRAND_HINTS = new Set(["ipad", "tab", "galaxy tab"]);
 
 function safeObjectId(id) {
   const value = String(id || "").trim();
@@ -200,6 +206,7 @@ function buildCategoryConstraint(message) {
     "dien thoai": ["dien thoai", "smartphone", "phone", "iphone", "android", "galaxy"],
     laptop: ["laptop", "notebook", "ultrabook"],
     "phu kien": ["phu kien", "accessory", "tai nghe", "chuot", "ban phim", "webcam", "dong ho"],
+    tablet: ["tablet", "may tinh bang", "ipad", "galaxy tab"],
   };
 
   for (const [category, keywords] of Object.entries(aliases)) {
@@ -242,12 +249,16 @@ function inferCategoryFromBrandHint(brandHint) {
     return "";
   }
 
-  if (PHONE_BRAND_HINTS.has(normalizedBrand) || normalizedBrand === "iphone") {
+  if (PHONE_BRAND_HINTS.has(normalizedBrand)) {
     return "dien thoai";
   }
 
-  if (normalizedBrand === "macbook" || normalizedBrand === "ipad") {
-    return normalizedBrand === "ipad" ? "tablet" : "laptop";
+  if (LAPTOP_BRAND_HINTS.has(normalizedBrand)) {
+    return "laptop";
+  }
+
+  if (TABLET_BRAND_HINTS.has(normalizedBrand)) {
+    return "tablet";
   }
 
   return "";
@@ -285,7 +296,6 @@ async function trackChatbotEvent({
   }
 
   const created = await ChatbotEvent.create(payload);
-  invalidateKnnCache();
   return created;
 }
 
@@ -554,6 +564,7 @@ async function maybeGenerateProductConsultLlmReply(product, specs, history = [])
 
     return String(content || "").trim() || null;
   } catch (error) {
+    console.error("[LLM] maybeGenerateConsultReply failed:", error.message);
     return null;
   }
 }
@@ -693,7 +704,8 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
       let llmComment = null;
       try {
         llmComment = await maybeGenerateProductConsultLlmReply(productObj, specs, historyContext);
-      } catch (_) {
+      } catch (error) {
+        console.error("[LLM] Generating product consult reply failed:", error.message);
         llmComment = null;
       }
 
@@ -1020,13 +1032,13 @@ async function processChatMessage({ message, sessionId, context = {}, userId = n
         }
       }
     }
-  } else if (llmReply && (intent === "product_search" || intent === "product_consult") && recommendedProducts.length > 0) {
+  } else if (llmReply && intent === "product_search" && recommendedProducts.length > 0) {
     const replyNormalized = normalizeText(llmReply);
     const hasProductMention = recommendedProducts.some((p) => {
       const tokens = tokenize(p.name).filter((t) => t.length >= 4);
       return tokens.some((t) => replyNormalized.includes(t));
     });
-    if (!hasProductMention && llmReply.length > 80) {
+    if (!hasProductMention && llmReply.length > 150) {
       llmReply = null;
     }
   }
@@ -1123,7 +1135,8 @@ async function debugGreeting({ mode = "anonymous", sessionId = null, limit = 4 }
   try {
     const raw = await maybeGenerateLlmReply({ message: "Xin chào", intent: "greeting", recommendedProducts, history: session.history });
     if (raw) llmText = String(raw).trim();
-  } catch (e) {
+  } catch (error) {
+    console.error("[LLM] Generating greeting LLM reply failed:", error.message);
     llmText = null;
   }
 

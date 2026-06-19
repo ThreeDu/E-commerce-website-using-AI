@@ -1,6 +1,11 @@
 const mongoose = require("mongoose");
 
-const KNOWN_BRANDS = ["samsung", "iphone", "xiaomi", "oppo", "vivo", "realme", "macbook", "ipad"];
+const KNOWN_BRANDS = [
+  "samsung", "iphone", "xiaomi", "oppo", "vivo", "realme", "macbook", "ipad",
+  "acer", "dell", "hp", "asus", "lenovo", "msi", "razer",
+  "google", "oneplus", "huawei", "honor", "nokia", "sony",
+  "nothing", "motorola", "rog",
+];
 
 function normalizeText(value) {
   return String(value || "")

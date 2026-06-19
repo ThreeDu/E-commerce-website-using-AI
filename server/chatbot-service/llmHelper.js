@@ -119,6 +119,7 @@ async function maybeParseQueryWithLlm(message, history = []) {
 
     return normalized;
   } catch (error) {
+    console.error("[LLM] maybeParseQueryWithLlm failed:", error.message);
     return null;
   }
 }
@@ -379,7 +380,7 @@ async function maybeGenerateLlmReply({ message, intent, recommendedProducts, his
       };
     }
   } catch (error) {
-    console.error('maybeGenerateLlmReply Error:', error);
+    console.error("[LLM] maybeGenerateLlmReply failed:", error.message);
     return null;
   }
 }
@@ -445,7 +446,7 @@ async function generateEmbedding(text) {
     }
   } catch (error) {
     clearTimeout(timeout);
-    console.error('generateEmbedding Error:', error);
+    console.error("[LLM] generateEmbedding failed:", error.message);
     return null;
   }
 }

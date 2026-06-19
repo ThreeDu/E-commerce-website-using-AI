@@ -412,7 +412,7 @@ async function getSessionSeedProducts({ sessionId, userId, behaviorProfile }) {
         $match: {
           $or: filters,
           product: { $ne: null },
-          eventType: { $in: ["view", "click", "cart"] },
+          eventType: { $in: ["impression", "click", "cart"] },
         },
       },
       { $sort: { createdAt: -1 } },
