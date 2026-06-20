@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -171,9 +171,14 @@ function ChatbotWidget() {
   const location = useLocation();
   const { cart, addToCart, reloadCart } = useCart();
   const { auth } = useAuth();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [pending, setPending] = useState(false);
   const [input, setInput] = useState("");
+  const textareaRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const latestAiMessageRef = useRef(null);
+  const userWasNearBottomRef = useRef(true);
   const [sessionId, setSessionId] = useState("");
   const [messages, setMessages] = useState([]);
   const [recording, setRecording] = useState(false);
@@ -453,6 +458,66 @@ function ChatbotWidget() {
   }, [pending, sendMessageThroughMainChat]);
 
   useEffect(() => {
+    if (textareaRef.current) {
+      if (!input) {
+        textareaRef.current.style.height = "38px";
+      } else {
+        textareaRef.current.style.height = "auto";
+        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 100)}px`;
+      }
+    }
+  }, [input]);
+
+  const handleKeyDown = useCallback((event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      const text = String(input).trim();
+      if (text && !pending) {
+        sendMessage(text);
+      }
+    }
+  }, [input, pending, sendMessage]);
+
+  const handleScroll = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const threshold = 150;
+    const position = container.scrollHeight - container.scrollTop - container.clientHeight;
+    userWasNearBottomRef.current = position <= threshold;
+  }, []);
+
+  const scrollToBottom = useCallback((behavior = "smooth") => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (messages.length === 0) return;
+
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role === "user") {
+      scrollToBottom("smooth");
+    } else if (lastMessage.role === "assistant") {
+      if (userWasNearBottomRef.current && latestAiMessageRef.current) {
+        latestAiMessageRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => scrollToBottom("auto"), 60);
+      return () => clearTimeout(timer);
+    }
+  }, [open, scrollToBottom]);
+
+  const latestAiId = useMemo(() => {
+    const lastAi = [...messages].reverse().find((msg) => msg.role === "assistant");
+    return lastAi ? lastAi.id : null;
+  }, [messages]);
+
+  useEffect(() => {
     if (isAdminArea || !open || !sessionId || messages.length > 0 || pending) {
       return;
     }
@@ -496,9 +561,15 @@ function ChatbotWidget() {
             </button>
           </header>
 
-          <div className="p-2.5 overflow-y-auto display grid gap-2.5 bg-gradient-to-b from-[#f3f7ff] to-[#fbf9ff] scrollbar-thin">
-            {messages.map((msg) => (
-              <article key={msg.id} className="w-full">
+          <div 
+            ref={messagesContainerRef}
+            onScroll={handleScroll}
+            className="p-2.5 overflow-y-auto display grid gap-2.5 bg-gradient-to-b from-[#f3f7ff] to-[#fbf9ff] scrollbar-thin"
+          >
+            {messages.map((msg) => {
+              const isLatestAi = msg.id === latestAiId;
+              return (
+                <article key={msg.id} ref={isLatestAi ? latestAiMessageRef : null} className="w-full">
                 <div className={`flex gap-2 items-start ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   {msg.role === "assistant" ? (
                     <div className="w-7 h-7 rounded-full grid place-items-center text-[#0f2233] bg-gradient-to-br from-[#d8ecff] to-[#f6f2ff] border border-[#0f494f]/15 shadow-sm [&>svg]:w-4 [&>svg]:h-4" aria-hidden="true">
@@ -631,7 +702,8 @@ function ChatbotWidget() {
                   </div>
                 </div>
               </article>
-            ))}
+              );
+            })}
             {pending ? (
               <article className="w-full">
                 <div className="flex gap-2 items-start justify-start">
@@ -653,6 +725,7 @@ function ChatbotWidget() {
                 </div>
               </article>
             ) : null}
+            <div ref={messagesEndRef} />
           </div>
 
           {quickReplies.length > 0 ? (
@@ -681,18 +754,21 @@ function ChatbotWidget() {
           ) : null}
 
           <form
-            className="border-t border-black/8 grid grid-cols-[1fr_auto_auto] gap-2 p-2.5 bg-white items-center"
+            className="border-t border-black/8 grid grid-cols-[1fr_auto_auto] gap-2 p-2.5 bg-white items-end"
             onSubmit={(event) => {
               event.preventDefault();
               sendMessage(input);
             }}
           >
-            <input
+            <textarea
+              ref={textareaRef}
               value={input}
               onChange={(event) => setInput(event.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder={recording ? "Đang lắng nghe..." : "Nhập nhu cầu của bạn..."}
               disabled={pending}
-              className={`border rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 ${
+              rows={1}
+              className={`border rounded-xl p-2 px-3 text-sm focus:outline-none focus:ring-2 w-full resize-none h-[38px] min-h-[38px] max-h-[100px] overflow-y-auto scrollbar-thin ${
                 recording ? "border-red-400 bg-red-50 focus:ring-red-200" : "border-black/10 focus:ring-[#dfeeff]"
               }`}
             />
@@ -727,7 +803,7 @@ function ChatbotWidget() {
               {pending ? (
                 "..."
               ) : (
-                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true" className="w-[18px] h-[18px]">
+                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true" className="w-[18px] h-[18px] scale-x-[-1]">
                   <path
                     d="M3.4 11.2a1 1 0 0 0 0 1.6l16.6 8.4a1 1 0 0 0 1.4-1.1l-3.1-7.1-15-1.8Zm0 1.6 16.6-8.4a1 1 0 0 1 1.4 1.1l-3.1 7.1-15 1.8Z"
                     fill="currentColor"
