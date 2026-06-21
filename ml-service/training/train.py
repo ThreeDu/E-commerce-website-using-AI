@@ -23,14 +23,17 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from features.feature_engineering import (
     FEATURE_NAMES,
+    RECOMMEND_FEATURE_NAMES,
     extract_features_for_all_users,
     generate_churn_labels,
     generate_potential_labels,
     generate_clv_labels,
+    extract_recommendation_dataset,
 )
 from models.churn_model import ChurnPredictor
 from models.potential_model import PotentialScorer
 from models.clv_model import CLVPredictor
+from models.recommendation_model import RecommendationPredictor
 from config import MODEL_DIR
 
 
@@ -47,11 +50,11 @@ def run_training():
     df = extract_features_for_all_users()
 
     if df.empty or len(df) < 5:
-        print(f"  ⚠ Only {len(df)} customers found. Need at least 5 to train.")
+        print(f"  [WARN] Only {len(df)} customers found. Need at least 5 to train.")
         print("  Saving empty metrics.")
         return {"error": "Not enough data", "customer_count": len(df)}
 
-    print(f"  ✓ Found {len(df)} customers with {len(FEATURE_NAMES)} features each.")
+    print(f"  [OK] Found {len(df)} customers with {len(FEATURE_NAMES)} features each.")
     print()
 
     X = df[FEATURE_NAMES].fillna(0).values
@@ -62,31 +65,46 @@ def run_training():
     potential_labels = generate_potential_labels(df)
     clv_labels = generate_clv_labels(df)
 
+    # Step 2b: Extract recommendation dataset
+    print("[2b/5] Extracting recommendation dataset...")
+    X_recommend, y_recommend = extract_recommendation_dataset()
+
     churn_positive = int(churn_labels.sum())
     print(f"  Churn: {churn_positive} churned / {len(churn_labels)} total ({100 * churn_positive / len(churn_labels):.1f}%)")
     print(f"  Potential: min={potential_labels.min():.1f}, max={potential_labels.max():.1f}, mean={potential_labels.mean():.1f}")
     print(f"  CLV: min={clv_labels.min():.1f}, max={clv_labels.max():.1f}, mean={clv_labels.mean():.1f}")
+    print(f"  Recommendation Pairs: {len(X_recommend)} total, positive={int(y_recommend.sum())}")
     print()
 
     # Step 3: Train churn model
     print("[3/5] Training Churn Predictor (Random Forest)...")
     churn_model = ChurnPredictor()
     churn_metrics = churn_model.train(X, churn_labels)
-    print(f"  ✓ Churn metrics: {json.dumps(churn_metrics, indent=2)}")
+    print(f"  [OK] Churn metrics: {json.dumps(churn_metrics, indent=2)}")
     print()
 
     # Step 4: Train potential model
     print("[4/5] Training Potential Scorer (Gradient Boosting)...")
     potential_model = PotentialScorer()
     potential_metrics = potential_model.train(X, potential_labels)
-    print(f"  ✓ Potential metrics: {json.dumps(potential_metrics, indent=2)}")
+    print(f"  [OK] Potential metrics: {json.dumps(potential_metrics, indent=2)}")
     print()
 
     # Step 4b: Train CLV model
     print("[4b/5] Training CLV Predictor (Gradient Boosting)...")
     clv_model = CLVPredictor()
     clv_metrics = clv_model.train(X, clv_labels)
-    print(f"  ✓ CLV metrics: {json.dumps(clv_metrics, indent=2)}")
+    print(f"  [OK] CLV metrics: {json.dumps(clv_metrics, indent=2)}")
+    print()
+
+    # Step 4c: Train Recommendation model
+    print("[4c/5] Training Recommendation Predictor (Random Forest)...")
+    recommend_model = RecommendationPredictor()
+    if len(X_recommend) > 0:
+        recommend_metrics = recommend_model.train(X_recommend, y_recommend)
+    else:
+        recommend_metrics = {"f1_mean": 0.0, "accuracy": 0.0, "note": "No data"}
+    print(f"  [OK] Recommendation metrics: {json.dumps(recommend_metrics, indent=2)}")
     print()
 
     # Step 5: Save models
@@ -94,30 +112,37 @@ def run_training():
     churn_model.save()
     potential_model.save()
     clv_model.save()
-    print(f"  ✓ Models saved to {MODEL_DIR}")
+    recommend_model.save()
+    print(f"  [OK] Models saved to {MODEL_DIR}")
     print()
 
     # Feature importance
     churn_importance = churn_model.feature_importance(FEATURE_NAMES)
     potential_importance = potential_model.feature_importance(FEATURE_NAMES)
     clv_importance = clv_model.feature_importance(FEATURE_NAMES)
+    recommend_importance = recommend_model.feature_importance(RECOMMEND_FEATURE_NAMES)
 
-    print("── Churn Feature Importance (top 5) ──")
+    print("--- Churn Feature Importance (top 5) ---")
     for name, score in sorted(churn_importance.items(), key=lambda x: x[1], reverse=True)[:5]:
         print(f"  {name:.<30} {score:.4f}")
 
     print()
-    print("── Potential Feature Importance (top 5) ──")
+    print("--- Potential Feature Importance (top 5) ---")
     for name, score in sorted(potential_importance.items(), key=lambda x: x[1], reverse=True)[:5]:
         print(f"  {name:.<30} {score:.4f}")
 
     print()
-    print("── CLV Feature Importance (top 5) ──")
+    print("--- CLV Feature Importance (top 5) ---")
     for name, score in sorted(clv_importance.items(), key=lambda x: x[1], reverse=True)[:5]:
         print(f"  {name:.<30} {score:.4f}")
 
     print()
-    print("✅ Training completed successfully!")
+    print("--- Recommendation Feature Importance (top 5) ---")
+    for name, score in sorted(recommend_importance.items(), key=lambda x: x[1], reverse=True)[:5]:
+        print(f"  {name:.<30} {score:.4f}")
+
+    print()
+    print("[SUCCESS] Training completed successfully!")
 
     results = {
         "trained_at": datetime.now(timezone.utc).isoformat(),
@@ -125,9 +150,11 @@ def run_training():
         "churn_metrics": churn_metrics,
         "potential_metrics": potential_metrics,
         "clv_metrics": clv_metrics,
+        "recommendation_metrics": recommend_metrics,
         "churn_feature_importance": churn_importance,
         "potential_feature_importance": potential_importance,
         "clv_feature_importance": clv_importance,
+        "recommendation_feature_importance": recommend_importance,
     }
 
 

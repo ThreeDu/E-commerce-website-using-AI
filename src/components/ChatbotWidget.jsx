@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -169,13 +169,90 @@ function writeBehavior(nextBehavior) {
 
 function ChatbotWidget() {
   const location = useLocation();
-  const { cart, addToCart } = useCart();
+  const { cart, addToCart, reloadCart } = useCart();
   const { auth } = useAuth();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [pending, setPending] = useState(false);
   const [input, setInput] = useState("");
+  const textareaRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const latestAiMessageRef = useRef(null);
+  const userWasNearBottomRef = useRef(true);
   const [sessionId, setSessionId] = useState("");
   const [messages, setMessages] = useState([]);
+  const [recording, setRecording] = useState(false);
+  const [compareProduct1, setCompareProduct1] = useState(null);
+
+  const recognition = useMemo(() => {
+    if (typeof window !== "undefined") {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SR) {
+        const rec = new SR();
+        rec.continuous = false;
+        rec.lang = "vi-VN";
+        rec.interimResults = false;
+        return rec;
+      }
+    }
+    return null;
+  }, []);
+
+  useEffect(() => {
+    if (!recognition) return;
+
+    recognition.onstart = () => {
+      console.log("Speech recognition started");
+      setRecording(true);
+    };
+
+    recognition.onresult = (event) => {
+      console.log("Speech recognition result event:", event);
+      const resultIndex = event.resultIndex;
+      const transcript = event.results[resultIndex][0].transcript;
+      if (transcript) {
+        setInput((prev) => {
+          const space = prev && !prev.endsWith(" ") ? " " : "";
+          return prev + space + transcript.trim();
+        });
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      if (event.error === "not-allowed") {
+        alert("Không thể truy cập microphone. Vui lòng cấp quyền truy cập microphone cho trang web này trong cài đặt trình duyệt (Click vào biểu tượng ổ khóa ở đầu thanh địa chỉ URL).");
+      } else if (event.error === "network") {
+        alert("Không thể kết nối đến máy chủ nhận diện giọng nói của Google (Lỗi Network). Vui lòng kiểm tra lại đường truyền Internet, tạm thời tắt các dịch vụ VPN/Proxy/Chặn quảng cáo, hoặc thử lại sau.");
+      } else if (event.error === "no-speech") {
+        console.log("No speech detected.");
+      } else {
+        alert("Lỗi nhận diện giọng nói: " + event.error);
+      }
+      setRecording(false);
+    };
+
+    recognition.onend = () => {
+      console.log("Speech recognition ended");
+      setRecording(false);
+    };
+  }, [recognition]);
+
+  const toggleRecording = useCallback(() => {
+    if (!recognition) {
+      alert("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói.");
+      return;
+    }
+    if (recording) {
+      recognition.stop();
+    } else {
+      try {
+        recognition.start();
+      } catch (e) {
+        // Already started
+      }
+    }
+  }, [recognition, recording]);
 
   const isAdminArea = location.pathname.startsWith("/admin");
 
@@ -339,6 +416,10 @@ function ChatbotWidget() {
         }),
       ]);
 
+      if (data?.cartUpdated && typeof reloadCart === "function") {
+        reloadCart();
+      }
+
       const products = Array.isArray(data?.products) ? data.products : [];
       products.forEach((item) => {
         trackEvent({
@@ -359,7 +440,7 @@ function ChatbotWidget() {
     } finally {
       setPending(false);
     }
-  }, [messages, location.pathname, auth?.token, sessionId, trackEvent]);
+  }, [messages, location.pathname, auth?.token, sessionId, trackEvent, reloadCart]);
 
   const sendMessageThroughMainChat = useCallback(async (text) => submitChatMessage(text, { showUserMessage: true }), [submitChatMessage]);
 
@@ -375,6 +456,66 @@ function ChatbotWidget() {
 
     return sendMessageThroughMainChat(text);
   }, [pending, sendMessageThroughMainChat]);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      if (!input) {
+        textareaRef.current.style.height = "38px";
+      } else {
+        textareaRef.current.style.height = "auto";
+        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 100)}px`;
+      }
+    }
+  }, [input]);
+
+  const handleKeyDown = useCallback((event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      const text = String(input).trim();
+      if (text && !pending) {
+        sendMessage(text);
+      }
+    }
+  }, [input, pending, sendMessage]);
+
+  const handleScroll = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const threshold = 150;
+    const position = container.scrollHeight - container.scrollTop - container.clientHeight;
+    userWasNearBottomRef.current = position <= threshold;
+  }, []);
+
+  const scrollToBottom = useCallback((behavior = "smooth") => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (messages.length === 0) return;
+
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role === "user") {
+      scrollToBottom("smooth");
+    } else if (lastMessage.role === "assistant") {
+      if (userWasNearBottomRef.current && latestAiMessageRef.current) {
+        latestAiMessageRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => scrollToBottom("auto"), 60);
+      return () => clearTimeout(timer);
+    }
+  }, [open, scrollToBottom]);
+
+  const latestAiId = useMemo(() => {
+    const lastAi = [...messages].reverse().find((msg) => msg.role === "assistant");
+    return lastAi ? lastAi.id : null;
+  }, [messages]);
 
   useEffect(() => {
     if (isAdminArea || !open || !sessionId || messages.length > 0 || pending) {
@@ -420,9 +561,15 @@ function ChatbotWidget() {
             </button>
           </header>
 
-          <div className="p-2.5 overflow-y-auto display grid gap-2.5 bg-gradient-to-b from-[#f3f7ff] to-[#fbf9ff] scrollbar-thin">
-            {messages.map((msg) => (
-              <article key={msg.id} className="w-full">
+          <div 
+            ref={messagesContainerRef}
+            onScroll={handleScroll}
+            className="p-2.5 overflow-y-auto display grid gap-2.5 bg-gradient-to-b from-[#f3f7ff] to-[#fbf9ff] scrollbar-thin"
+          >
+            {messages.map((msg) => {
+              const isLatestAi = msg.id === latestAiId;
+              return (
+                <article key={msg.id} ref={isLatestAi ? latestAiMessageRef : null} className="w-full">
                 <div className={`flex gap-2 items-start ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   {msg.role === "assistant" ? (
                     <div className="w-7 h-7 rounded-full grid place-items-center text-[#0f2233] bg-gradient-to-br from-[#d8ecff] to-[#f6f2ff] border border-[#0f494f]/15 shadow-sm [&>svg]:w-4 [&>svg]:h-4" aria-hidden="true">
@@ -435,7 +582,7 @@ function ChatbotWidget() {
                     </div>
                   ) : null}
                   <div className={`max-w-[84%] rounded-[18px] p-2.5 px-3 border border-[#0f2233]/10 shadow-sm animate-chatbot-pop ${msg.role === "user" ? "bg-[#efeaff] border-[#0f494f]/12 origin-top-right" : "bg-[#f7faff] origin-top-left"}`}>
-                    {msg.role === "assistant" ? renderAssistantMarkdown(msg.text) : <p className="m-0 text-sm leading-relaxed">{msg.text}</p>}
+                    {msg.role === "assistant" ? renderAssistantMarkdown(msg.text) : <p className="m-0 text-sm leading-relaxed">{msg.text.replace(/\s*\[Mã:\s*[a-f0-9]+\]/gi, "")}</p>}
                     {msg.products.length > 0 ? (
                       <div className="mt-2 grid gap-2">
                         {msg.products.map((product, index) => (
@@ -473,27 +620,81 @@ function ChatbotWidget() {
                                 {Number(product.price || 0) > Number(product.finalPrice || product.price || 0) ? (
                                   <p className="mt-0.5 text-[11px] text-[#6b7280] line-through">{formatVnd(product.price)}</p>
                                 ) : null}
+                                {(product.averageRating && Number(product.averageRating) > 0) || (product.totalPurchases && Number(product.totalPurchases) > 0) ? (
+                                  <div className="flex flex-wrap items-center gap-1 mt-1 mb-1">
+                                    {product.averageRating && Number(product.averageRating) > 0 ? (
+                                      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[#b45309] bg-[#fef3c7] border border-[#fde68a] px-1.5 py-0.5 rounded">
+                                        ★ {Number(product.averageRating).toFixed(1)}
+                                      </span>
+                                    ) : null}
+                                    {product.totalPurchases && Number(product.totalPurchases) > 0 ? (
+                                      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[#c2410c] bg-[#ffedd5] border border-[#fed7aa] px-1.5 py-0.5 rounded">
+                                        🔥 Đã bán: {product.totalPurchases}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                ) : null}
                                 <p className="mt-0.5 text-[11px] text-[#64748b]">{product.reason}</p>
                               </div>
                             </Link>
 
-                            <button
-                              type="button"
-                              className="border border-black/10 bg-white text-[#0f2233] rounded-lg min-h-[34px] text-xs font-medium cursor-pointer transition-all hover:bg-[#edf4ff] active:scale-97"
-                              onClick={() => {
-                                addToCart({ ...product, id: product._id });
-                                trackEvent({
-                                  eventType: "cart",
-                                  productId: product._id,
-                                  category: product.category,
-                                  metadata: {
-                                    source: "chatbot_add_to_cart",
-                                  },
-                                });
-                              }}
-                            >
-                              Thêm vào giỏ
-                            </button>
+                            <div className="flex gap-1 mt-1.5 w-full">
+                              <button
+                                type="button"
+                                className="flex-1 border border-black/10 bg-white text-[#0f2233] rounded-lg min-h-[30px] text-[11px] font-semibold cursor-pointer transition-all hover:bg-[#edf4ff] active:scale-97"
+                                onClick={() => {
+                                  addToCart({ ...product, id: product._id });
+                                  trackEvent({
+                                    eventType: "cart",
+                                    productId: product._id,
+                                    category: product.category,
+                                    metadata: {
+                                      source: "chatbot_add_to_cart",
+                                    },
+                                  });
+                                }}
+                              >
+                                Thêm giỏ
+                              </button>
+                              
+                              <button
+                                type="button"
+                                className="flex-1 border border-black/10 bg-[#fbf5ff] text-[#6b21a8] rounded-lg min-h-[30px] text-[11px] font-semibold cursor-pointer transition-all hover:bg-[#f3e8ff] active:scale-97"
+                                onClick={() => {
+                                  if (!compareProduct1) {
+                                    setCompareProduct1(product);
+                                    setMessages((prev) => [
+                                      ...prev,
+                                      createMessage("assistant", `Bạn đã chọn **${product.name}** làm sản phẩm đầu tiên. Vui lòng bấm nút **"So sánh"** trên một sản phẩm khác trong danh sách, hoặc gõ tên sản phẩm thứ hai để xem so sánh và nhận xét từ AI.`),
+                                    ]);
+                                  } else {
+                                    if (compareProduct1._id === product._id) {
+                                      setCompareProduct1(null);
+                                      setMessages((prev) => [
+                                        ...prev,
+                                        createMessage("assistant", `Đã hủy chọn so sánh sản phẩm **${product.name}**.`),
+                                      ]);
+                                    } else {
+                                      const prod1 = compareProduct1;
+                                      setCompareProduct1(null);
+                                      sendMessage(`So sánh ${prod1.name} [Mã: ${prod1._id}] và ${product.name} [Mã: ${product._id}]`);
+                                    }
+                                  }
+                                }}
+                              >
+                                So sánh
+                              </button>
+
+                              <button
+                                type="button"
+                                className="flex-1 border border-black/10 bg-[#f0fdf4] text-[#166534] rounded-lg min-h-[30px] text-[11px] font-semibold cursor-pointer transition-all hover:bg-[#dcfce7] active:scale-97"
+                                onClick={() => {
+                                  sendMessage(`Tư vấn chi tiết cấu hình sản phẩm ${product.name} [Mã: ${product._id}]`);
+                                }}
+                              >
+                                Chi tiết
+                              </button>
+                            </div>
                           </article>
                         ))}
                       </div>
@@ -501,7 +702,8 @@ function ChatbotWidget() {
                   </div>
                 </div>
               </article>
-            ))}
+              );
+            })}
             {pending ? (
               <article className="w-full">
                 <div className="flex gap-2 items-start justify-start">
@@ -523,6 +725,7 @@ function ChatbotWidget() {
                 </div>
               </article>
             ) : null}
+            <div ref={messagesEndRef} />
           </div>
 
           {quickReplies.length > 0 ? (
@@ -535,31 +738,72 @@ function ChatbotWidget() {
             </div>
           ) : null}
 
+          {compareProduct1 ? (
+            <div className="p-2 px-3 flex items-center justify-between border-t border-purple-100 bg-[#fdf4ff] text-[#6b21a8] text-xs font-semibold animate-fade-in gap-2 min-w-0">
+              <span className="truncate min-w-0 flex-1">
+                Đang chọn: <strong>{compareProduct1.name}</strong> (Bấm \"So sánh\" trên thẻ khác)
+              </span>
+              <button
+                type="button"
+                className="text-red-500 hover:text-red-700 font-bold shrink-0 cursor-pointer ml-1"
+                onClick={() => setCompareProduct1(null)}
+              >
+                Hủy
+              </button>
+            </div>
+          ) : null}
+
           <form
-            className="border-t border-black/8 grid grid-cols-[1fr_auto] gap-2 p-2.5 bg-white"
+            className="border-t border-black/8 grid grid-cols-[1fr_auto_auto] gap-2 p-2.5 bg-white items-end"
             onSubmit={(event) => {
               event.preventDefault();
               sendMessage(input);
             }}
           >
-            <input
+            <textarea
+              ref={textareaRef}
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Nhập nhu cầu của bạn..."
+              onKeyDown={handleKeyDown}
+              placeholder={recording ? "Đang lắng nghe..." : "Nhập nhu cầu của bạn..."}
               disabled={pending}
-              className="border border-black/10 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dfeeff]"
+              rows={1}
+              className={`border rounded-xl p-2 px-3 text-sm focus:outline-none focus:ring-2 w-full resize-none h-[38px] min-h-[38px] max-h-[100px] overflow-y-auto scrollbar-thin ${
+                recording ? "border-red-400 bg-red-50 focus:ring-red-200" : "border-black/10 focus:ring-[#dfeeff]"
+              }`}
             />
+            
+            <button
+              type="button"
+              onClick={toggleRecording}
+              disabled={pending}
+              title={recording ? "Dừng ghi âm" : "Ghi âm giọng nói"}
+              className={`border border-black/10 rounded-xl min-w-[40px] h-[36px] flex items-center justify-center cursor-pointer transition-all active:scale-95 ${
+                recording 
+                  ? "bg-red-500 text-white animate-pulse" 
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
+                {recording ? (
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                ) : (
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                )}
+              </svg>
+            </button>
+
             <button
               type="submit"
               disabled={pending || !String(input).trim()}
               aria-label="Gửi"
               title="Gửi"
-              className="border border-black/10 rounded-xl bg-[#dfeeff] text-[#0f314f] min-w-[44px] font-bold cursor-pointer transition-all hover:shadow-sm active:scale-96 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="border border-black/10 rounded-xl bg-[#dfeeff] text-[#0f314f] min-w-[44px] h-[36px] font-bold cursor-pointer transition-all hover:shadow-sm active:scale-96 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {pending ? (
                 "..."
               ) : (
-                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true" className="w-[18px] h-[18px]">
+                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true" className="w-[18px] h-[18px] scale-x-[-1]">
                   <path
                     d="M3.4 11.2a1 1 0 0 0 0 1.6l16.6 8.4a1 1 0 0 0 1.4-1.1l-3.1-7.1-15-1.8Zm0 1.6 16.6-8.4a1 1 0 0 1 1.4 1.1l-3.1 7.1-15 1.8Z"
                     fill="currentColor"

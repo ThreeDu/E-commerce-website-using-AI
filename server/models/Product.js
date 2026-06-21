@@ -1,6 +1,11 @@
 const mongoose = require("mongoose");
 
-const KNOWN_BRANDS = ["samsung", "iphone", "xiaomi", "oppo", "vivo", "realme", "macbook", "ipad"];
+const KNOWN_BRANDS = [
+  "samsung", "iphone", "xiaomi", "oppo", "vivo", "realme", "macbook", "ipad",
+  "acer", "dell", "hp", "asus", "lenovo", "msi", "razer",
+  "google", "oneplus", "huawei", "honor", "nokia", "sony",
+  "nothing", "motorola", "rog",
+];
 
 function normalizeText(value) {
   return String(value || "")
@@ -211,6 +216,10 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0,
+    },
+    embedding: {
+      type: [Number],
+      default: undefined,
     },
     viewedBy: {
       type: [mongoose.Schema.Types.ObjectId],

@@ -6,7 +6,7 @@ const User = require("../models/User");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const AnalyticsEvent = require("../models/AnalyticsEvent");
-const ChatbotEvent = require("../models/ChatbotEvent");
+const ChatbotEvent = require("../chatbot-service/models/ChatbotEvent");
 const Cart = require("../models/Cart");
 
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/e-commerce-app";
@@ -494,17 +494,58 @@ async function createChatbotEvents(userId, config) {
   const daysRange = config.daysAgoRange || [2, 20];
   const docs = [];
 
+  const products = await Product.find({}).select("_id").limit(100).lean();
+
   for (let s = 0; s < sessions; s++) {
     const sessionId = "sess_" + Math.random().toString(36).substring(7);
     const baseDate = randomDateDaysAgo(daysRange[0], daysRange[1]);
     for (let i = 0; i < messagesPerSession; i++) {
+      const msgTime = new Date(baseDate.getTime() + i * 60000);
       docs.push({
         user: userId,
         sessionId,
         eventType: "message",
         message: "Tu van san pham",
-        createdAt: new Date(baseDate.getTime() + i * 30000),
+        createdAt: msgTime,
       });
+
+      if (products.length > 0) {
+        const numImpressions = Math.floor(Math.random() * 3) + 2; 
+        const selectedProducts = [];
+        for (let j = 0; j < numImpressions; j++) {
+          const randomProduct = products[Math.floor(Math.random() * products.length)];
+          selectedProducts.push(randomProduct._id);
+          docs.push({
+            user: userId,
+            sessionId,
+            eventType: "impression",
+            product: randomProduct._id,
+            createdAt: new Date(msgTime.getTime() + 2000 + j * 500),
+          });
+        }
+
+        if (Math.random() > 0.5) {
+          const clickProdId = selectedProducts[Math.floor(Math.random() * selectedProducts.length)];
+          const clickTime = new Date(msgTime.getTime() + 10000 + Math.floor(Math.random() * 5000));
+          docs.push({
+            user: userId,
+            sessionId,
+            eventType: "click",
+            product: clickProdId,
+            createdAt: clickTime,
+          });
+
+          if (Math.random() > 0.8) {
+            docs.push({
+              user: userId,
+              sessionId,
+              eventType: "cart",
+              product: clickProdId,
+              createdAt: new Date(clickTime.getTime() + 5000 + Math.floor(Math.random() * 5000)),
+            });
+          }
+        }
+      }
     }
   }
 

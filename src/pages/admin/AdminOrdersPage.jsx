@@ -439,27 +439,21 @@ function AdminOrdersPage() {
             </button>
           </div>
         </div>
+      </section>
 
-        {/* Customer Stats Drawer (Glassmorphism) */}
-        {isDrawerOpen && (
-          <div className="fixed inset-0 z-50 flex justify-start" role="dialog" aria-modal="true">
-            {/* Backdrop */}
-            <div 
-              className="fixed inset-0 bg-transparent transition-opacity duration-300" 
-              onClick={() => setIsDrawerOpen(false)}
-            />
-            
-            {/* Drawer Panel */}
-            <div 
-              className="relative w-full max-w-[580px] bg-white/95 backdrop-blur-md border-r border-slate-200 shadow-2xl flex flex-col h-full z-10 overflow-hidden"
-              style={{ animation: "slideFromLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards" }}
-            >
-              <style>{`
-                @keyframes slideFromLeft {
-                  from { transform: translateX(-100%); }
-                  to { transform: translateX(0); }
-                }
-              `}</style>
+      {/* Customer Stats Drawer (Glassmorphism) */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6" role="dialog" aria-modal="true">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-slate-900/40 transition-opacity duration-300" 
+            onClick={() => setIsDrawerOpen(false)}
+          />
+          
+          {/* Drawer Panel */}
+          <div 
+            className="relative w-full max-w-[620px] max-h-[85vh] bg-white border border-slate-200 shadow-2xl flex flex-col rounded-3xl z-10 overflow-hidden animate-slide-up"
+          >
 
               {/* Drawer Header */}
               <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
@@ -516,6 +510,30 @@ function AdminOrdersPage() {
                           {customerStats.rank}
                         </span>
                       </div>
+                    </div>
+
+                    {/* User activity metadata */}
+                    <div className="grid grid-cols-2 gap-3 text-xs text-slate-600 bg-slate-50/50 border border-slate-200/60 rounded-xl p-3 shadow-xs">
+                      <div className="space-y-1">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Truy cập gần nhất</span>
+                        <strong className="text-slate-700 block font-semibold">
+                          {customerStats.lastVisit ? formatDateTime(customerStats.lastVisit) : "Chưa ghi nhận"}
+                        </strong>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Đặt hàng gần nhất</span>
+                        <strong className="text-slate-700 block font-semibold">
+                          {customerStats.lastOrderDate ? formatDateTime(customerStats.lastOrderDate) : "Chưa có đơn hàng"}
+                        </strong>
+                      </div>
+                      {customerStats.lastPurchaseDate && customerStats.lastPurchaseDate !== customerStats.lastOrderDate && (
+                        <div className="col-span-2 pt-2 border-t border-slate-100 space-y-1">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Mua thành công gần nhất</span>
+                          <strong className="text-emerald-600 block font-semibold">
+                            {formatDateTime(customerStats.lastPurchaseDate)}
+                          </strong>
+                        </div>
+                      )}
                     </div>
 
                     {/* Stats metric cards */}
@@ -701,20 +719,19 @@ function AdminOrdersPage() {
           </div>
         )}
 
-        {/* Order Detail Drawer */}
-        {isOrderDrawerOpen && (
-          <div className="fixed inset-0 z-[70] flex justify-start" role="dialog" aria-modal="true">
-            {/* Backdrop */}
-            <div 
-              className="fixed inset-0 bg-transparent transition-opacity duration-300" 
-              onClick={() => setIsOrderDrawerOpen(false)}
-            />
-            
-            {/* Drawer Panel */}
-            <div 
-              className="relative w-full max-w-[580px] bg-white/95 backdrop-blur-md border-r border-slate-200 shadow-2xl flex flex-col h-full z-10 overflow-hidden"
-              style={{ animation: "slideFromLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards" }}
-            >
+      {/* Order Detail Drawer */}
+      {isOrderDrawerOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 md:p-6" role="dialog" aria-modal="true">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-slate-900/40 transition-opacity duration-300" 
+            onClick={() => setIsOrderDrawerOpen(false)}
+          />
+          
+          {/* Drawer Panel */}
+          <div 
+            className="relative w-full max-w-[620px] max-h-[85vh] bg-white border border-slate-200 shadow-2xl flex flex-col rounded-3xl z-10 overflow-hidden animate-slide-up"
+          >
               {/* Drawer Header */}
               <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
                 <div className="flex items-center gap-2">
@@ -869,7 +886,6 @@ function AdminOrdersPage() {
             </div>
           </div>
         )}
-      </section>
     </main>
   );
 }

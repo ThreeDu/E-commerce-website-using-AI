@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const ChatbotEvent = require("./models/ChatbotEvent");
-const { refreshKnnCache, computeKnnScores } = require("./sessionState");
+// Removed sessionState KNN imports
 const {
   normalizeText,
   tokenize,
@@ -24,13 +24,27 @@ function getEffectivePrice(product) {
   return originalPrice > 0 ? originalPrice : 0;
 }
 
+function cosineSimilarity(vecA, vecB) {
+  if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
 function detectIntent(message) {
   const text = normalizeText(message);
   if (!text) {
     return "product_search";
   }
 
-  if (includesAny(text, ["xin chao", "chao ban", "hello", "hi", "hey"])) {
+  if (/\b(xin\s*chao|chao\s*ban|hello|hi|hey)\b/i.test(text)) {
     return "greeting";
   }
 
@@ -44,6 +58,17 @@ function detectIntent(message) {
 
   if (includesAny(text, ["tu van", "goi y", "de xuat", "nen mua gi"])) {
     return "product_consult";
+  }
+
+  if (includesAny(text, ["don hang", "hoa don", "order", "tra cuu don", "kiem tra don", "trang thai don"])) {
+    return "order_status";
+  }
+
+  if (
+    includesAny(text, ["them vao gio", "add to cart", "them gio hang", "cho vao gio", "mua ngay", "mua luon"]) ||
+    (/\b(them|cho|bo|add)\b/i.test(text) && /\b(gio|cart)\b/i.test(text))
+  ) {
+    return "add_to_cart";
   }
 
   return "product_search";
@@ -182,7 +207,7 @@ function buildSemanticSignal(product, queryTokens) {
   };
 }
 
-function rankWithLtr({ product, queryTokens, behaviorProfile, knnScore, budget, totalPurchases }) {
+function rankWithLtr({ product, queryTokens, behaviorProfile, rfScore, budget, totalPurchases }) {
   const semanticSignal = buildSemanticSignal(product, queryTokens);
   const semanticFeature = Math.min(1, semanticSignal.semanticRaw / 8);
 
@@ -208,15 +233,15 @@ function rankWithLtr({ product, queryTokens, behaviorProfile, knnScore, budget, 
 
   const ltrScore = isBudgetDriven
     ? semanticFeature * 0.2 +
-      Math.min(1, Number(knnScore || 0)) * 0.1 +
+      Math.min(1, Number(rfScore || 0)) * 0.25 +
       Math.min(1, behaviorFeature) * 0.1 +
       popularityFeature * 0.1 +
       ratingFeature * 0.05 +
-      priceFitFeature * 0.45
-    : semanticFeature * 0.38 +
-      Math.min(1, Number(knnScore || 0)) * 0.22 +
-      Math.min(1, behaviorFeature) * 0.16 +
-      popularityFeature * 0.14 +
+      priceFitFeature * 0.3
+    : semanticFeature * 0.3 +
+      Math.min(1, Number(rfScore || 0)) * 0.35 +
+      Math.min(1, behaviorFeature) * 0.15 +
+      popularityFeature * 0.1 +
       ratingFeature * 0.06 +
       priceFitFeature * 0.04;
 
@@ -224,7 +249,7 @@ function rankWithLtr({ product, queryTokens, behaviorProfile, knnScore, budget, 
     ltrScore,
     matched: semanticSignal.matched,
     semanticFeature,
-    knnFeature: Math.min(1, Number(knnScore || 0)),
+    rfFeature: Math.min(1, Number(rfScore || 0)),
     behaviorFeature: Math.min(1, behaviorFeature),
     popularityFeature,
   };
@@ -258,8 +283,10 @@ function buildRecommendationReason(item) {
     reasons.push("Phù hợp với nhu cầu tìm kiếm của bạn");
   }
 
-  if (Number(item.knnScore || 0) > 0.2) {
-    reasons.push("Được gợi ý thêm từ các sản phẩm tương tự");
+  if (Number(item.rfScore || 0) > 0.4) {
+    reasons.push("Được gợi ý hàng đầu bằng mô hình AI");
+  } else if (Number(item.rfScore || 0) > 0.15) {
+    reasons.push("Phù hợp với thói quen mua sắm của bạn");
   }
 
   if (Number(item.totalPurchases || 0) > 0) {
@@ -385,7 +412,7 @@ async function getSessionSeedProducts({ sessionId, userId, behaviorProfile }) {
         $match: {
           $or: filters,
           product: { $ne: null },
-          eventType: { $in: ["view", "click", "cart"] },
+          eventType: { $in: ["impression", "click", "cart"] },
         },
       },
       { $sort: { createdAt: -1 } },
@@ -418,7 +445,54 @@ async function getSessionSeedProducts({ sessionId, userId, behaviorProfile }) {
   return Array.from(seedSet).slice(0, 20);
 }
 
+async function fetchMlRecommendationScores(userId, productIds = []) {
+  if (!Array.isArray(productIds) || productIds.length === 0 || !ML_SERVICE_URL) {
+    return new Map();
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const response = await fetch(
+      `${ML_SERVICE_URL.replace(/\/$/, "")}/api/intelligence/recommend`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: userId ? String(userId).trim() : null,
+          productIds: productIds.map(String),
+        }),
+        signal: controller.signal,
+      }
+    );
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      return new Map();
+    }
+
+    const data = await response.json();
+    const scores = data?.scores || {};
+    return new Map(Object.entries(scores));
+  } catch (error) {
+    return new Map();
+  }
+}
+
 async function findRecommendedProducts(message, context = {}, options = {}) {
+  // Launch embedding API request in parallel
+  const embeddingPromise = (async () => {
+    try {
+      const { generateEmbedding } = require("./llmHelper");
+      return await generateEmbedding(message);
+    } catch (err) {
+      console.error("Embedding generation failed in recommender:", err.message);
+      return null;
+    }
+  })();
+
   const queryTokens = tokenize(message);
   const QUERY_STOPWORDS = new Set([
     "co", "khong", "ngan", "sach", "duoi", "tren", "toi", "da", "min", "max",
@@ -449,6 +523,17 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
   let priceConstraint = parsedPriceConstraint || llmPriceConstraint;
   const categoryConstraint = normalizeHintValue(llmQueryHints?.category || memory?.category || "");
   const brandConstraint = normalizeHintValue(llmQueryHints?.brand || memory?.brand || "");
+  
+  const normMsg = normalizeText(message);
+  let sortConstraint = options.sortConstraint || null;
+  if (!sortConstraint) {
+    if (includesAny(normMsg, ["danh gia cao", "top rated", "highly rated", "nhieu sao", "sao cao", "danh gia tot"])) {
+      sortConstraint = "rating";
+    } else if (includesAny(normMsg, ["ban chay nhat", "best seller", "ban chay", "mua nhieu", "nhieu nguoi mua", "hot"])) {
+      sortConstraint = "sales";
+    }
+  }
+  
   const queryType = classifyQueryType({ informativeQueryTokens, hasNumericToken, priceConstraint });
 
   if (!priceConstraint && memory?.budget) {
@@ -462,7 +547,7 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
 
   if (conversationFocus?.isFollowUp && conversationFocus.anchorProductId) {
     const anchorProduct = await Product.findById(conversationFocus.anchorProductId)
-      .select("_id name brand series model variant sku slug price finalPrice discountPercent description category image averageRating totalRatings totalViews stock")
+      .select("_id name brand series model variant sku slug price finalPrice discountPercent description category image averageRating totalRatings totalViews stock totalPurchases reason")
       .lean();
 
     if (anchorProduct) {
@@ -485,12 +570,23 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
   }
 
   const rawProducts = await Product.find(dbFilter)
-    .select("_id name brand series model variant sku slug price finalPrice discountPercent description category image averageRating totalRatings totalViews stock")
+    .select("_id name brand series model variant sku slug price finalPrice discountPercent description category image averageRating totalRatings totalViews stock totalPurchases reason embedding")
     .sort({ averageRating: -1, stock: -1 })
     .limit(400)
     .lean();
 
   let products = rawProducts;
+
+  const queryEmbedding = await embeddingPromise;
+  if (queryEmbedding && Array.isArray(queryEmbedding) && queryEmbedding.length > 0) {
+    products.forEach((item) => {
+      if (item.embedding && Array.isArray(item.embedding) && item.embedding.length === queryEmbedding.length) {
+        item.similarityScore = cosineSimilarity(queryEmbedding, item.embedding);
+      } else {
+        item.similarityScore = 0;
+      }
+    });
+  }
   if (categoryConstraint) {
     products = products.filter((item) => {
       const normalizedCategory = normalizeText(item.category);
@@ -510,14 +606,75 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
     }
   }
 
+  // Parse and apply screen size constraint if query contains screen size keywords and values
+  const screenQueryRegex = /(?:màn\s+hình|man\s+hinh|màn|man|kích\s+thước|kich\s+thuoc|tỷ\s+lệ|ty\s+le|ti\s+le|kích\s+cỡ|kich\s+co|size)\s*(?:khoảng|khoang|tầm|tam|rộng|rong|lớn|lon|nhỏ|nho)?\s*(\d+(?:[.,]\d+)?)\s*(?:"|inch\b|in\b)?/i;
+  const screenMatch = String(message || "").match(screenQueryRegex);
+  if (screenMatch) {
+    const requestedScreenSize = parseFloat(screenMatch[1].replace(",", "."));
+    if (!isNaN(requestedScreenSize)) {
+      const compareService = require("./compare");
+      const screenFiltered = products.filter((item) => {
+        const specs = compareService.extractComparisonSpecSummary(item);
+        const sizeMatch = String(specs.screen || "").match(/^(\d+(?:[.,]\d+)?)/);
+        if (sizeMatch) {
+          const sizeValue = parseFloat(sizeMatch[1].replace(",", "."));
+          return Math.abs(sizeValue - requestedScreenSize) < 0.05;
+        }
+        return false;
+      });
+      if (screenFiltered.length > 0) {
+        products = screenFiltered;
+      }
+    }
+  }
+
+  // Parse and apply chip constraint if query contains chip keywords
+  let requestedChip = null;
+  const chipKeywords = [
+    /\bintel\s*core\s*i\d\b/i,
+    /\b(?:amd\s*)?ryzen\s*\d\b/i,
+    /\bsnapdragon\s*\d+\s*(?:gen\s*\d+|elite)?\b/i,
+    /\bexynos\s*\d+\b/i,
+    /\bdimensity\s*\d+\b/i,
+    /\ba\d{2}(?:\s*(?:pro|bionic))?\b/i, // a19 pro, a19 bionic, a18 pro, etc.
+    /\bm\d(?:\s*(?:pro|max|ultra))?\b/i,  // m3 max, m3 pro, m2 max, etc.
+    /\bi\d\b/i,                           // i5, i7, i9
+  ];
+  
+  for (const regex of chipKeywords) {
+    const m = String(message || "").match(regex);
+    if (m) {
+      requestedChip = m[0].trim();
+      break;
+    }
+  }
+  
+  if (!requestedChip) {
+    const genericChipMatch = String(message || "").match(/(?:chip|cpu|vi\s+xử\s+lý|vi\s+xu\s+ly|chipset)\s+([a-z0-9-]+)/i);
+    if (genericChipMatch) {
+      requestedChip = genericChipMatch[1].trim();
+    }
+  }
+
+  if (requestedChip) {
+    const normalizedChip = normalizeText(requestedChip);
+    const chipFiltered = products.filter((item) => {
+      const nameNorm = normalizeText(item.name);
+      const descNorm = normalizeText(item.description);
+      return nameNorm.includes(normalizedChip) || descNorm.includes(normalizedChip);
+    });
+    if (chipFiltered.length > 0) {
+      products = chipFiltered;
+    }
+  }
+
   if (products.length === 0) {
     return [];
   }
 
   const purchaseMap = await getPurchaseMapByProductIds(products.map((item) => item._id));
-  await refreshKnnCache();
-  const seedProductIds = await getSessionSeedProducts({ sessionId: options.sessionId, userId: options.userId, behaviorProfile });
-  const knnScores = computeKnnScores(seedProductIds);
+  const productIds = products.map((item) => String(item._id));
+  const rfScores = await fetchMlRecommendationScores(options.userId, productIds);
   const mlSignal = options.mlSignal && typeof options.mlSignal === "object" ? options.mlSignal : null;
   const churnScore = Number(mlSignal?.churn_score ?? mlSignal?.churnScore ?? 0);
   const potentialScore = Number(mlSignal?.potential_score ?? mlSignal?.potentialScore ?? 0);
@@ -535,8 +692,8 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
       const allNumericMatched = numericTokens.length === 0 || numericTokens.every((token) => normalizedName.includes(token));
       const queryCoverage = informativeQueryTokens.length > 0 ? nameOverlap / informativeQueryTokens.length : 0;
       const totalPurchases = purchaseMap.get(String(product._id)) || 0;
-      const knnScore = Number(knnScores.get(String(product._id)) || 0);
-      const ltr = rankWithLtr({ product, queryTokens, behaviorProfile, knnScore, budget: priceConstraint?.maxPrice ?? null, totalPurchases });
+      const rfScore = Number(rfScores.get(String(product._id)) || 0);
+      const ltr = rankWithLtr({ product, queryTokens, behaviorProfile, rfScore, budget: priceConstraint?.maxPrice ?? null, totalPurchases });
 
       const sellingPrice = getEffectivePrice(product);
       const discountFeature = Math.min(1, Number(product.discountPercent || 0) / 30);
@@ -566,11 +723,22 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
         }
       }
 
+      let semanticBoost = 0;
+      if (product.similarityScore != null && product.similarityScore > 0) {
+        if (product.similarityScore >= 0.75) {
+          semanticBoost = product.similarityScore * 10;
+        } else if (product.similarityScore >= 0.65) {
+          semanticBoost = product.similarityScore * 5;
+        } else {
+          semanticBoost = product.similarityScore;
+        }
+      }
+
       return {
         ...product,
         totalPurchases,
-        knnScore,
-        ltrScore: ltr.ltrScore + hardMatchOverride + mlBoost,
+        rfScore,
+        ltrScore: ltr.ltrScore + hardMatchOverride + mlBoost + semanticBoost,
         nameOverlap,
         queryCoverage,
         exactMatch,
@@ -580,6 +748,15 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
       };
     })
     .sort((a, b) => {
+      if (sortConstraint === "rating") {
+        const ratingB = Number(b.averageRating || 0);
+        const ratingA = Number(a.averageRating || 0);
+        if (ratingB !== ratingA) return ratingB - ratingA;
+      } else if (sortConstraint === "sales") {
+        const salesB = Number(b.totalPurchases || 0);
+        const salesA = Number(a.totalPurchases || 0);
+        if (salesB !== salesA) return salesB - salesA;
+      }
       if (b.ltrScore !== a.ltrScore) return b.ltrScore - a.ltrScore;
       if (Number(a.nameOverlap || 0) !== Number(b.nameOverlap || 0)) return Number(b.nameOverlap || 0) - Number(a.nameOverlap || 0);
       return Number(a.priceDelta || 0) - Number(b.priceDelta || 0);
@@ -596,7 +773,7 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
     dedupedCandidates.push(item);
   });
 
-  const pickedCandidates = dedupedCandidates.filter((item) => item.ltrScore > 0.06);
+  const pickedCandidates = sortConstraint ? dedupedCandidates : dedupedCandidates.filter((item) => item.ltrScore > 0.06);
   const finalCandidates = (pickedCandidates.length > 0 ? pickedCandidates : dedupedCandidates).slice(0, 5).map((item) => {
     const sellingPrice = getEffectivePrice(item);
     const originalPrice = Number(item.price || 0);
@@ -621,7 +798,9 @@ async function findRecommendedProducts(message, context = {}, options = {}) {
       totalRatings: item.totalRatings,
       totalViews: item.totalViews,
       totalPurchases: item.totalPurchases,
-      knnScore: item.knnScore,
+      rfScore: item.rfScore,
+      similarityScore: item.similarityScore || 0,
+      ltrScore: item.ltrScore || 0,
       reason: buildRecommendationReason(item),
     };
   });

@@ -627,31 +627,62 @@ async function parseDescriptionToSpecsWithMemory(rawText, history = []) {
     `Tin nhắn hiện tại: ${String(rawText || "").trim()}`,
   ].join("\n");
 
+  const isGemini = apiUrl.includes("generativelanguage.googleapis.com");
+
   try {
-    const response = await fetch(`${apiUrl.replace(/\/$/, "")}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0,
-        messages: [
-          {
-            role: "system",
-            content:
-              "Bạn chỉ được xuất một JSON object nghiêm ngặt. Không bao giờ thêm markdown, chú thích hay văn bản ngoài JSON.",
+    const response = await (async () => {
+      if (isGemini) {
+        const endpoint = apiUrl.includes(":generateContent")
+          ? apiUrl
+          : `${apiUrl.replace(/\/$/, "")}/v1beta/models/${model}:generateContent`;
+        const delimiter = endpoint.includes("?") ? "&" : "?";
+        const requestUrl = `${endpoint}${delimiter}key=${encodeURIComponent(apiKey)}`;
+
+        return fetch(requestUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-      }),
-    });
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: `Bạn chỉ được xuất một JSON object nghiêm ngặt. Không bao giờ thêm markdown, chú thích hay văn bản ngoài JSON.\n\n${prompt}` }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0,
+            },
+          }),
+        });
+      }
+
+      return fetch(`${apiUrl.replace(/\/$/, "")}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0,
+          messages: [
+            {
+              role: "system",
+              content:
+                "Bạn chỉ được xuất một JSON object nghiêm ngặt. Không bao giờ thêm markdown, chú thích hay văn bản ngoài JSON.",
+            },
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+        }),
+      });
+    })();
 
     if (!response.ok) {
+      console.error("[LLM] parseDescriptionToSpecsWithMemory API response error:", response.status, response.statusText);
       return {
         category: fallbackCategory,
         price_max: fallbackPriceMax,
@@ -661,7 +692,16 @@ async function parseDescriptionToSpecsWithMemory(rawText, history = []) {
     }
 
     const data = await response.json();
-    const content = String(data?.choices?.[0]?.message?.content || "").replace(/```json|```/g, "").trim();
+    const content = isGemini
+      ? (data?.candidates || [])
+          .flatMap((candidate) => candidate?.content?.parts || [])
+          .map((part) => String(part?.text || "").trim())
+          .filter(Boolean)
+          .join("\n")
+          .replace(/```json|```/g, "")
+          .trim()
+      : String(data?.choices?.[0]?.message?.content || "").replace(/```json|```/g, "").trim();
+
     const parsed = extractJsonObjectFromText(content);
 
     const category = normalizeCategory(parsed?.category) || fallbackCategory;
@@ -721,6 +761,7 @@ async function parseDescriptionToSpecsWithMemory(rawText, history = []) {
       refresh_rate: parsed_refresh,
     };
   } catch (error) {
+    console.error("[LLM] parseDescriptionToSpecsWithMemory failed:", error.message);
     return {
       category: fallbackCategory,
       price_max: fallbackPriceMax,

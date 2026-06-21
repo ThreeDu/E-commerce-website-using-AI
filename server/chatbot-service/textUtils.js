@@ -109,6 +109,19 @@ function isModelAnchorToken(token) {
   return /[a-z]+\d+/.test(value);
 }
 
+function cleanHtmlBreaks(text) {
+  if (typeof text !== "string" || !text) return "";
+  
+  return text.split("\n").map(line => {
+    const isTableRow = line.includes("|") && line.split("|").length >= 3;
+    if (isTableRow) {
+      return line.replace(/<br\s*\/?>/gi, " \\| ");
+    } else {
+      return line.replace(/<br\s*\/?>/gi, "\n");
+    }
+  }).join("\n");
+}
+
 module.exports = {
   normalizeText,
   tokenize,
@@ -120,4 +133,5 @@ module.exports = {
   includesAny,
   isStorageToken,
   isModelAnchorToken,
+  cleanHtmlBreaks,
 };
