@@ -74,6 +74,21 @@ const orderSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    isPaid: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    paidAt: {
+      type: Date,
+      default: null,
+    },
+    paymentDetails: {
+      transactionRef: { type: String, default: "" },
+      bankCode: { type: String, default: "" },
+      amount: { type: Number, default: 0 },
+      counterpartName: { type: String, default: "" },
+    },
     cancelledReason: {
       type: String,
       trim: true,

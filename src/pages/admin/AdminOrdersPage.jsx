@@ -7,7 +7,7 @@ import { getErrorMessage } from "../../utils/adminErrorUtils";
 import { getStatusInfo } from "../../utils/orderStatusUtils";
 import { getProductImageSrc } from "../../utils/productUtils";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronLeft, faChevronRight, faReceipt, faFilter, faEye, faTimes, faUser, faEnvelope, faCoins, faGift, faExternalLink } from "@fortawesome/free-solid-svg-icons";
+import { faChevronLeft, faChevronRight, faReceipt, faFilter, faEye, faTimes, faUser, faEnvelope, faCoins, faGift, faExternalLink, faSearch } from "@fortawesome/free-solid-svg-icons";
 const STATUS_OPTIONS = [
   { value: "all", label: "Tất cả" },
   { value: "pending", label: "Chờ xử lý" },
@@ -30,6 +30,27 @@ function AdminOrdersPage() {
 
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all");
   const [page, setPage] = useState(Math.max(1, Number(searchParams.get("page") || 1) || 1));
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredOrders = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return orders;
+
+    return orders.filter((order) => {
+      const orderId = String(order._id || "").toLowerCase();
+      const customerName = String(order.shippingAddress?.fullName || "").toLowerCase();
+      const phone = String(order.shippingAddress?.phone || "").toLowerCase();
+      const address = String(order.shippingAddress?.address || "").toLowerCase();
+
+      return (
+        orderId.includes(query) ||
+        customerName.includes(query) ||
+        phone.includes(query) ||
+        address.includes(query)
+      );
+    });
+  }, [orders, searchQuery]);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
@@ -144,7 +165,13 @@ function AdminOrdersPage() {
       setOrders((prev) =>
         prev.map((order) => (order._id === orderId ? { ...order, ...data.order } : order))
       );
-      setMessage("Cập nhật trạng thái đơn hàng thành công.");
+      
+      const updatedOrder = data.order || data;
+      if (status === "confirmed" && updatedOrder?.paymentMethod === "beepay") {
+        setMessage("Đơn hàng qua BeePay đã được xác nhận và thanh toán thành công.");
+      } else {
+        setMessage("Cập nhật trạng thái đơn hàng thành công.");
+      }
     } catch (error) {
       setMessage(getErrorMessage(error, "Không thể cập nhật trạng thái đơn hàng."));
     } finally {
@@ -332,10 +359,33 @@ function AdminOrdersPage() {
               ))}
             </select>
           </div>
+
+          <div className="grid gap-2 min-w-0 md:col-span-2">
+            <label htmlFor="order-search" className="text-admin-muted text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <FontAwesomeIcon icon={faSearch} className="text-admin-muted" />
+              Tìm kiếm đơn hàng
+            </label>
+            <input
+              id="order-search"
+              type="text"
+              placeholder="Nhập mã đơn hàng, tên khách hàng, SĐT, địa chỉ..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)]"
+            />
+          </div>
         </div>
 
         <p className="text-admin-muted text-sm mt-1 mb-2">
-          Tổng đơn hàng: <strong className="text-admin-ink">{total}</strong>
+          {searchQuery.trim() ? (
+            <>
+              Kết quả tìm kiếm: <strong className="text-admin-ink">{filteredOrders.length}</strong> / {total}
+            </>
+          ) : (
+            <>
+              Tổng đơn hàng: <strong className="text-admin-ink">{total}</strong>
+            </>
+          )}
         </p>
 
         <div className="border border-[#e2eaf4] rounded-2xl overflow-hidden bg-white w-full max-w-full shadow-xs">
@@ -352,7 +402,7 @@ function AdminOrdersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-admin-line">
-                {orders.map((order) => (
+                {filteredOrders.map((order) => (
                   <tr key={order._id} className="transition-colors hover:bg-[#f8fbff] [&>td]:p-3.5 [&>td]:align-middle">
                     <td
                       className="cursor-pointer group"
@@ -402,10 +452,12 @@ function AdminOrdersPage() {
                     </td>
                   </tr>
                 ))}
-                {!loading && orders.length === 0 && (
+                {!loading && filteredOrders.length === 0 && (
                   <tr>
                     <td colSpan="6" className="text-center! text-admin-muted p-6!">
-                      Không có đơn hàng phù hợp bộ lọc.
+                      {orders.length === 0
+                        ? "Không có đơn hàng phù hợp bộ lọc."
+                        : "Không tìm thấy đơn hàng nào khớp với nội dung tìm kiếm."}
                     </td>
                   </tr>
                 )}
@@ -816,7 +868,13 @@ function AdminOrdersPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400 font-medium">Phương thức thanh toán:</span>
-                          <strong className="text-slate-800">{orderDetail.paymentMethod === "transfer" ? "Chuyển khoản" : "Thanh toán khi nhận hàng (COD)"}</strong>
+                          <strong className="text-slate-800">
+                            {orderDetail.paymentMethod === "transfer"
+                              ? "Chuyển khoản (Thủ công)"
+                              : orderDetail.paymentMethod === "beepay"
+                              ? "Quét mã VietQR (Tự động qua BeePay)"
+                              : "Thanh toán khi nhận hàng (COD)"}
+                          </strong>
                         </div>
                         {orderDetail.discountCode && (
                           <div className="flex justify-between">

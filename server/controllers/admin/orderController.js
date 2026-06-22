@@ -53,9 +53,32 @@ const getOrderById = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng." });
     }
 
+    const orderObj = order.toObject();
+    if (
+      (orderObj.paymentMethod === "beepay" || orderObj.paymentMethod === "transfer") &&
+      orderObj.status === "pending"
+    ) {
+      const bankId = process.env.BANK_ID || "MB";
+      const accountNo = process.env.BANK_ACCOUNT_NO || "008000888";
+      const accountName = process.env.BANK_ACCOUNT_NAME || "NGUYEN VAN A";
+      const prefix = process.env.BEEPAY_PREFIX || "DH";
+      const description = `${prefix}${orderObj._id}`;
+      const qrUrl = `https://img.vietqr.io/image/${bankId}-${accountNo}-compact.png?amount=${
+        orderObj.totalPrice
+      }&addInfo=${description}&accountName=${encodeURIComponent(accountName)}`;
+
+      orderObj.paymentConfig = {
+        bankId,
+        accountNo,
+        accountName,
+        description,
+        qrUrl,
+      };
+    }
+
     return res.json({
       message: "Lấy chi tiết đơn hàng thành công.",
-      order,
+      order: orderObj,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -84,6 +107,21 @@ const updateOrderStatus = async (req, res) => {
       deliveredAt: status === "delivered" ? new Date() : null,
       cancelledAt: status === "cancelled" ? new Date() : null,
     };
+
+    if (
+      status === "confirmed" &&
+      (existingOrder.paymentMethod === "beepay" || existingOrder.paymentMethod === "transfer") &&
+      !existingOrder.isPaid
+    ) {
+      updatePayload.isPaid = true;
+      updatePayload.paidAt = new Date();
+      updatePayload.paymentDetails = {
+        transactionRef: "MANUAL_CONFIRM_" + Date.now(),
+        bankCode: "MANUAL",
+        amount: existingOrder.totalPrice,
+        counterpartName: "ADMIN_MANUAL",
+      };
+    }
 
     const updatedOrder = await Order.findByIdAndUpdate(req.params.id, updatePayload, {
       new: true,
