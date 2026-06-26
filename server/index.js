@@ -9,6 +9,7 @@ const categoryRoutes = require("./routes/categoryRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const pointRoutes = require("./routes/pointRoutes");
 const chatbotRoutes = require("./chatbot-service/routes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 dotenv.config();
 
@@ -23,7 +24,14 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json({ limit: "10mb" }));
+app.use(
+  express.json({
+    limit: "10mb",
+    verify: (req, res, buf) => {
+      req.rawBody = buf.toString();
+    },
+  })
+);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
@@ -32,6 +40,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/points", pointRoutes);
+app.use("/api/payments", paymentRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({ message: "API is running" });

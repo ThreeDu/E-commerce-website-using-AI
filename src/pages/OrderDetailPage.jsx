@@ -60,6 +60,46 @@ function OrderDetailPage() {
     fetchOrderDetail();
   }, [auth?.token, detailEndpoint]);
 
+  // Tự động kiểm tra trạng thái thanh toán (polling) mỗi 5 giây
+  useEffect(() => {
+    if (!order || order.status !== "pending" || !auth?.token || isAdminView) {
+      return;
+    }
+
+    const intervalId = setInterval(async () => {
+      try {
+        const response = await fetch(detailEndpoint, {
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const fetchedOrder = data?.order || data;
+          if (fetchedOrder && fetchedOrder.status !== "pending") {
+            setOrder(fetchedOrder);
+            success("Đơn hàng của bạn đã được xác nhận thanh toán thành công!", {
+              title: "Thanh toán thành công",
+            });
+            clearInterval(intervalId);
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi khi kiểm tra trạng thái đơn hàng:", err);
+      }
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [order?.status, auth?.token, detailEndpoint, isAdminView, success]);
+
+  const handleCopyText = (text, fieldName) => {
+    navigator.clipboard.writeText(text);
+    success(`Đã sao chép ${fieldName} vào bộ nhớ tạm.`, {
+      title: "Sao chép thành công",
+    });
+  };
+
   const handleCancelOrder = async () => {
     if (isAdminView) {
       return;
@@ -144,7 +184,21 @@ function OrderDetailPage() {
                 {statusInfo.label}
               </span>
             </p>
-            <p className="m-0 mb-2.5 text-[#6b7280] last:mb-0 [&>strong]:text-[#111827]">Phương thức thanh toán: <strong>{order.paymentMethod === "transfer" ? "Chuyển khoản" : "COD"}</strong></p>
+            <p className="m-0 mb-2.5 text-[#6b7280] last:mb-0 [&>strong]:text-[#111827]">
+              Phương thức thanh toán:{" "}
+              <strong>
+                {order.paymentMethod === "transfer"
+                  ? "Chuyển khoản (Thủ công)"
+                  : order.paymentMethod === "beepay"
+                  ? "Quét mã VietQR (Tự động qua BeePay)"
+                  : "COD"}
+              </strong>
+            </p>
+            {order.isPaid ? (
+              <p className="m-0 mb-2.5 text-[#16a34a] font-bold text-xs">
+                ✓ Đã thanh toán ({new Date(order.paidAt).toLocaleString("vi-VN")})
+              </p>
+            ) : null}
             {order.discountCode ? (
               <p className="m-0 mb-2.5 text-[#16a34a] font-bold">Mã giảm: {order.discountCode}</p>
             ) : null}
@@ -152,6 +206,105 @@ function OrderDetailPage() {
           </div>
         </div>
       </section>
+
+      {/* Hiển thị hướng dẫn thanh toán QR VietQR nếu phương thức là chuyển khoản & trạng thái pending */}
+      {!isAdminView && order.status === "pending" && order.paymentConfig ? (
+        <section className="border border-[#dee2e6] rounded-[10px] bg-[#f8fafc] p-6 mb-5 shadow-sm">
+          <div className="flex gap-6 items-center flex-wrap md:flex-nowrap">
+            {/* Cột trái: Mã QR */}
+            <div className="flex flex-col items-center bg-white p-4 rounded-xl shadow-sm border border-[#e2e8f0] mx-auto md:mx-0">
+              <h4 className="text-xs font-bold text-[#475569] mb-3 text-center">Quét mã VietQR để thanh toán</h4>
+              <div className="relative w-[180px] h-[180px] bg-slate-50 flex items-center justify-center rounded-lg overflow-hidden border border-[#f1f5f9]">
+                <img 
+                  src={order.paymentConfig.qrUrl} 
+                  alt="VietQR Payment Code" 
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = "/placeholder.svg";
+                  }}
+                />
+              </div>
+              <div className="mt-3 flex items-center gap-1.5 text-xs text-[#059669] font-bold animate-pulse">
+                <span className="w-2 h-2 rounded-full bg-[#059669]"></span>
+                Đang chờ thanh toán tự động...
+              </div>
+            </div>
+
+            {/* Cột phải: Hướng dẫn chuyển khoản */}
+            <div className="flex-1 w-full text-[14px]">
+              <h3 className="mt-0 mb-4 text-base font-bold text-[#1e293b]">Thông tin chuyển khoản</h3>
+              
+              <div className="grid gap-3 text-sm">
+                <div className="flex items-center justify-between border-b border-[#cbd5e1]/30 pb-2">
+                  <span className="text-[#64748b]">Ngân hàng:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-[#1e293b]">{order.paymentConfig.bankId}</span>
+                    <button 
+                      type="button" 
+                      onClick={() => handleCopyText(order.paymentConfig.bankId, "Ngân hàng")}
+                      className="text-xs text-[#2563eb] font-semibold border-none bg-transparent hover:underline cursor-pointer"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between border-b border-[#cbd5e1]/30 pb-2">
+                  <span className="text-[#64748b]">Số tài khoản:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-[#1e293b]">{order.paymentConfig.accountNo}</span>
+                    <button 
+                      type="button" 
+                      onClick={() => handleCopyText(order.paymentConfig.accountNo, "Số tài khoản")}
+                      className="text-xs text-[#2563eb] font-semibold border-none bg-transparent hover:underline cursor-pointer"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between border-b border-[#cbd5e1]/30 pb-2">
+                  <span className="text-[#64748b]">Chủ tài khoản:</span>
+                  <span className="font-bold text-[#1e293b]">{order.paymentConfig.accountName}</span>
+                </div>
+
+                <div className="flex items-center justify-between border-b border-[#cbd5e1]/30 pb-2">
+                  <span className="text-[#64748b]">Số tiền chuyển:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-[#dc2626]">{Number(order.totalPrice || 0).toLocaleString("vi-VN")} đ</span>
+                    <button 
+                      type="button" 
+                      onClick={() => handleCopyText(order.totalPrice.toString(), "Số tiền")}
+                      className="text-xs text-[#2563eb] font-semibold border-none bg-transparent hover:underline cursor-pointer"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between border-b border-[#cbd5e1]/30 pb-2">
+                  <span className="text-[#64748b]">Nội dung chuyển khoản:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-[#2563eb] bg-[#eff6ff] px-2 py-0.5 rounded border border-[#bfdbfe]">{order.paymentConfig.description}</span>
+                    <button 
+                      type="button" 
+                      onClick={() => handleCopyText(order.paymentConfig.description, "Nội dung chuyển khoản")}
+                      className="text-xs text-[#2563eb] font-semibold border-none bg-transparent hover:underline cursor-pointer"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 rounded-lg bg-[#eff6ff] text-xs text-[#1e40af] border border-[#bfdbfe]/50 leading-relaxed">
+                <strong>Lưu ý quan trọng:</strong> Vui lòng chuyển <strong>chính xác số tiền</strong> và <strong>nội dung chuyển khoản</strong> ở trên (hoặc quét mã QR để điền tự động). Hệ thống sẽ tự động xác thực và cập nhật trạng thái đơn hàng của bạn ngay khi nhận được tiền.
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="border border-[#dee2e6] rounded-[10px] bg-white p-5 mb-5">
         <h3 className="mt-0 mb-4 font-bold text-lg">Sản phẩm trong đơn</h3>

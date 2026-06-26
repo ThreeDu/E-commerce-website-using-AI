@@ -176,7 +176,7 @@ function CheckoutPage() {
     };
 
     try {
-      await createOrder(orderData, auth.token);
+      const response = await createOrder(orderData, auth.token);
 
       trackEvent({
         eventName: "checkout_success",
@@ -199,7 +199,12 @@ function CheckoutPage() {
       // Remove only selected items from cart
       removeSelectedItems();
 
-      navigate("/order-history");
+      const orderId = response?.order?._id || response?._id;
+      if (orderId) {
+        navigate(`/order-history/${orderId}`);
+      } else {
+        navigate("/order-history");
+      }
     } catch (err) {
       console.error("Lỗi khi gọi API đặt hàng:", err);
       error(err?.message || "Không thể tạo đơn hàng mới.", {
@@ -273,7 +278,8 @@ function CheckoutPage() {
               <select name="paymentMethod" value={formData.paymentMethod} onChange={handleChange}
                 className="w-full p-2.5 rounded-xl border border-[#e2e8f0] bg-[#f9fafb] text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#4f46e5]">
                 <option value="cod">Thanh toán khi nhận hàng (COD)</option>
-                <option value="transfer">Chuyển khoản ngân hàng</option>
+                <option value="transfer">Chuyển khoản ngân hàng (Thủ công)</option>
+                <option value="beepay">Chuyển khoản / Quét mã VietQR (Tự động qua BeePay)</option>
               </select>
             </div>
           </form>
