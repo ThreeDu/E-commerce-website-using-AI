@@ -60,9 +60,11 @@ function OrderDetailPage() {
     fetchOrderDetail();
   }, [auth?.token, detailEndpoint]);
 
+  const orderStatus = order?.status;
+
   // Tự động kiểm tra trạng thái thanh toán (polling) mỗi 5 giây
   useEffect(() => {
-    if (!order || order.status !== "pending" || !auth?.token || isAdminView) {
+    if (orderStatus !== "pending" || !auth?.token || isAdminView) {
       return;
     }
 
@@ -91,7 +93,7 @@ function OrderDetailPage() {
     }, 5000);
 
     return () => clearInterval(intervalId);
-  }, [order?.status, auth?.token, detailEndpoint, isAdminView, success]);
+  }, [orderStatus, auth?.token, detailEndpoint, isAdminView, success]);
 
   const handleCopyText = (text, fieldName) => {
     navigator.clipboard.writeText(text);
