@@ -9,6 +9,7 @@ const categoryRoutes = require("./routes/categoryRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const pointRoutes = require("./routes/pointRoutes");
 const chatbotRoutes = require("./chatbot-service/routes");
+const adminChatbotRoutes = require("./admin-chatbot/adminChatRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 
 dotenv.config();
@@ -39,6 +40,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/chatbot", chatbotRoutes);
+app.use("/api/admin/chatbot", adminChatbotRoutes);
 app.use("/api/points", pointRoutes);
 app.use("/api/payments", paymentRoutes);
 

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ChatbotWidget from "./components/ChatbotWidget";
@@ -50,7 +50,7 @@ const AdminRetentionCampaignPage = lazy(() => import("./pages/admin/AdminRetenti
 const AdminRewardTiersPage = lazy(() => import("./pages/admin/reward/AdminRewardTiersPage"));
 const AdminAddRewardTierPage = lazy(() => import("./pages/admin/reward/AdminAddRewardTierPage"));
 const AdminEditRewardTierPage = lazy(() => import("./pages/admin/reward/AdminEditRewardTierPage"));
-
+const AdminChatbotPage = lazy(() => import("./pages/admin/AdminChatbotPage"));
 
 function GuestRoute({ children }) {
   const { auth } = useAuth();
@@ -298,6 +298,14 @@ function App() {
                       element={
                         <ProtectedRoute requiredRole="admin">
                           <AdminEditRewardTierPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/chatbot"
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminChatbotPage />
                         </ProtectedRoute>
                       }
                     />
