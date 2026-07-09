@@ -10,7 +10,11 @@ const Cart = require("../models/Cart");
 const PointHistory = require("../models/PointHistory");
 const Notification = require("../models/Notification");
 
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/e-commerce-app";
+const MONGO_URI = process.env.MONGO_URI;
+if (!MONGO_URI) {
+  console.error("MONGO_URI not configured in env");
+  process.exit(1);
+}
 
 async function clearMockData() {
   try {

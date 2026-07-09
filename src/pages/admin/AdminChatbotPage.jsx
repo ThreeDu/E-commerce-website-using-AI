@@ -232,7 +232,7 @@ function AdminChatbotPage() {
   if (!auth || auth.user?.role !== 'admin') return null;
 
   return (
-    <main className="w-full flex-1 flex h-0 bg-[#17212b] text-[#d0dbe8] overflow-hidden relative">
+    <main className="w-full h-screen bg-[#17212b] text-[#d0dbe8] flex overflow-hidden relative">
       {/* Mobile Drawer Overlay Backdrop */}
       {isSidebarOpen && (
         <button

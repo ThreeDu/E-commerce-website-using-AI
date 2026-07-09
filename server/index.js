@@ -8,7 +8,7 @@ const orderRoutes = require("./routes/orderRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const pointRoutes = require("./routes/pointRoutes");
-const chatbotRoutes = require("./chatbot-service/routes");
+const chatbotRoutes = require("./chatbot-service/chatbotRoutes");
 const adminChatbotRoutes = require("./admin-chatbot/adminChatRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 
@@ -16,8 +16,11 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const MONGO_URI =
-  process.env.MONGO_URI || "mongodb://localhost:27017/e-commerce-app";
+const MONGO_URI = process.env.MONGO_URI;
+if (!MONGO_URI) {
+  console.error('[FATAL] MONGO_URI chưa được cấu hình trong .env');
+  process.exit(1);
+}
 
 app.use(
   cors({

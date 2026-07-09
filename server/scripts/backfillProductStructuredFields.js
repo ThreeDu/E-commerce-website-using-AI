@@ -14,7 +14,11 @@ function normalizeSku(value) {
 }
 
 async function run() {
-  const mongoUri = process.env.MONGO_URI || "mongodb://localhost:27017/e-commerce-app";
+  const mongoUri = process.env.MONGO_URI;
+  if (!mongoUri) {
+    console.error("MONGO_URI not configured in env");
+    process.exit(1);
+  }
   await mongoose.connect(mongoUri);
 
   let scanned = 0;

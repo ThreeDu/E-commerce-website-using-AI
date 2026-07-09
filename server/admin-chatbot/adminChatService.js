@@ -12,7 +12,7 @@ const {
 } = require('./adminToolExecutor');
 
 // ─── Config ────────────────────────────────────────────────────────────────────
-const LLM_TIMEOUT_MS = 15000;
+const LLM_TIMEOUT_MS = Number(process.env.CHATBOT_LLM_TIMEOUT_MS) || 60000;
 const MAX_TOOL_ITERATIONS = 3;
 
 const WRITE_OPERATIONS = new Set(['updateOrderStatus', 'updateProduct', 'createProduct', 'createDiscount']);
@@ -142,7 +142,15 @@ async function callLlm(messages, includeTools = true) {
         body.tool_choice = 'auto';
       }
 
-      response = await fetch(`${apiUrl.replace(/\/$/, '')}/chat/completions`, {
+      let requestUrl;
+      const baseUrl = apiUrl.replace(/\/+$/, '');
+      if (baseUrl.match(/\/(chat|completions)/)) {
+        requestUrl = baseUrl;
+      } else {
+        requestUrl = `${baseUrl}/v1/chat/completions`;
+      }
+
+      response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
