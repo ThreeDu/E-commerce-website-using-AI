@@ -5,7 +5,7 @@
  */
 
 const ChatSession = require('./models/ChatSession');
-const { callLLMWithTools } = require('./llmHelper');
+const { callLLMWithTools, callLLMStreaming } = require('./llmHelper');
 const { TOOL_DEFINITIONS, executeTool } = require('./chatbotToolExecutor');
 
 const MAX_TOOL_ITERATIONS = 5;
@@ -19,7 +19,8 @@ function buildSystemPrompt(context) {
 
 ## Nguyên tắc hoạt động
 - Luôn trả lời bằng tiếng Việt, thân thiện và chuyên nghiệp
-- Khi khách hỏi về sản phẩm, LUÔN gọi tool searchProducts hoặc getProductDetail để lấy dữ liệu thực từ hệ thống
+- Khi khách hỏi tư vấn sản phẩm hoặc tìm hiểu theo danh mục (ví dụ: Điện thoại, Laptop, Tablet,...), LUÔN sử dụng tool getCategories để xem danh mục hệ thống và gọi searchProducts với tham số category hoặc keyword tương ứng để liệt kê các sản phẩm thực tế thuộc danh mục đó.
+- Phân tích chi tiết ưu nhược điểm, các phân khúc giá khác nhau (giá rẻ, tầm trung, cao cấp) và sản phẩm tiêu biểu trong danh mục khách quan tâm.
 - KHÔNG BAO GIỜ bịa thông tin sản phẩm, giá cả, specs. Chỉ dựa trên dữ liệu từ tools
 - Khi trả về danh sách sản phẩm, format thông tin rõ ràng và dễ đọc
 - Khi so sánh sản phẩm, sử dụng bảng Markdown để hiển thị side-by-side
@@ -77,9 +78,25 @@ Chỉ dùng format này khi có sản phẩm thực sự để hiển thị. IDs
   return prompt;
 }
 
+// ─── Filter out raw LLM special tokens & tool call syntax ────────────────────
+function cleanUpSpecialTokens(text) {
+  if (!text || typeof text !== 'string') return '';
+
+  let cleaned = text;
+
+  // Remove <|tool_call>call: functionName{} or <|tool_call>...
+  cleaned = cleaned.replace(/<\|tool_call\|?>[\s\S]*?(?:\{\}|(?=\n\n|\n[A-ZÀ-Ỹa-zà-ỹ]|$))/gi, '');
+  cleaned = cleaned.replace(/<\|[a-z_0-9:-]+\|?>/gi, '');
+  cleaned = cleaned.replace(/call:\s*[a-zA-Z0-9_]+\s*\{[^}]*\}/gi, '');
+  cleaned = cleaned.replace(/```(?:tool_call|json_call|function_call)[\s\S]*?```/gi, '');
+
+  // Remove leftover empty lines
+  return cleaned.replace(/\n{3,}/g, '\n\n').trim();
+}
+
 // ─── Extract structured data from LLM response ─────────────────────────────
 function extractStructuredData(text) {
-  let cleanText = text;
+  let cleanText = cleanUpSpecialTokens(text);
   const productIds = [];
   const quickReplies = [];
 
@@ -104,6 +121,8 @@ function extractStructuredData(text) {
     } catch { /* ignore parse errors */ }
     cleanText = cleanText.replace(qrRegex, '').trim();
   }
+
+  cleanText = cleanUpSpecialTokens(cleanText);
 
   return { cleanText, productIds, quickReplies };
 }
@@ -253,7 +272,7 @@ async function processMessage({ message, sessionId, userId, history, context }) 
   const products = await fetchProductCards(productIds);
 
   // 7. Save assistant reply to session
-  session.messages.push({ role: 'assistant', content: cleanText, timestamp: new Date() });
+  session.messages.push({ role: 'assistant', content: cleanText || '', timestamp: new Date() });
 
   // Trim session history to prevent unbounded growth
   if (session.messages.length > MAX_HISTORY_MESSAGES * 3) {
@@ -272,4 +291,128 @@ async function processMessage({ message, sessionId, userId, history, context }) 
   };
 }
 
-module.exports = { processMessage };
+// ─── Streaming: Process message with SSE ────────────────────────────────────
+/**
+ * Same as processMessage but streams the final LLM response.
+ * Tool calling loop runs non-streamed. Only final text is streamed.
+ *
+ * @param {object} params - Same as processMessage
+ * @param {Function} params.onChunk - Called with each text chunk
+ * @param {Function} params.onProducts - Called with products & quickReplies metadata
+ * @returns {Promise<{sessionId, cartUpdated}>}
+ */
+async function processMessageStream({ message, sessionId, userId, context, onChunk, onProducts }) {
+  let session = await ChatSession.findOne({ sessionId });
+
+  if (!session) {
+    session = new ChatSession({
+      sessionId,
+      userId: userId || null,
+      messages: [],
+      context: context || {},
+    });
+  } else if (userId && !session.userId) {
+    session.userId = userId;
+  }
+
+  if (context) {
+    session.context = { ...session.context, ...context };
+  }
+
+  const systemPrompt = buildSystemPrompt({
+    userId,
+    userBehavior: context?.userBehavior,
+    page: context?.page,
+  });
+
+  const conversationMessages = session.messages
+    .filter((m) => m.role === 'user' || m.role === 'assistant')
+    .slice(-MAX_HISTORY_MESSAGES)
+    .map((m) => ({ role: m.role, content: m.content }));
+
+  conversationMessages.push({ role: 'user', content: message });
+  session.messages.push({ role: 'user', content: message, timestamp: new Date() });
+
+  // Tool calling loop (non-streamed)
+  let llmMessages = [...conversationMessages];
+  let cartUpdated = false;
+  let iterations = 0;
+  let needsStream = true;
+
+  while (iterations < MAX_TOOL_ITERATIONS) {
+    iterations++;
+
+    const result = await callLLMWithTools(systemPrompt, llmMessages, TOOL_DEFINITIONS);
+
+    if (!result.toolCalls || result.toolCalls.length === 0) {
+      // No tool calls — stream this final response instead
+      needsStream = true;
+      break;
+    }
+
+    llmMessages.push({
+      role: 'assistant',
+      content: result.content || '',
+      toolCalls: result.toolCalls,
+    });
+
+    for (const toolCall of result.toolCalls) {
+      console.log(`[Chatbot-Stream] Tool: ${toolCall.name}`);
+      const toolResult = await executeTool(toolCall.name, toolCall.arguments, userId);
+
+      if (toolCall.name === 'addToCart' && toolResult.success) cartUpdated = true;
+
+      session.messages.push({
+        role: 'tool',
+        content: `${toolCall.name}: ${JSON.stringify(toolResult).substring(0, 500)}`,
+        toolName: toolCall.name,
+        timestamp: new Date(),
+      });
+
+      llmMessages.push({
+        role: 'tool',
+        toolName: toolCall.name,
+        toolCallId: toolCall.id,
+        content: JSON.stringify(toolResult),
+      });
+    }
+
+    if (iterations === MAX_TOOL_ITERATIONS) {
+      needsStream = true;
+      break;
+    }
+  }
+
+  // Stream the final response
+  let fullText = '';
+  if (needsStream) {
+    try {
+      fullText = await callLLMStreaming(systemPrompt, llmMessages, onChunk);
+    } catch (streamError) {
+      // Fallback to non-streaming if streaming fails
+      console.warn('[Chatbot-Stream] Streaming failed, falling back:', streamError.message);
+      const fallback = await callLLMWithTools(systemPrompt, llmMessages, []);
+      fullText = fallback.content || 'Xin lỗi, tôi đang gặp sự cố. Vui lòng thử lại.';
+      onChunk(fullText);
+    }
+  }
+
+  // Extract structured data and send metadata
+  const { cleanText, productIds, quickReplies } = extractStructuredData(fullText);
+  const products = await fetchProductCards(productIds);
+
+  if (onProducts && (products.length > 0 || quickReplies.length > 0)) {
+    onProducts({ products, quickReplies });
+  }
+
+  // Save to session
+  session.messages.push({ role: 'assistant', content: cleanText || '', timestamp: new Date() });
+  if (session.messages.length > MAX_HISTORY_MESSAGES * 3) {
+    session.messages = session.messages.slice(-MAX_HISTORY_MESSAGES * 2);
+  }
+  await session.save();
+
+  return { sessionId, cartUpdated };
+}
+
+module.exports = { processMessage, processMessageStream };

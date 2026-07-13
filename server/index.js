@@ -10,7 +10,9 @@ const analyticsRoutes = require("./routes/analyticsRoutes");
 const pointRoutes = require("./routes/pointRoutes");
 const chatbotRoutes = require("./chatbot-service/chatbotRoutes");
 const adminChatbotRoutes = require("./admin-chatbot/adminChatRoutes");
+const chatbotAnalyticsRoutes = require("./routes/chatbotAnalyticsRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const path = require("path");
 
 dotenv.config();
 
@@ -37,6 +39,8 @@ app.use(
   })
 );
 
+app.use("/reports", express.static(path.join(__dirname, "../public/reports")));
+
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
@@ -44,6 +48,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/admin/chatbot", adminChatbotRoutes);
+app.use("/api/admin/chatbot-analytics", chatbotAnalyticsRoutes);
 app.use("/api/points", pointRoutes);
 app.use("/api/payments", paymentRoutes);
 

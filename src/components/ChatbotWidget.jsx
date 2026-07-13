@@ -94,25 +94,67 @@ function formatVnd(value) {
   return `${rounded.toLocaleString("vi-VN")} đ`;
 }
 
+function cleanSpecialTokens(text) {
+  if (!text || typeof text !== "string") return "";
+  let cleaned = text;
+  cleaned = cleaned.replace(/<\|tool_call\|?>[\s\S]*?(?:\{\}|(?=\n\n|\n[A-ZÀ-Ỹa-zà-ỹ]|$))/gi, "");
+  cleaned = cleaned.replace(/<\|[a-z_0-9:-]+\|?>/gi, "");
+  cleaned = cleaned.replace(/call:\s*[a-zA-Z0-9_]+\s*\{[^}]*\}/gi, "");
+  cleaned = cleaned.replace(/```(?:tool_call|json_call|function_call)[\s\S]*?```/gi, "");
+  return cleaned.replace(/\n{3,}/g, "\n\n").trim();
+}
+
 function renderAssistantMarkdown(text) {
+  const sanitizedText = cleanSpecialTokens(text);
   return (
-    <div className="grid gap-2.5 overflow-x-auto">
+    <div className="min-w-0 max-w-full break-words [overflow-wrap:anywhere] text-sm text-[#0f2233] leading-relaxed">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
           table: ({ node, ...props }) => (
-            <table className="w-full min-w-full border-collapse border-spacing-0 border-2 border-[#1e1e1e] rounded-lg overflow-hidden shadow-[4px_4px_0px_#1e1e1e] bg-gradient-to-b from-[#f7f1ff] to-[#eef8ff] text-xs" {...props} />
+            <div className="w-full max-w-full overflow-x-auto my-2 rounded-xl border border-black/12 bg-white shadow-sm scrollbar-thin">
+              <table className="w-full min-w-[320px] border-collapse border-spacing-0 text-xs" {...props} />
+            </div>
           ),
           th: ({ node, ...props }) => (
-            <th className="p-2 px-2.5 border-r border-b border-[#1e1e1e]/12 align-top bg-gradient-to-b from-[#ffe8c7] to-[#ffd9f0] font-extrabold text-[#1e1e1e] text-left last:border-r-0" {...props} />
+            <th className="p-2 px-3 border-r border-b border-black/10 align-top bg-[#eef6ff] font-bold text-[#0f314f] text-left last:border-r-0" {...props} />
           ),
           td: ({ node, ...props }) => (
-            <td className="p-2 px-2.5 border-r border-b border-[#1e1e1e]/12 align-top text-[#202124] leading-relaxed last:border-r-0 first:font-bold hover:bg-white/70" {...props} />
+            <td className="p-2 px-3 border-r border-b border-black/8 align-top text-[#334155] leading-normal last:border-r-0 hover:bg-black/[0.02]" {...props} />
           ),
-          p: ({ node, ...props }) => <p className="m-0 mt-2 first:mt-0 whitespace-pre-wrap" {...props} />,
+          p: ({ node, ...props }) => (
+            <p className="m-0 mt-2 first:mt-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]" {...props} />
+          ),
+          ul: ({ node, ...props }) => (
+            <ul className="m-0 my-2 pl-5 list-disc break-words [overflow-wrap:anywhere] space-y-1" {...props} />
+          ),
+          ol: ({ node, ...props }) => (
+            <ol className="m-0 my-2 pl-5 list-decimal break-words [overflow-wrap:anywhere] space-y-1" {...props} />
+          ),
+          li: ({ node, ...props }) => (
+            <li className="break-words [overflow-wrap:anywhere]" {...props} />
+          ),
+          pre: ({ node, ...props }) => (
+            <pre className="w-full max-w-full overflow-x-auto my-2.5 p-3 rounded-xl bg-[#1e293b] text-[#e2e8f0] text-xs font-mono leading-relaxed border border-slate-700 scrollbar-thin shadow-inner" {...props} />
+          ),
+          code: ({ node, inline, className, children, ...props }) => {
+            const isCodeBlock = !inline && (className?.includes("language-") || String(children).includes("\n"));
+            if (isCodeBlock) {
+              return (
+                <code className="font-mono text-xs text-[#e2e8f0]" {...props}>
+                  {children}
+                </code>
+              );
+            }
+            return (
+              <code className="font-mono text-xs bg-[#e2e8f0] text-[#0f172a] px-1.5 py-0.5 rounded font-semibold break-words [overflow-wrap:anywhere] whitespace-pre-wrap" {...props}>
+                {children}
+              </code>
+            );
+          },
         }}
       >
-        {String(text || "")}
+        {sanitizedText}
       </ReactMarkdown>
     </div>
   );
@@ -367,11 +409,6 @@ function ChatbotWidget() {
 
     try {
       const behavior = readBehavior();
-      const recentHistory = nextMessages.slice(-8).map((item) => ({
-        role: item.role,
-        content: item.text,
-        products: Array.isArray(item.products) ? item.products : [],
-      }));
       const headers = {
           "Content-Type": "application/json",
       };
@@ -380,13 +417,19 @@ function ChatbotWidget() {
         headers.Authorization = `Bearer ${auth.token}`;
       }
 
-      const response = await fetch("/api/chatbot/message", {
+      // Create empty assistant message for streaming
+      const streamMsgId = `stream_${Date.now()}`;
+      setMessages((prev) => [
+        ...prev,
+        { ...createMessage("assistant", ""), id: streamMsgId, streaming: true },
+      ]);
+
+      const response = await fetch("/api/chatbot/message/stream", {
         method: "POST",
         headers,
         body: JSON.stringify({
           message: text,
           sessionId,
-          history: recentHistory,
           context: {
             page: location.pathname,
             userBehavior: behavior,
@@ -394,49 +437,132 @@ function ChatbotWidget() {
         }),
       });
 
-      const data = await response.json();
       if (!response.ok) {
-        setMessages((prev) => [
-          ...prev,
-          createMessage("assistant", data?.message || "He thong tam thoi ban, ban thu lai sau."),
-        ]);
+        // Fallback to non-streaming
+        const fallbackRes = await fetch("/api/chatbot/message", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            message: text,
+            sessionId,
+            history: nextMessages.slice(-8).map((item) => ({
+              role: item.role,
+              content: item.text,
+              products: Array.isArray(item.products) ? item.products : [],
+            })),
+            context: { page: location.pathname, userBehavior: behavior },
+          }),
+        });
+        const fallbackData = await fallbackRes.json();
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === streamMsgId
+              ? {
+                  ...m,
+                  text: fallbackData?.reply || "Hệ thống tạm thời bận.",
+                  products: fallbackData?.products || [],
+                  quickReplies: fallbackData?.quickReplies || [],
+                  streaming: false,
+                }
+              : m
+          )
+        );
+        if (fallbackData?.cartUpdated && typeof reloadCart === "function") reloadCart();
         return;
       }
 
-      if (data?.sessionId && data.sessionId !== sessionId) {
-        setSessionId(data.sessionId);
-        localStorage.setItem(SESSION_STORAGE_KEY, data.sessionId);
+      // Parse SSE stream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let streamedText = "";
+      let streamProducts = [];
+      let streamQuickReplies = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            var currentEvent = line.slice(7).trim();
+          } else if (line.startsWith("data: ") && currentEvent) {
+            try {
+              const payload = JSON.parse(line.slice(6));
+
+              if (currentEvent === "token" && payload.text) {
+                streamedText += payload.text;
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === streamMsgId ? { ...m, text: streamedText } : m
+                  )
+                );
+              } else if (currentEvent === "products") {
+                streamProducts = payload.products || [];
+                streamQuickReplies = payload.quickReplies || [];
+              } else if (currentEvent === "done") {
+                if (payload.sessionId && payload.sessionId !== sessionId) {
+                  setSessionId(payload.sessionId);
+                  localStorage.setItem(SESSION_STORAGE_KEY, payload.sessionId);
+                }
+                if (payload.cartUpdated && typeof reloadCart === "function") reloadCart();
+              } else if (currentEvent === "error") {
+                streamedText = payload.message || "Đã có lỗi xảy ra.";
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === streamMsgId ? { ...m, text: streamedText } : m
+                  )
+                );
+              }
+            } catch { /* skip unparseable */ }
+            currentEvent = null;
+          }
+        }
       }
 
-      setMessages((prev) => [
-        ...prev,
-        createMessage("assistant", data?.reply || "Minh da nhan thong tin.", {
-          products: Array.isArray(data?.products) ? data.products : [],
-          quickReplies: Array.isArray(data?.quickReplies) ? data.quickReplies : [],
-        }),
-      ]);
+      // Finalize the streamed message
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === streamMsgId
+            ? {
+                ...m,
+                text: streamedText || "Mình đã nhận thông tin.",
+                products: streamProducts,
+                quickReplies: streamQuickReplies,
+                streaming: false,
+              }
+            : m
+        )
+      );
 
-      if (data?.cartUpdated && typeof reloadCart === "function") {
-        reloadCart();
-      }
-
-      const products = Array.isArray(data?.products) ? data.products : [];
-      products.forEach((item) => {
+      // Track product impressions
+      streamProducts.forEach((item) => {
         trackEvent({
           eventType: "impression",
           productId: item._id,
           category: item.category,
           queryText: text,
-          metadata: {
-            source: "chatbot_recommendation",
-          },
+          metadata: { source: "chatbot_recommendation" },
         });
       });
     } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        createMessage("assistant", "Khong the ket noi chatbot luc nay. Ban thu lai trong giay lat."),
-      ]);
+      setMessages((prev) => {
+        // If stream message exists, update it with error
+        const hasStream = prev.some((m) => m.streaming);
+        if (hasStream) {
+          return prev.map((m) =>
+            m.streaming ? { ...m, text: "Không thể kết nối chatbot lúc này. Bạn thử lại trong giây lát.", streaming: false } : m
+          );
+        }
+        return [
+          ...prev,
+          createMessage("assistant", "Không thể kết nối chatbot lúc này. Bạn thử lại trong giây lát."),
+        ];
+      });
     } finally {
       setPending(false);
     }
@@ -518,12 +644,20 @@ function ChatbotWidget() {
   }, [messages]);
 
   useEffect(() => {
-    if (isAdminArea || !open || !sessionId || messages.length > 0 || pending) {
+    if (isAdminArea || !open || messages.length > 0) {
       return;
     }
 
-    void submitChatMessage("Xin chào", { showUserMessage: false });
-  }, [open, isAdminArea, sessionId, messages.length, pending, submitChatMessage]);
+    setMessages([
+      createMessage(
+        "assistant",
+        "Chào bạn! Tôi có thể hỗ trợ gì cho bạn hôm nay? Bạn đang cần tìm kiếm sản phẩm nào, hay muốn được tư vấn về dòng thiết bị nào ạ?",
+        {
+          quickReplies: ["Tìm điện thoại", "Tìm laptop", "Xem khuyến mãi"],
+        }
+      ),
+    ]);
+  }, [open, isAdminArea, messages.length]);
 
   if (isAdminArea) {
     return null;
@@ -581,8 +715,20 @@ function ChatbotWidget() {
                       </svg>
                     </div>
                   ) : null}
-                  <div className={`max-w-[84%] rounded-[18px] p-2.5 px-3 border border-[#0f2233]/10 shadow-sm animate-chatbot-pop ${msg.role === "user" ? "bg-[#efeaff] border-[#0f494f]/12 origin-top-right" : "bg-[#f7faff] origin-top-left"}`}>
-                    {msg.role === "assistant" ? renderAssistantMarkdown(msg.text) : <p className="m-0 text-sm leading-relaxed">{msg.text.replace(/\s*\[Mã:\s*[a-f0-9]+\]/gi, "")}</p>}
+                  <div className={`max-w-[85%] min-w-0 overflow-hidden rounded-[18px] p-2.5 px-3 border border-[#0f2233]/10 shadow-sm animate-chatbot-pop ${msg.role === "user" ? "bg-[#efeaff] border-[#0f494f]/12 origin-top-right" : "bg-[#f7faff] origin-top-left"}`}>
+                    {msg.role === "assistant" ? (
+                      msg.text ? (
+                        renderAssistantMarkdown(msg.text)
+                      ) : (
+                        <div className="flex gap-1.5 p-1 items-center">
+                          <span className="w-2 h-2 rounded-full bg-[#0f314f]/50 animate-bounce" />
+                          <span className="w-2 h-2 rounded-full bg-[#0f314f]/50 animate-bounce [animation-delay:0.15s]" />
+                          <span className="w-2 h-2 rounded-full bg-[#0f314f]/50 animate-bounce [animation-delay:0.3s]" />
+                        </div>
+                      )
+                    ) : (
+                      <p className="m-0 text-sm leading-relaxed">{msg.text.replace(/\s*\[Mã:\s*[a-f0-9]+\]/gi, "")}</p>
+                    )}
                     {msg.products.length > 0 ? (
                       <div className="mt-2 grid gap-2">
                         {msg.products.map((product, index) => (
@@ -704,7 +850,7 @@ function ChatbotWidget() {
               </article>
               );
             })}
-            {pending ? (
+            {pending && !messages.some((m) => m.streaming) ? (
               <article className="w-full">
                 <div className="flex gap-2 items-start justify-start">
                   <div className="w-7 h-7 rounded-full grid place-items-center text-[#0f2233] bg-gradient-to-br from-[#d8ecff] to-[#f6f2ff] border border-[#0f494f]/15 shadow-sm [&>svg]:w-4 [&>svg]:h-4" aria-hidden="true">

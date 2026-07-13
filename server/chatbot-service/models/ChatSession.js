@@ -8,7 +8,7 @@ const chatMessageSchema = new mongoose.Schema({
   },
   content: {
     type: String,
-    required: true,
+    default: '',
   },
   toolName: {
     type: String,

@@ -828,6 +828,166 @@ const toolSchemas = [
   },
 ];
 
+const { generateExcelReport } = require('./reportGenerator');
+
+// ─── Tool 10: exportReport ──────────────────────────────────────────────────────
+async function exportReport({ reportType }) {
+  try {
+    let data = [];
+    const type = String(reportType || 'orders').toLowerCase();
+
+    if (type === 'orders') {
+      const orders = await Order.find({}).sort({ createdAt: -1 }).limit(100).lean();
+      data = orders.map((o) => ({
+        'Mã Đơn': o._id.toString(),
+        'Tổng Tiền': o.totalAmount,
+        'Trạng Thái': o.status,
+        'Thanh Toán': o.paymentMethod,
+        'Ngày Tạo': o.createdAt ? new Date(o.createdAt).toLocaleString('vi-VN') : '',
+      }));
+    } else if (type === 'products') {
+      const products = await Product.find({}).sort({ totalPurchases: -1 }).limit(100).lean();
+      data = products.map((p) => ({
+        'Mã SP': p._id.toString(),
+        'Tên Sản Phẩm': p.name,
+        'Danh Mục': p.category,
+        'Thương Hiệu': p.brand,
+        'Giá': p.price,
+        'Tồn Kho': p.stock,
+        'Lượt Bán': p.totalPurchases || 0,
+      }));
+    } else if (type === 'revenue' || type === 'stats') {
+      const orders = await Order.find({ status: { $ne: 'Cancelled' } }).lean();
+      const totalRev = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+      data = [
+        { 'Chỉ Số': 'Tổng Đơn Hàng Thành Công', 'Giá Trị': orders.length },
+        { 'Chỉ Số': 'Tổng Doanh Thu (VND)', 'Giá Trị': totalRev },
+      ];
+    } else {
+      return { error: 'Loại báo cáo không hợp lệ. Chọn: orders, products, revenue.' };
+    }
+
+    const report = generateExcelReport(data, `Report_${type}`);
+    return {
+      success: true,
+      filename: report.filename,
+      downloadUrl: report.downloadUrl,
+      totalRecords: data.length,
+    };
+  } catch (error) {
+    return { error: `Lỗi khi xuất báo cáo: ${error.message}` };
+  }
+}
+
+// ─── Tool 11: batchUpdateProducts ───────────────────────────────────────────────
+async function batchUpdateProducts({ category, brand, discountPercent, priceMultiplier, adminUserId }) {
+  try {
+    const filter = {};
+    if (category) filter.category = { $regex: category, $options: 'i' };
+    if (brand) filter.brand = { $regex: brand, $options: 'i' };
+
+    if (Object.keys(filter).length === 0) {
+      return { error: 'Cần chỉ định category hoặc brand để thực hiện batch update.' };
+    }
+
+    const products = await Product.find(filter).limit(50);
+    let updatedCount = 0;
+
+    for (const p of products) {
+      let changed = false;
+
+      if (discountPercent !== undefined) {
+        p.discountPercent = Number(discountPercent);
+        changed = true;
+      }
+
+      if (priceMultiplier !== undefined && priceMultiplier > 0) {
+        p.price = Math.round(p.price * Number(priceMultiplier));
+        changed = true;
+      }
+
+      if (changed) {
+        await p.save();
+        updatedCount++;
+      }
+    }
+
+    return {
+      success: true,
+      updatedCount,
+      message: `Đã cập nhật ${updatedCount} sản phẩm thành công.`,
+    };
+  } catch (error) {
+    return { error: `Lỗi batch update sản phẩm: ${error.message}` };
+  }
+}
+
+// ─── Tool 12: batchUpdateOrders ─────────────────────────────────────────────────
+async function batchUpdateOrders({ fromStatus, toStatus, adminUserId }) {
+  try {
+    if (!fromStatus || !toStatus) {
+      return { error: 'Cần truyền fromStatus và toStatus.' };
+    }
+
+    const result = await Order.updateMany(
+      { status: fromStatus },
+      { $set: { status: toStatus } }
+    );
+
+    return {
+      success: true,
+      updatedCount: result.modifiedCount,
+      message: `Đã chuyển ${result.modifiedCount} đơn hàng từ ${fromStatus} sang ${toStatus}.`,
+    };
+  } catch (error) {
+    return { error: `Lỗi batch update đơn hàng: ${error.message}` };
+  }
+}
+
+// Append new schemas to toolSchemas
+toolSchemas.push(
+  {
+    name: 'exportReport',
+    description: 'Xuất báo cáo thống kê dưới dạng file Excel để tải về.',
+    parameters: {
+      type: 'object',
+      properties: {
+        reportType: {
+          type: 'string',
+          enum: ['orders', 'products', 'revenue'],
+          description: 'Loại báo cáo cần xuất: orders (đơn hàng), products (sản phẩm), revenue (doanh thu).',
+        },
+      },
+      required: ['reportType'],
+    },
+  },
+  {
+    name: 'batchUpdateProducts',
+    description: 'Cập nhật hàng loạt nhiều sản phẩm theo danh mục hoặc thương hiệu. Yêu cầu admin xác nhận.',
+    parameters: {
+      type: 'object',
+      properties: {
+        category: { type: 'string', description: 'Tên danh mục sản phẩm.' },
+        brand: { type: 'string', description: 'Tên thương hiệu.' },
+        discountPercent: { type: 'number', description: 'Phần trăm giảm giá mới (0-100).' },
+        priceMultiplier: { type: 'number', description: 'Hệ số điều chỉnh giá (ví dụ 1.05 để tăng 5%).' },
+      },
+    },
+  },
+  {
+    name: 'batchUpdateOrders',
+    description: 'Cập nhật hàng loạt trạng thái đơn hàng. Yêu cầu admin xác nhận.',
+    parameters: {
+      type: 'object',
+      properties: {
+        fromStatus: { type: 'string', description: 'Trạng thái cũ của đơn hàng.' },
+        toStatus: { type: 'string', description: 'Trạng thái mới cần chuyển sang.' },
+      },
+      required: ['fromStatus', 'toStatus'],
+    },
+  }
+);
+
 // Convert parameter types from lowercase (OpenAI) to uppercase (Gemini)
 function toGeminiType(schema) {
   if (!schema || typeof schema !== 'object') return schema;
@@ -883,5 +1043,8 @@ module.exports = {
   getRecentLogs,
   createProduct,
   createDiscount,
+  exportReport,
+  batchUpdateProducts,
+  batchUpdateOrders,
   TOOL_DEFINITIONS,
 };

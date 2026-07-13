@@ -151,7 +151,13 @@ function AdminChatbotPage() {
         body.confirmationData = confirmationData;
       }
 
-      const res = await fetch('/api/admin/chatbot/message', {
+      setMessages((prev) => prev.filter((m) => m.role !== 'confirmation'));
+
+      // Create stream placeholder for assistant message
+      const streamMsgId = `stream_${Date.now()}`;
+      setMessages((prev) => [...prev, { role: 'assistant', content: '', id: streamMsgId, streaming: true }]);
+
+      const res = await fetch('/api/admin/chatbot/message/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -160,47 +166,87 @@ function AdminChatbotPage() {
         body: JSON.stringify(body),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        setMessages((prev) => [...prev, { role: 'assistant', content: data.message || 'Đã xảy ra lỗi.' }]);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === streamMsgId ? { ...m, content: 'Đã xảy ra lỗi kết nối.', streaming: false } : m
+          )
+        );
         return;
       }
 
-      setMessages((prev) => prev.filter((m) => m.role !== 'confirmation'));
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let streamedText = '';
 
-      if (data.toolsUsed?.length > 0) {
-        for (const tool of data.toolsUsed) {
-          setMessages((prev) => [...prev, { role: 'tool', content: `Đã thực hiện: ${tool.name}`, toolName: tool.name }]);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            var currentEvent = line.slice(7).trim();
+          } else if (line.startsWith('data: ') && currentEvent) {
+            try {
+              const payload = JSON.parse(line.slice(6));
+
+              if (currentEvent === 'token' && payload.text) {
+                streamedText += payload.text;
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === streamMsgId ? { ...m, content: streamedText } : m
+                  )
+                );
+              } else if (currentEvent === 'tools' && Array.isArray(payload.toolsUsed)) {
+                for (const tool of payload.toolsUsed) {
+                  setMessages((prev) => [
+                    ...prev.filter((m) => m.id !== streamMsgId),
+                    { role: 'tool', content: `Đã thực hiện: ${tool.name}`, toolName: tool.name },
+                    prev.find((m) => m.id === streamMsgId),
+                  ]);
+                }
+              } else if (currentEvent === 'confirmation' && payload) {
+                setMessages((prev) => [
+                  ...prev.filter((m) => m.id !== streamMsgId),
+                  {
+                    role: 'confirmation',
+                    content: payload.description || 'Xác nhận thao tác?',
+                    confirmationData: { ...payload, originalMessage: text?.trim() },
+                  },
+                ]);
+              }
+            } catch { /* skip unparseable */ }
+            currentEvent = null;
+          }
         }
       }
 
-      if (data.requiresConfirmation) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'confirmation',
-            content: data.confirmationData?.description || 'Xác nhận thao tác?',
-            confirmationData: { ...data.confirmationData, originalMessage: text?.trim() },
-          },
-        ]);
-        return;
-      }
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === streamMsgId
+            ? { ...m, content: streamedText || 'Đã xử lý xong.', streaming: false }
+            : m
+        )
+      );
 
-      if (data.reply) {
-        setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
-      }
-
-      // Refresh list to show new/updated session title
       await fetchSessions();
-      
-      // Update local header title if this is the first message
       if (messages.length === 0 && !confirmed) {
         const title = text.trim().length > 40 ? text.trim().substring(0, 40) + '...' : text.trim();
         setActiveTitle(title);
       }
     } catch (error) {
-      setMessages((prev) => [...prev, { role: 'assistant', content: 'Không thể kết nối tới server.' }]);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.streaming
+            ? { ...m, content: 'Không thể kết nối tới server.', streaming: false }
+            : m
+        )
+      );
     } finally {
       setIsLoading(false);
     }
@@ -437,7 +483,15 @@ function AdminChatbotPage() {
                     }`}
                   >
                     {msg.role === 'assistant' ? (
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                      msg.content ? (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                      ) : (
+                        <div className="flex gap-1.5 p-1 items-center">
+                          <span className="w-2 h-2 rounded-full bg-[#00ff88]/50 animate-acb-bounce" />
+                          <span className="w-2 h-2 rounded-full bg-[#00ff88]/50 animate-acb-bounce [animation-delay:0.15s]" />
+                          <span className="w-2 h-2 rounded-full bg-[#00ff88]/50 animate-acb-bounce [animation-delay:0.3s]" />
+                        </div>
+                      )
                     ) : (
                       msg.content
                     )}
@@ -446,7 +500,7 @@ function AdminChatbotPage() {
               );
             })}
 
-            {isLoading && (
+            {isLoading && !messages.some((m) => m.streaming) && (
               <div className="flex gap-3 items-start animate-acb-slide-up">
                 <div className="w-8 h-8 rounded-full bg-[#263544] border border-white/10 flex items-center justify-center text-xs shrink-0 font-bold">
                   🤖

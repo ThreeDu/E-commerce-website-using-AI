@@ -16,24 +16,13 @@ const Cart = require('../models/Cart');
 const Order = require('../models/Order');
 const Discount = require('../models/Discount');
 const { normalizeVietnamese } = require('./textUtils');
+const { generateEmbedding, cosineSimilarity } = require('./embeddingHelper');
 
 // ─── Tool 1: searchProducts ─────────────────────────────────────────────────
 async function searchProducts({ keyword, brand, category, priceMin, priceMax, sortBy, limit }) {
   try {
     const filter = {};
     const maxResults = Math.min(Number(limit) || 8, 12);
-
-    // Keyword search (name or description)
-    if (keyword) {
-      const normalized = normalizeVietnamese(keyword);
-      const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      filter.$or = [
-        { name: { $regex: escaped, $options: 'i' } },
-        { description: { $regex: escaped, $options: 'i' } },
-        { brand: { $regex: escaped, $options: 'i' } },
-        { series: { $regex: escaped, $options: 'i' } },
-      ];
-    }
 
     if (brand) {
       filter.brand = { $regex: normalizeVietnamese(brand).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
@@ -46,10 +35,28 @@ async function searchProducts({ keyword, brand, category, priceMin, priceMax, so
     if (priceMin !== undefined || priceMax !== undefined) {
       filter.finalPrice = {};
       if (priceMin !== undefined) filter.finalPrice.$gte = Number(priceMin);
-      if (priceMax !== undefined) filter.finalPrice.$lte = Number(priceMax);
+      if (priceMax !== undefined) filter.priceMax = Number(priceMax);
     }
 
-    // Sort
+    let products = [];
+
+    // Try RAG vector search if keyword exists
+    let queryVector = null;
+    if (keyword) {
+      queryVector = await generateEmbedding(keyword);
+    }
+
+    if (keyword) {
+      const normalized = normalizeVietnamese(keyword);
+      const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { name: { $regex: escaped, $options: 'i' } },
+        { description: { $regex: escaped, $options: 'i' } },
+        { brand: { $regex: escaped, $options: 'i' } },
+        { series: { $regex: escaped, $options: 'i' } },
+      ];
+    }
+
     let sort = {};
     if (sortBy === 'price_asc') sort = { finalPrice: 1 };
     else if (sortBy === 'price_desc') sort = { finalPrice: -1 };
@@ -58,11 +65,25 @@ async function searchProducts({ keyword, brand, category, priceMin, priceMax, so
     else if (sortBy === 'newest') sort = { createdAt: -1 };
     else sort = { averageRating: -1, totalPurchases: -1 };
 
-    const products = await Product.find(filter)
-      .sort(sort)
-      .limit(maxResults)
-      .select('name price finalPrice discountPercent image averageRating totalRatings stock brand category series description')
-      .lean();
+    products = await Product.find(filter).sort(sort).limit(maxResults * 2).lean();
+
+    // Re-rank results with Vector Similarity if query embedding is available
+    if (queryVector && products.length > 0) {
+      products = products.map((p) => {
+        let similarity = 0;
+        if (Array.isArray(p.embedding) && p.embedding.length > 0) {
+          similarity = cosineSimilarity(queryVector, p.embedding);
+        }
+        return { ...p, similarityScore: similarity };
+      });
+
+      // Sort by similarity score descending if not custom sorted
+      if (!sortBy) {
+        products.sort((a, b) => (b.similarityScore || 0) - (a.similarityScore || 0));
+      }
+    }
+
+    products = products.slice(0, maxResults);
 
     if (products.length === 0) {
       return { found: 0, message: 'Không tìm thấy sản phẩm nào phù hợp.' };

@@ -51,6 +51,7 @@ const AdminRewardTiersPage = lazy(() => import("./pages/admin/reward/AdminReward
 const AdminAddRewardTierPage = lazy(() => import("./pages/admin/reward/AdminAddRewardTierPage"));
 const AdminEditRewardTierPage = lazy(() => import("./pages/admin/reward/AdminEditRewardTierPage"));
 const AdminChatbotPage = lazy(() => import("./pages/admin/AdminChatbotPage"));
+const ChatbotAnalyticsPage = lazy(() => import("./pages/admin/ChatbotAnalyticsPage"));
 
 function GuestRoute({ children }) {
   const { auth } = useAuth();
@@ -306,6 +307,14 @@ function App() {
                       element={
                         <ProtectedRoute requiredRole="admin">
                           <AdminChatbotPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/chatbot-analytics"
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <ChatbotAnalyticsPage />
                         </ProtectedRoute>
                       }
                     />

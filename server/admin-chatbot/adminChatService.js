@@ -9,13 +9,25 @@ const {
   getRecentLogs,
   createProduct,
   createDiscount,
+  exportReport,
+  batchUpdateProducts,
+  batchUpdateOrders,
 } = require('./adminToolExecutor');
+
+const { callLLMWithTools, callLLMStreaming } = require('../chatbot-service/llmHelper');
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const LLM_TIMEOUT_MS = Number(process.env.CHATBOT_LLM_TIMEOUT_MS) || 60000;
 const MAX_TOOL_ITERATIONS = 3;
 
-const WRITE_OPERATIONS = new Set(['updateOrderStatus', 'updateProduct', 'createProduct', 'createDiscount']);
+const WRITE_OPERATIONS = new Set([
+  'updateOrderStatus',
+  'updateProduct',
+  'createProduct',
+  'createDiscount',
+  'batchUpdateProducts',
+  'batchUpdateOrders',
+]);
 
 const TOOL_FUNCTIONS = {
   getDashboardStats,
@@ -27,6 +39,9 @@ const TOOL_FUNCTIONS = {
   getRecentLogs,
   createProduct,
   createDiscount,
+  exportReport,
+  batchUpdateProducts,
+  batchUpdateOrders,
 };
 
 const SYSTEM_PROMPT = [
@@ -39,6 +54,13 @@ const SYSTEM_PROMPT = [
   '- Khi liệt kê nhiều items, sử dụng markdown table cho rõ ràng',
   '- Không bịa dữ liệu, chỉ trả lời dựa trên kết quả từ tools',
 ].join('\n');
+
+// Convert tool schemas for shared llmHelper format
+const GENERIC_TOOLS = (TOOL_DEFINITIONS.openai || []).map((t) => ({
+  name: t.function.name,
+  description: t.function.description,
+  parameters: t.function.parameters,
+}));
 
 // ─── LLM API call ──────────────────────────────────────────────────────────────
 
@@ -79,129 +101,17 @@ function buildMessages(history, currentMessage) {
  * Returns: { textContent, toolCalls } where toolCalls is an array of { id, name, args }
  */
 async function callLlm(messages, includeTools = true) {
-  const { apiUrl, apiKey, model, isGemini } = getLlmConfig();
+  const tools = includeTools ? GENERIC_TOOLS : [];
+  const result = await callLLMWithTools(SYSTEM_PROMPT, messages, tools);
 
-  if (!apiUrl || !apiKey) {
-    throw new Error('LLM chưa được cấu hình. Vui lòng kiểm tra CHATBOT_LLM_API_URL và CHATBOT_LLM_API_KEY.');
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
-
-  try {
-    let response;
-
-    if (isGemini) {
-      // ── Gemini API ──
-      const baseEndpoint = apiUrl.includes(':generateContent')
-        ? apiUrl
-        : `${apiUrl.replace(/\/$/, '')}/v1beta/models/${model}:generateContent`;
-      const delimiter = baseEndpoint.includes('?') ? '&' : '?';
-      const requestUrl = `${baseEndpoint}${delimiter}key=${encodeURIComponent(apiKey)}`;
-
-      // Convert messages to Gemini contents format
-      const contents = messages.map((msg) => ({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }],
-      }));
-
-      const body = {
-        systemInstruction: {
-          role: 'system',
-          parts: [{ text: SYSTEM_PROMPT }],
-        },
-        contents,
-        generationConfig: { temperature: 0.3 },
-      };
-
-      if (includeTools) {
-        body.tools = TOOL_DEFINITIONS.gemini;
-      }
-
-      response = await fetch(requestUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify(body),
-      });
-    } else {
-      // ── OpenAI-compatible API ──
-      const openaiMessages = [
-        { role: 'system', content: SYSTEM_PROMPT },
-        ...messages,
-      ];
-
-      const body = {
-        model,
-        temperature: 0.3,
-        messages: openaiMessages,
-      };
-
-      if (includeTools) {
-        body.tools = TOOL_DEFINITIONS.openai;
-        body.tool_choice = 'auto';
-      }
-
-      let requestUrl;
-      const baseUrl = apiUrl.replace(/\/+$/, '');
-      if (baseUrl.match(/\/(chat|completions)/)) {
-        requestUrl = baseUrl;
-      } else {
-        requestUrl = `${baseUrl}/v1/chat/completions`;
-      }
-
-      response = await fetch(requestUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        signal: controller.signal,
-        body: JSON.stringify(body),
-      });
-    }
-
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      console.error('[AdminChatbot] LLM API error. Status:', response.status, 'Body:', errorText);
-      throw new Error(`LLM API trả về lỗi (status ${response.status})`);
-    }
-
-    const data = await response.json();
-
-    // Parse response based on provider
-    if (isGemini) {
-      return parseGeminiResponse(data);
-    } else {
-      return parseOpenAIResponse(data);
-    }
-  } catch (error) {
-    clearTimeout(timeout);
-    if (error.name === 'AbortError') {
-      throw new Error('LLM API timeout sau 15 giây. Vui lòng thử lại.');
-    }
-    throw error;
-  }
-}
-
-function parseGeminiResponse(data) {
-  const candidate = data?.candidates?.[0];
-  const parts = candidate?.content?.parts || [];
-
-  const textParts = parts.filter((p) => p.text).map((p) => p.text);
-  const textContent = textParts.join('\n').trim() || null;
-
-  const toolCalls = parts
-    .filter((p) => p.functionCall)
-    .map((p, index) => ({
-      id: `gemini_call_${index}`,
-      name: p.functionCall.name,
-      args: p.functionCall.args || {},
-    }));
-
-  return { textContent, toolCalls };
+  return {
+    textContent: result?.content || null,
+    toolCalls: (result?.toolCalls || []).map((tc) => ({
+      id: tc.id,
+      name: tc.name,
+      args: tc.arguments || {},
+    })),
+  };
 }
 
 function parseOpenAIResponse(data) {
@@ -299,6 +209,19 @@ function generateConfirmationDescription(toolName, args) {
     }
     if (args.minOrderValue) desc += `, đơn tối thiểu: ${Number(args.minOrderValue).toLocaleString('vi-VN')} VND`;
     return desc;
+  }
+
+  if (toolName === 'batchUpdateProducts') {
+    let desc = `Cập nhật hàng loạt sản phẩm`;
+    if (args.category) desc += ` trong danh mục "${args.category}"`;
+    if (args.brand) desc += ` thuộc thương hiệu "${args.brand}"`;
+    if (args.discountPercent !== undefined) desc += ` (Giảm giá mới: ${args.discountPercent}%)`;
+    if (args.priceMultiplier) desc += ` (Điều chỉnh hệ số giá: x${args.priceMultiplier})`;
+    return desc;
+  }
+
+  if (toolName === 'batchUpdateOrders') {
+    return `Chuyển hàng loạt đơn hàng từ trạng thái "${args.fromStatus}" sang "${args.toStatus}"`;
   }
 
   return `Thực hiện ${toolName} với tham số: ${JSON.stringify(args)}`;
@@ -418,6 +341,90 @@ async function processAdminMessage({ message, history = [], sessionId, adminUser
   }
 }
 
+/**
+ * Process an admin message with SSE streaming for final response text.
+ */
+async function processAdminMessageStream({ message, history = [], sessionId, adminUserId, confirmed, confirmationData, onChunk, onToolsUsed }) {
+  const toolsUsed = [];
+
+  try {
+    if (confirmed && confirmationData) {
+      const { toolName, args } = confirmationData;
+      if (!TOOL_FUNCTIONS[toolName]) {
+        const errText = `Lỗi: Không tìm thấy tool "${toolName}".`;
+        onChunk(errText);
+        return { reply: errText, toolsUsed: [], sessionId };
+      }
+
+      const execArgs = { ...args, adminUserId };
+      const result = await TOOL_FUNCTIONS[toolName](execArgs);
+      toolsUsed.push({ name: toolName, args });
+      if (onToolsUsed) onToolsUsed(toolsUsed);
+
+      const messages = buildMessages(history, message);
+      appendToolResultToMessages(messages, { name: toolName, args }, result, false);
+
+      const streamedText = await callLLMStreaming(SYSTEM_PROMPT, messages, onChunk);
+      return { reply: streamedText, toolsUsed, sessionId };
+    }
+
+    let messages = buildMessages(history, message);
+
+    for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+      const { toolCalls } = await callLlm(messages, true);
+
+      if (!toolCalls || toolCalls.length === 0) {
+        break;
+      }
+
+      const toolCall = toolCalls[0];
+      const { name: toolName, args } = toolCall;
+
+      if (WRITE_OPERATIONS.has(toolName)) {
+        return {
+          requiresConfirmation: true,
+          confirmationData: {
+            toolName,
+            args,
+            description: generateConfirmationDescription(toolName, args),
+          },
+          toolsUsed,
+          sessionId,
+        };
+      }
+
+      const fn = TOOL_FUNCTIONS[toolName];
+      if (!fn) {
+        break;
+      }
+
+      const execArgs = { ...args, adminUserId };
+      const result = await fn(execArgs);
+      toolsUsed.push({ name: toolName, args });
+      if (onToolsUsed) onToolsUsed(toolsUsed);
+
+      appendToolResultToMessages(messages, toolCall, result, false);
+    }
+
+    const streamedText = await callLLMStreaming(SYSTEM_PROMPT, messages, onChunk);
+
+    return {
+      reply: streamedText || 'Đã xử lý xong yêu cầu.',
+      toolsUsed,
+      sessionId,
+    };
+  } catch (error) {
+    console.error('[AdminChatbot-Stream] error:', error.message);
+    onChunk(`Đã xảy ra lỗi khi xử lý yêu cầu: ${error.message}`);
+    return {
+      reply: `Lỗi: ${error.message}`,
+      toolsUsed,
+      sessionId,
+    };
+  }
+}
+
 module.exports = {
   processAdminMessage,
+  processAdminMessageStream,
 };
