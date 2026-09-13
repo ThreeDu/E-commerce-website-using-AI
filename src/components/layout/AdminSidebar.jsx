@@ -20,6 +20,7 @@ import {
   faBullhorn,
   faCube,
   faRightFromBracket,
+  faRobot,
 } from "@fortawesome/free-solid-svg-icons";
 
 function AdminSidebar({ isSidebarOpen, onToggleSidebar, onLogout }) {
@@ -28,6 +29,7 @@ function AdminSidebar({ isSidebarOpen, onToggleSidebar, onLogout }) {
     { to: "/admin/dashboard", icon: faGaugeHigh, label: "Bảng điều khiển", tooltip: "Bảng điều khiển" },
     { to: "/admin/notifications", icon: faBell, label: "Trung tâm thông báo", tooltip: "Thông báo" },
     { to: "/admin/intelligence", icon: faBrain, label: "AI phân tích dự đoán", tooltip: "AI Analytics" },
+    { to: "/admin/chatbot", icon: faRobot, label: "Trợ lý AI Admin", tooltip: "Trợ lý AI" },
     { to: "/admin/retention", icon: faBullhorn, label: "Chiến dịch giữ chân", tooltip: "Giữ chân KH" },
     { to: "/admin/categories", icon: faTableCellsLarge, label: "Quản lý danh mục", tooltip: "Danh mục" },
     { to: "/admin/products", icon: faBoxOpen, label: "Quản lý sản phẩm", tooltip: "Sản phẩm" },

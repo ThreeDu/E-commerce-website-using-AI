@@ -130,7 +130,7 @@ const verifyToken = async (req, res) => {
       return res.status(401).json({ message: "Thiếu token xác thực." });
     }
 
-    const secret = process.env.JWT_SECRET || "dev_secret_change_me";
+    const secret = process.env.JWT_SECRET;
     const decoded = jwt.verify(token, secret);
 
     const user = await User.findById(decoded.userId).select("_id name email role phone address avatar");

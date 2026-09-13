@@ -224,20 +224,23 @@ function ProductsPage() {
     }
   }, [categories, categoryItems, categoryMap, location.state?.category, location.state?.categoryId]);
 
-  const categoriesById = new Map(
-    categoryItems.map((item) => [String(item._id), item])
+  const categoriesById = useMemo(
+    () => new Map(categoryItems.map((item) => [String(item._id), item])),
+    [categoryItems]
   );
 
-  const childrenByParentId = new Map();
-  categoryItems.forEach((item) => {
+  const childrenByParentId = useMemo(() => {
+    const map = new Map();
+    categoryItems.forEach((item) => {
+      const key = item.parentId ? String(item.parentId) : "root";
+      const next = map.get(key) || [];
+      next.push(item);
+      map.set(key, next);
+    });
+    return map;
+  }, [categoryItems]);
 
-    const key = item.parentId ? String(item.parentId) : "root";
-    const next = childrenByParentId.get(key) || [];
-    next.push(item);
-    childrenByParentId.set(key, next);
-  });
-
-  const selectedCategoryScope = (() => {
+  const selectedCategoryScope = useMemo(() => {
     if (selectedCategoryId === "all") {
       return null;
     }
@@ -266,19 +269,30 @@ function ProductsPage() {
     }
 
     return {
-      names: new Set(matchedCategories.map((item) => item.name)),
+      ids: new Set(matchedCategories.map((item) => String(item._id))),
+      names: new Set(matchedCategories.map((item) => String(item.name || "").trim().toLowerCase())),
       paths: matchedCategories
-        .map((item) => String(item.path || "").trim())
+        .map((item) => String(item.path || "").trim().toLowerCase())
         .filter(Boolean),
     };
-  })();
+  }, [selectedCategoryId, categoriesById, childrenByParentId]);
 
   useEffect(() => {
     const results = allProducts.filter((product) => {
       const matchSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const productCategory = String(product.category || "").trim();
+      const productCategory = String(product.category || "").trim().toLowerCase();
+      const productCategoryId = String(product.categoryId || product.category_id || "").trim();
+
       const matchCategory = (() => {
         if (!selectedCategoryScope) {
+          return true;
+        }
+
+        if (productCategoryId && selectedCategoryScope.ids.has(productCategoryId)) {
+          return true;
+        }
+
+        if (selectedCategoryScope.ids.has(productCategory)) {
           return true;
         }
 
@@ -287,9 +301,10 @@ function ProductsPage() {
         }
 
         return selectedCategoryScope.paths.some(
-          (path) => productCategory === path || productCategory.startsWith(`${path} >`)
+          (path) => productCategory === path || productCategory.startsWith(`${path} >`) || path.includes(productCategory) || productCategory.includes(path)
         );
       })();
+
       const matchPrice = product.price <= maxPrice;
       return matchSearch && matchCategory && matchPrice;
     });
@@ -319,7 +334,8 @@ function ProductsPage() {
     setCurrentPage(1);
   }, [searchTerm, selectedCategoryScope, maxPrice, allProducts, sortBy]);
 
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
+  const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
 
   const getPageNumbers = () => {
     const pages = [];
@@ -330,13 +346,13 @@ function ProductsPage() {
         pages.push({ type: "page", value: i });
       }
     } else {
-      if (currentPage <= 4) {
+      if (validCurrentPage <= 4) {
         for (let i = 1; i <= 5; i++) {
           pages.push({ type: "page", value: i });
         }
         pages.push({ type: "ellipsis", id: "right" });
         pages.push({ type: "page", value: totalPages });
-      } else if (currentPage >= totalPages - 3) {
+      } else if (validCurrentPage >= totalPages - 3) {
         pages.push({ type: "page", value: 1 });
         pages.push({ type: "ellipsis", id: "left" });
         for (let i = totalPages - 4; i <= totalPages; i++) {
@@ -345,9 +361,9 @@ function ProductsPage() {
       } else {
         pages.push({ type: "page", value: 1 });
         pages.push({ type: "ellipsis", id: "left" });
-        pages.push({ type: "page", value: currentPage - 1 });
-        pages.push({ type: "page", value: currentPage });
-        pages.push({ type: "page", value: currentPage + 1 });
+        pages.push({ type: "page", value: validCurrentPage - 1 });
+        pages.push({ type: "page", value: validCurrentPage });
+        pages.push({ type: "page", value: validCurrentPage + 1 });
         pages.push({ type: "ellipsis", id: "right" });
         pages.push({ type: "page", value: totalPages });
       }
@@ -356,10 +372,10 @@ function ProductsPage() {
   };
 
   const currentProducts = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const start = (validCurrentPage - 1) * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
     return filteredProducts.slice(start, end);
-  }, [filteredProducts, currentPage]);
+  }, [filteredProducts, validCurrentPage]);
 
   const handleAddToCart = (product) => {
     if (!auth?.token) {
@@ -607,7 +623,7 @@ function ProductsPage() {
                     <button
                       type="button"
                       className="inline-flex items-center justify-center min-w-[40px] h-10 px-3.5 rounded-shop-md border border-shop-line bg-white text-shop-ink font-semibold cursor-pointer transition-all duration-200 shadow-[0_4px_10px_rgba(0,0,0,0.02)] hover:bg-shop-bg hover:border-shop-muted hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-shop-bg"
-                      disabled={currentPage === 1}
+                      disabled={validCurrentPage === 1}
                       onClick={() => {
                         setCurrentPage((prev) => Math.max(1, prev - 1));
                         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -673,7 +689,7 @@ function ProductsPage() {
                         <button
                           key={`page-${item.value}`}
                           type="button"
-                          className={`inline-flex items-center justify-center min-w-[40px] h-10 px-3.5 rounded-shop-md border border-shop-line bg-white text-shop-ink font-semibold cursor-pointer transition-all duration-200 shadow-[0_4px_10px_rgba(0,0,0,0.02)] hover:bg-shop-bg hover:border-shop-muted hover:-translate-y-px ${currentPage === item.value ? "bg-shop-primary text-white border-shop-primary hover:bg-shop-primary hover:text-white hover:border-shop-primary" : ""}`}
+                          className={`inline-flex items-center justify-center min-w-[40px] h-10 px-3.5 rounded-shop-md border border-shop-line bg-white text-shop-ink font-semibold cursor-pointer transition-all duration-200 shadow-[0_4px_10px_rgba(0,0,0,0.02)] hover:bg-shop-bg hover:border-shop-muted hover:-translate-y-px ${validCurrentPage === item.value ? "bg-shop-primary text-white border-shop-primary hover:bg-shop-primary hover:text-white hover:border-shop-primary" : ""}`}
                           onClick={() => {
                             setCurrentPage(item.value);
                             window.scrollTo({ top: 0, behavior: "smooth" });
@@ -686,7 +702,7 @@ function ProductsPage() {
                     <button
                       type="button"
                       className="inline-flex items-center justify-center min-w-[40px] h-10 px-3.5 rounded-shop-md border border-shop-line bg-white text-shop-ink font-semibold cursor-pointer transition-all duration-200 shadow-[0_4px_10px_rgba(0,0,0,0.02)] hover:bg-shop-bg hover:border-shop-muted hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-shop-bg"
-                      disabled={currentPage === totalPages}
+                      disabled={validCurrentPage === totalPages}
                       onClick={() => {
                         setCurrentPage((prev) => Math.min(totalPages, prev + 1));
                         window.scrollTo({ top: 0, behavior: "smooth" });

@@ -41,7 +41,7 @@ router.get("/recommendations", async (req, res) => {
     const token = getTokenFromHeader(req);
     if (token) {
       try {
-        const secret = process.env.JWT_SECRET || "dev_secret_change_me";
+        const secret = process.env.JWT_SECRET;
         const decoded = jwt.verify(token, secret);
         userId = decoded?.userId || null;
       } catch {

@@ -1,458 +1,531 @@
-const { normalizeHintValue, extractJsonObjectFromText, formatConversationHistoryForPrompt, normalizeText } = require('./textUtils');
+/**
+ * llmHelper.js — LLM API abstraction layer
+ *
+ * Features:
+ *  - Multi-provider fallback chain (local → gemini → openai)
+ *  - Streaming support (SSE)
+ *  - Dual format: Gemini & OpenAI-compatible
+ *
+ * NOTE: Env vars are read at call time (not import time) because
+ * dotenv.config() runs after module imports in index.js.
+ */
 
-const LLM_TIMEOUT_MS = Number(process.env.CHATBOT_LLM_TIMEOUT_MS || 10000);
+// ─── Provider Config ────────────────────────────────────────────────────────
 
-function toNumberOrNull(value) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return null;
+/**
+ * Parse multi-provider config from env.
+ * Format: CHATBOT_LLM_PROVIDERS=local,gemini (comma-separated, ordered by priority)
+ *
+ * Each provider needs:
+ *   CHATBOT_LLM_{PROVIDER}_URL, CHATBOT_LLM_{PROVIDER}_KEY, CHATBOT_LLM_{PROVIDER}_MODEL
+ *
+ * Falls back to legacy single-provider config (CHATBOT_LLM_API_URL etc.)
+ */
+function getProviders() {
+  const providerNames = (process.env.CHATBOT_LLM_PROVIDERS || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const timeout = Number(process.env.CHATBOT_LLM_TIMEOUT_MS) || 60000;
+
+  if (providerNames.length > 0) {
+    return providerNames.map((name) => {
+      const upper = name.toUpperCase();
+      return {
+        name,
+        apiUrl: process.env[`CHATBOT_LLM_${upper}_URL`] || '',
+        apiKey: process.env[`CHATBOT_LLM_${upper}_KEY`] || '',
+        model: process.env[`CHATBOT_LLM_${upper}_MODEL`] || 'gpt-4.1-mini',
+        timeout,
+      };
+    }).filter((p) => p.apiUrl && p.apiKey);
   }
 
-  return parsed;
+  // Legacy single-provider fallback
+  const apiUrl = process.env.CHATBOT_LLM_API_URL || '';
+  const apiKey = process.env.CHATBOT_LLM_API_KEY || '';
+  if (!apiUrl || !apiKey) return [];
+
+  return [{
+    name: 'default',
+    apiUrl,
+    apiKey,
+    model: process.env.CHATBOT_LLM_MODEL || 'gpt-4.1-mini',
+    timeout,
+  }];
 }
 
-async function maybeParseQueryWithLlm(message, history = []) {
-  const llmEnabled = String(process.env.CHATBOT_LLM_ENABLED || '').toLowerCase() === 'true';
-  const parserEnabled =
-    String(process.env.CHATBOT_LLM_QUERY_PARSER_ENABLED || 'true').toLowerCase() === 'true';
-  const apiUrl = String(process.env.CHATBOT_LLM_API_URL || '').trim();
-  const apiKey = String(process.env.CHATBOT_LLM_API_KEY || '').trim();
-  const model = String(process.env.CHATBOT_LLM_MODEL || 'gpt-4.1-mini').trim();
+function isProviderGemini(provider) {
+  return provider.apiUrl.includes('generativelanguage.googleapis.com');
+}
 
-  if (!llmEnabled || !parserEnabled || !apiUrl || !apiKey) {
-    return null;
+// ─── URL builders ───────────────────────────────────────────────────────────
+
+function buildGeminiUrl(provider, streaming = false) {
+  const baseUrl = provider.apiUrl.replace(/\/+$/, '');
+  const action = streaming ? 'streamGenerateContent' : 'generateContent';
+  const streamParam = streaming ? '&alt=sse' : '';
+  if (baseUrl.includes('/models/')) {
+    const actionUrl = baseUrl.replace(/:(generateContent|streamGenerateContent)/, `:${action}`);
+    return `${actionUrl}?key=${provider.apiKey}${streamParam}`;
   }
+  return `${baseUrl}/v1beta/models/${provider.model}:${action}?key=${provider.apiKey}${streamParam}`;
+}
 
-  const isGemini = apiUrl.includes('generativelanguage.googleapis.com');
-  const prompt = [
-    'Extract shopping intent as strict JSON only.',
-    'Return one JSON object with keys:',
-    'intent, brand, series, model, product_line, storage, ram, price_min, price_max, confidence.',
-    'Use null for unknown values.',
-    'Do not include markdown or explanation.',
-    'Use the conversation history to resolve short follow-up messages and inherit the product category, brand, or model from the previous turn when the current message is underspecified.',
-    "If the current message is a budget-only follow-up like 'duoi 20 trieu', infer the implied category from history.",
-    'If the current message asks about color or availability, use the latest referenced product from history.',
-    `Conversation history:\n${formatConversationHistoryForPrompt(history, 6)}`,
-    `User message: ${String(message || '')}`,
-  ].join('\n');
+function buildOpenAIUrl(provider) {
+  const baseUrl = provider.apiUrl.replace(/\/+$/, '');
+  if (baseUrl.match(/\/(chat|completions)/)) return baseUrl;
+  return `${baseUrl}/v1/chat/completions`;
+}
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
+// ─── Convert tool definitions to Gemini format ──────────────────────────────
+function toGeminiTools(tools) {
+  return [
+    {
+      function_declarations: tools.map((t) => ({
+        name: t.name,
+        description: t.description,
+        parameters: t.parameters,
+      })),
+    },
+  ];
+}
 
-    const response = await (async () => {
-      if (isGemini) {
-        const endpoint = apiUrl.includes(':generateContent')
-          ? apiUrl
-          : `${apiUrl.replace(/\/$/, '')}/v1beta/models/${model}:generateContent`;
-        const delimiter = endpoint.includes('?') ? '&' : '?';
-        const requestUrl = `${endpoint}${delimiter}key=${encodeURIComponent(apiKey)}`;
-
-        return fetch(requestUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          signal: controller.signal,
-          body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [{ text: prompt }],
-              },
-            ],
-            generationConfig: {
-              temperature: 0,
+// ─── Convert messages to Gemini format ──────────────────────────────────────
+function toGeminiContents(messages) {
+  const contents = [];
+  for (const msg of messages) {
+    if (msg.role === 'system') continue;
+    if (msg.role === 'tool') {
+      contents.push({
+        role: 'function',
+        parts: [
+          {
+            functionResponse: {
+              name: msg.toolName || 'unknown',
+              response: { result: msg.content },
             },
-          }),
-        });
-      }
-
-      return fetch(`${apiUrl.replace(/\/$/, '')}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          model,
-          temperature: 0,
-          messages: [{ role: 'user', content: prompt }],
-        }),
+          },
+        ],
       });
-    })();
-
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      return null;
+    } else if (msg.role === 'assistant' && msg.toolCalls) {
+      contents.push({
+        role: 'model',
+        parts: msg.toolCalls.map((tc) => ({
+          functionCall: {
+            name: tc.name,
+            args: tc.arguments,
+          },
+        })),
+      });
+    } else {
+      contents.push({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content || '' }],
+      });
     }
-
-    const data = await response.json();
-    const content = isGemini
-      ? (data?.candidates || [])
-          .flatMap((candidate) => candidate?.content?.parts || [])
-          .map((part) => String(part?.text || '').trim())
-          .filter(Boolean)
-          .join('\n')
-      : data?.choices?.[0]?.message?.content;
-
-    const parsed = extractJsonObjectFromText(content);
-    if (!parsed || typeof parsed !== 'object') {
-      return null;
-    }
-
-    const normalized = {
-      intent: String(parsed.intent || '').trim(),
-      brand: normalizeHintValue(parsed.brand),
-      series: normalizeHintValue(parsed.series),
-      model: normalizeHintValue(parsed.model),
-      product_line: normalizeHintValue(parsed.product_line || parsed.productLine),
-      storage: normalizeHintValue(parsed.storage),
-      ram: normalizeHintValue(parsed.ram),
-      priceMin: toNumberOrNull(parsed.price_min ?? parsed.priceMin),
-      priceMax: toNumberOrNull(parsed.price_max ?? parsed.priceMax),
-      confidence: Number(parsed.confidence ?? 0),
-    };
-
-    return normalized;
-  } catch (error) {
-    console.error("[LLM] maybeParseQueryWithLlm failed:", error.message);
-    return null;
   }
+  return contents;
 }
 
-async function maybeGenerateLlmReply({ message, intent, recommendedProducts, history }) {
-  const enabled = String(process.env.CHATBOT_LLM_ENABLED || '').toLowerCase() === 'true';
-  const apiUrl = String(process.env.CHATBOT_LLM_API_URL || '').trim();
-  const apiKey = String(process.env.CHATBOT_LLM_API_KEY || '').trim();
-  const model = String(process.env.CHATBOT_LLM_MODEL || 'gpt-4.1-mini').trim();
+// ─── Build request bodies ───────────────────────────────────────────────────
 
-  if (!enabled || !apiUrl || !apiKey) {
-    return null;
+function buildGeminiBody(systemPrompt, messages, tools) {
+  const body = {
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents: toGeminiContents(messages),
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 4096,
+    },
+  };
+  if (tools && tools.length > 0) {
+    body.tools = toGeminiTools(tools);
+  }
+  return body;
+}
+
+function buildOpenAIBody(provider, systemPrompt, messages, tools, streaming = false) {
+  const oaiMessages = [{ role: 'system', content: systemPrompt }];
+
+  for (const msg of messages) {
+    if (msg.role === 'system') continue;
+    if (msg.role === 'tool') {
+      oaiMessages.push({
+        role: 'tool',
+        tool_call_id: msg.toolCallId || `call_${msg.toolName}`,
+        content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
+      });
+    } else if (msg.role === 'assistant' && msg.toolCalls) {
+      oaiMessages.push({
+        role: 'assistant',
+        content: null,
+        tool_calls: msg.toolCalls.map((tc, idx) => ({
+          id: tc.id || `call_${tc.name}_${idx}`,
+          type: 'function',
+          function: {
+            name: tc.name,
+            arguments: typeof tc.arguments === 'string' ? tc.arguments : JSON.stringify(tc.arguments),
+          },
+        })),
+      });
+    } else {
+      oaiMessages.push({ role: msg.role, content: msg.content });
+    }
   }
 
-  const compareService = require('./compare');
-  const contextProducts = recommendedProducts.slice(0, 4).map((item) => {
-    const specs = compareService.extractComparisonSpecSummary(item);
+  const body = {
+    model: provider.model,
+    messages: oaiMessages,
+    temperature: 0.7,
+    max_tokens: 4096,
+  };
+
+  if (streaming) body.stream = true;
+
+  if (tools && tools.length > 0) {
+    body.tools = tools.map((t) => ({
+      type: 'function',
+      function: { name: t.name, description: t.description, parameters: t.parameters },
+    }));
+  }
+
+  return body;
+}
+
+// ─── Parse responses ────────────────────────────────────────────────────────
+
+function parseGeminiResponse(data) {
+  const candidate = data?.candidates?.[0];
+  if (!candidate?.content?.parts) return { content: '', toolCalls: [] };
+
+  let textContent = '';
+  const toolCalls = [];
+
+  for (const part of candidate.content.parts) {
+    if (part.text) textContent += part.text;
+    if (part.functionCall) {
+      toolCalls.push({
+        id: `call_${part.functionCall.name}_${Date.now()}`,
+        name: part.functionCall.name,
+        arguments: part.functionCall.args || {},
+      });
+    }
+  }
+
+  return { content: textContent, toolCalls };
+}
+
+function parseOpenAIResponse(data) {
+  const choice = data?.choices?.[0];
+  if (!choice?.message) return { content: '', toolCalls: [] };
+
+  const msg = choice.message;
+  const toolCalls = (msg.tool_calls || []).map((tc) => {
+    let args = {};
+    try {
+      args = typeof tc.function.arguments === 'string'
+        ? JSON.parse(tc.function.arguments)
+        : tc.function.arguments || {};
+    } catch {
+      args = {};
+    }
     return {
-      name: item.name,
-      category: item.category,
-      price: item.price,
-      reason: item.reason,
-      specs: {
-        chip: specs.chip,
-        ram: specs.ram,
-        rom: specs.rom,
-        screen: specs.screen,
-        camera: specs.camera,
-        battery: specs.battery,
-        gpu: specs.gpu,
-        weight: specs.weight,
-        os: specs.os,
-        isLaptop: specs.isLaptop
-      },
-      description: item.description || '',
+      id: tc.id || `call_${tc.function.name}_${Date.now()}`,
+      name: tc.function.name,
+      arguments: args,
     };
   });
 
-  const systemPrompt = intent === 'greeting'
-    ? (() => {
-        const variants = [
-          'Chào mừng bạn quay trở lại! Mình đã chuẩn bị sẵn các ưu đãi đặc biệt dành riêng cho bạn — mời bạn xem các thẻ bên dưới.',
-          'Rất vui được gặp lại bạn! Hôm nay có một số deal giảm sâu mình đã lọc sẵn, bạn xem nhanh ở phía dưới nhé.',
-          'Chào bạn! Để tri ân sự quay trở lại, Tech Shop có một loạt ưu đãi giới hạn dành riêng cho bạn; mình đã sắp xếp chúng ở bên dưới.',
-          'Xin chào! Mình đã chọn giúp bạn một số chương trình giảm giá đặc biệt trong hôm nay — bạn có thể xem các thẻ sản phẩm bên dưới.',
-          'Chào bạn, hôm nay mình có một vài ưu đãi cực hời dành riêng cho bạn, mời bạn tham khảo các thẻ bên dưới.',
-        ];
+  let content = msg.content || '';
 
-        return [
-          'Bạn là trợ lý bán hàng e-commerce. Trả lời ngắn gọn, tự nhiên, ấm áp bằng tiếng Việt.',
-          'Nhiệm vụ là chào người dùng và dẫn họ nhìn xuống các thẻ sản phẩm bên dưới.',
-          'KHÔNG liệt kê tên sản phẩm hoặc nêu giá. Không dùng bullet. Không dài hơn 3 câu.',
-          'Dưới đây là vài ví dụ phong cách (chỉ để cảm hứng, đừng sao chép y nguyên):',
-          ...variants.map((v) => `- ${v}`),
-        ].join(' ');
-      })()
-    : 'Bạn là chuyên gia tư vấn bán hàng e-commerce chuyên nghiệp. Hãy trả lời tự nhiên, thân thiện bằng tiếng Việt.\n' +
-      'Dưới đây là các công cụ (Tools/Functions) bạn có thể sử dụng để hỗ trợ khách hàng:\n' +
-      '- `addToCart`: Gọi hàm này khi khách hàng yêu cầu thêm sản phẩm vào giỏ hàng (ví dụ: "Thêm sản phẩm này vào giỏ", "mua sản phẩm Samsung S26 Ultra", v.v.). Hãy đối chiếu và chọn sản phẩm phù hợp nhất từ danh sách `products` được cung cấp dưới đây để lấy ID tương ứng làm tham số `productId`.\n' +
-      '- `getOrderStatus`: Gọi hàm này khi khách hàng muốn kiểm tra hoặc theo dõi đơn hàng của họ (ví dụ: "đơn hàng mới nhất thế nào rồi", "tra cứu đơn hàng", v.v.).\n' +
-      'Hãy dựa vào thông tin chi tiết (Chip, Camera, Pin, RAM, ROM) của các sản phẩm để tư vấn chính xác. Trả lời tối đa 5 câu.';
+  // If content is empty but model returned reasoning_content (common in reasoning models like Gemma 4/DeepSeek R1)
+  if (!content && msg.reasoning_content) {
+    content = msg.reasoning_content;
+  }
 
-  const userPrompt = JSON.stringify(
-    {
-      intent,
-      message,
-      products: contextProducts,
-      recentHistory: history.slice(-4),
-      requirements: intent === 'greeting'
-        ? 'Trả lời tối đa 3 câu. Chỉ chào hỏi và mời xem phần sản phẩm bên dưới. Không lặp lại tên sản phẩm hoặc giá sản phẩm trong câu trả lời.'
-        : 'Trả lời tối đa 5 câu. Nếu khách hàng muốn thêm sản phẩm vào giỏ hoặc kiểm tra đơn hàng, bạn phải gọi công cụ tương ứng (addToCart hoặc getOrderStatus).',
-    },
-    null,
-    2
-  );
-
-  const geminiTools = [
-    {
-      functionDeclarations: [
-        {
-          name: 'addToCart',
-          description: 'Thêm sản phẩm vào giỏ hàng của khách hàng.',
-          parameters: {
-            type: 'OBJECT',
-            properties: {
-              productId: {
-                type: 'STRING',
-                description: 'Mã sản phẩm (ID) cần thêm vào giỏ hàng. Lấy từ trường _id hoặc id của sản phẩm trong danh sách contextProducts.'
-              },
-              quantity: {
-                type: 'NUMBER',
-                description: 'Số lượng sản phẩm cần thêm. Mặc định là 1.'
-              }
-            },
-            required: ['productId']
-          }
-        },
-        {
-          name: 'getOrderStatus',
-          description: 'Tra cứu danh sách đơn hàng hoặc trạng thái đơn hàng của khách hàng.',
-          parameters: {
-            type: 'OBJECT',
-            properties: {
-              orderId: {
-                type: 'STRING',
-                description: 'Mã đơn hàng cần kiểm tra (tùy chọn).'
-              }
-            }
-          }
-        }
-      ]
+  // Fallback: If tool_calls array is empty but content contains inline tool call text
+  if (toolCalls.length === 0 && content) {
+    const inlineToolMatch = content.match(/(?:call:|<\|tool_call\|?>)\s*([a-zA-Z0-9_]+)\s*(\{[\s\S]*?\})/i);
+    if (inlineToolMatch) {
+      try {
+        const name = inlineToolMatch[1];
+        const args = JSON.parse(inlineToolMatch[2] || '{}');
+        toolCalls.push({
+          id: `inline_call_${name}_${Date.now()}`,
+          name,
+          arguments: args,
+        });
+        // Clear content if it was only a tool call string
+        content = content.replace(/(?:call:|<\|tool_call\|?>)\s*[a-zA-Z0-9_]+\s*\{[\s\S]*?\}/gi, '').trim();
+      } catch { /* skip */ }
     }
-  ];
+  }
 
-  const openaiTools = [
-    {
-      type: 'function',
-      function: {
-        name: 'addToCart',
-        description: 'Thêm sản phẩm vào giỏ hàng của khách hàng.',
-        parameters: {
-          type: 'object',
-          properties: {
-            productId: {
-              type: 'string',
-              description: 'Mã sản phẩm (ID) cần thêm vào giỏ hàng. Lấy từ trường _id hoặc id của sản phẩm trong danh sách contextProducts.'
-            },
-            quantity: {
-              type: 'number',
-              description: 'Số lượng sản phẩm cần thêm. Mặc định là 1.'
-            }
-          },
-          required: ['productId']
-        }
-      }
-    },
-    {
-      type: 'function',
-      function: {
-        name: 'getOrderStatus',
-        description: 'Tra cứu danh sách đơn hàng hoặc trạng thái đơn hàng của khách hàng.',
-        parameters: {
-          type: 'object',
-          properties: {
-            orderId: {
-              type: 'string',
-              description: 'Mã đơn hàng cần kiểm tra (tùy chọn).'
-            }
-          }
-        }
-      }
-    }
-  ];
+  return { content, toolCalls };
+}
 
-  const isGemini = apiUrl.includes('generativelanguage.googleapis.com');
+// ─── Single provider call ───────────────────────────────────────────────────
+
+async function callProvider(provider, systemPrompt, messages, tools) {
+  const useGemini = isProviderGemini(provider);
+  const url = useGemini ? buildGeminiUrl(provider) : buildOpenAIUrl(provider);
+  const body = useGemini
+    ? buildGeminiBody(systemPrompt, messages, tools)
+    : buildOpenAIBody(provider, systemPrompt, messages, tools);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), provider.timeout);
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
+    const headers = { 'Content-Type': 'application/json' };
+    if (!useGemini) {
+      headers['Authorization'] = `Bearer ${provider.apiKey}`;
+    }
 
-    const response = await (async () => {
-      if (isGemini) {
-        const endpoint = apiUrl.includes(':generateContent')
-          ? apiUrl
-          : `${apiUrl.replace(/\/$/, '')}/v1beta/models/${model}:generateContent`;
-        const delimiter = endpoint.includes('?') ? '&' : '?';
-        const requestUrl = `${endpoint}${delimiter}key=${encodeURIComponent(apiKey)}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
 
-        return fetch(requestUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          signal: controller.signal,
-          body: JSON.stringify({
-            systemInstruction: {
-              role: 'system',
-              parts: [{ text: systemPrompt }],
-            },
-            contents: [
-              {
-                role: 'user',
-                parts: [{ text: userPrompt }],
-              },
-            ],
-            tools: geminiTools,
-            generationConfig: {
-              temperature: 0.4,
-            },
-          }),
-        });
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => '');
+      throw new Error(`[${provider.name}] Status ${res.status}: ${errorText.substring(0, 200)}`);
+    }
+
+    const data = await res.json();
+    return useGemini ? parseGeminiResponse(data) : parseOpenAIResponse(data);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// ─── Main: Call LLM with fallback chain ─────────────────────────────────────
+/**
+ * @param {string} systemPrompt
+ * @param {Array} messages
+ * @param {Array} tools
+ * @returns {Promise<{content: string, toolCalls: Array}>}
+ */
+async function callLLMWithTools(systemPrompt, messages, tools = []) {
+  const providers = getProviders();
+
+  if (providers.length === 0) {
+    throw new Error('LLM chưa được cấu hình. Kiểm tra CHATBOT_LLM_PROVIDERS hoặc CHATBOT_LLM_API_URL trong .env');
+  }
+
+  const errors = [];
+
+  for (const provider of providers) {
+    try {
+      console.log(`[LLM] Trying provider: ${provider.name} (${provider.model})`);
+      const result = await callProvider(provider, systemPrompt, messages, tools);
+      return result;
+    } catch (error) {
+      const reason = error.name === 'AbortError' ? `timeout (${provider.timeout}ms)` : error.message;
+      console.warn(`[LLM] Provider ${provider.name} failed: ${reason}`);
+      errors.push({ provider: provider.name, error: reason });
+    }
+  }
+
+  throw new Error(`Tất cả LLM providers đều thất bại:\n${errors.map((e) => `  - ${e.provider}: ${e.error}`).join('\n')}`);
+}
+
+// ─── Streaming: Call LLM and stream response ────────────────────────────────
+
+/**
+ * Stream LLM response token by token.
+ * Only streams the final text response (no tool calls in stream mode).
+ *
+ * @param {string} systemPrompt
+ * @param {Array} messages
+ * @param {Function} onChunk - Called with each text chunk: onChunk(text)
+ * @returns {Promise<string>} - Full accumulated text
+ */
+async function callLLMStreaming(systemPrompt, messages, onChunk) {
+  const providers = getProviders();
+  if (providers.length === 0) {
+    throw new Error('LLM chưa được cấu hình.');
+  }
+
+  const errors = [];
+
+  for (const provider of providers) {
+    try {
+      console.log(`[LLM-Stream] Trying provider: ${provider.name}`);
+      const result = await streamFromProvider(provider, systemPrompt, messages, onChunk);
+      return result;
+    } catch (error) {
+      const reason = error.name === 'AbortError' ? `timeout` : error.message;
+      console.warn(`[LLM-Stream] Provider ${provider.name} failed: ${reason}`);
+      errors.push({ provider: provider.name, error: reason });
+    }
+  }
+
+  throw new Error(`Tất cả LLM providers đều thất bại (streaming):\n${errors.map((e) => `  - ${e.provider}: ${e.error}`).join('\n')}`);
+}
+
+async function streamFromProvider(provider, systemPrompt, messages, onChunk) {
+  const useGemini = isProviderGemini(provider);
+
+  let url, body;
+  if (useGemini) {
+    url = buildGeminiUrl(provider, true);
+    body = buildGeminiBody(systemPrompt, messages, []);
+  } else {
+    url = buildOpenAIUrl(provider);
+    body = buildOpenAIBody(provider, systemPrompt, messages, [], true);
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), provider.timeout);
+
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (!useGemini) {
+      headers['Authorization'] = `Bearer ${provider.apiKey}`;
+    }
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => '');
+      throw new Error(`[${provider.name}] Status ${res.status}: ${errorText.substring(0, 200)}`);
+    }
+
+    // Read SSE stream
+    let fullText = '';
+    const reader = res.body;
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    for await (const chunk of reader) {
+      buffer += decoder.decode(chunk, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+
+        try {
+          const parsed = JSON.parse(data);
+          let text = '';
+
+          if (useGemini) {
+            // Gemini streaming format
+            const parts = parsed?.candidates?.[0]?.content?.parts || [];
+            text = parts.map((p) => p.text || '').join('');
+          } else {
+            // OpenAI streaming format (supports standard delta.content and reasoning model delta.reasoning_content)
+            const delta = parsed?.choices?.[0]?.delta;
+            text = delta?.content || delta?.reasoning_content || '';
+          }
+
+          if (text) {
+            fullText += text;
+            onChunk(text);
+          }
+        } catch { /* skip unparseable lines */ }
       }
+    }
 
-      return fetch(`${apiUrl.replace(/\/$/, '')}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          model,
-          temperature: 0.4,
+    return fullText;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// ─── Vision: Call LLM with image ────────────────────────────────────────────
+
+/**
+ * Call LLM with an image for visual recognition.
+ * @param {string} systemPrompt
+ * @param {string} userMessage
+ * @param {string} imageBase64 - Base64 encoded image data
+ * @param {string} mimeType - e.g. 'image/jpeg', 'image/png'
+ * @returns {Promise<{content: string}>}
+ */
+async function callLLMWithImage(systemPrompt, userMessage, imageBase64, mimeType = 'image/jpeg') {
+  const providers = getProviders();
+  if (providers.length === 0) {
+    throw new Error('LLM chưa được cấu hình.');
+  }
+
+  const errors = [];
+
+  for (const provider of providers) {
+    try {
+      const useGemini = isProviderGemini(provider);
+      const url = useGemini ? buildGeminiUrl(provider) : buildOpenAIUrl(provider);
+
+      let body;
+      if (useGemini) {
+        body = {
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: [{
+            role: 'user',
+            parts: [
+              { text: userMessage },
+              { inlineData: { mimeType, data: imageBase64 } },
+            ],
+          }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+        };
+      } else {
+        body = {
+          model: provider.model,
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: userMessage },
+                { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+              ],
+            },
           ],
-          tools: openaiTools,
-          tool_choice: 'auto',
-        }),
-      });
-    })();
-
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      console.error('maybeGenerateLlmReply API Error. Status:', response.status, 'Body:', errorText);
-      return null;
-    }
-
-    const data = await response.json();
-
-    if (isGemini) {
-      const candidate = data?.candidates?.[0];
-      const parts = candidate?.content?.parts || [];
-      const functionCallPart = parts.find(p => p.functionCall);
-      const textParts = parts.filter(p => p.text).map(p => p.text).join('\n');
-      
-      if (functionCallPart) {
-        return {
-          text: textParts || null,
-          toolCall: {
-            name: functionCallPart.functionCall.name,
-            args: functionCallPart.functionCall.args
-          }
+          temperature: 0.7,
+          max_tokens: 2048,
         };
       }
-      return {
-        text: String(textParts || '').trim() || null,
-        toolCall: null
-      };
-    } else {
-      const message = data?.choices?.[0]?.message;
-      if (message?.tool_calls && message.tool_calls.length > 0) {
-        const toolCall = message.tool_calls[0];
-        return {
-          text: message.content || null,
-          toolCall: {
-            name: toolCall.function.name,
-            args: JSON.parse(toolCall.function.arguments || '{}')
-          }
-        };
-      }
-      return {
-        text: String(message?.content || '').trim() || null,
-        toolCall: null
-      };
-    }
-  } catch (error) {
-    console.error("[LLM] maybeGenerateLlmReply failed:", error.message);
-    return null;
-  }
-}
 
-async function generateEmbedding(text) {
-  const llmEnabled = String(process.env.CHATBOT_LLM_ENABLED || '').toLowerCase() === 'true';
-  const apiUrl = String(process.env.CHATBOT_LLM_API_URL || '').trim();
-  const apiKey = String(process.env.CHATBOT_LLM_API_KEY || '').trim();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), provider.timeout);
 
-  if (!llmEnabled || !apiUrl || !apiKey || !text) {
-    return null;
-  }
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (!useGemini) headers['Authorization'] = `Bearer ${provider.apiKey}`;
 
-  const isGemini = apiUrl.includes('generativelanguage.googleapis.com');
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
-
-  try {
-    const response = await (async () => {
-      if (isGemini) {
-        const baseUrl = apiUrl.split('/models/')[0];
-        const requestUrl = `${baseUrl.replace(/\/$/, '')}/models/gemini-embedding-001:embedContent?key=${encodeURIComponent(apiKey)}`;
-        return fetch(requestUrl, {
+        const res = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
+          body: JSON.stringify(body),
           signal: controller.signal,
-          body: JSON.stringify({
-            content: {
-              parts: [{ text }]
-            }
-          })
         });
+
+        if (!res.ok) {
+          const errorText = await res.text().catch(() => '');
+          throw new Error(`[${provider.name}] Status ${res.status}: ${errorText.substring(0, 200)}`);
+        }
+
+        const data = await res.json();
+        const result = useGemini ? parseGeminiResponse(data) : parseOpenAIResponse(data);
+        return { content: result.content };
+      } finally {
+        clearTimeout(timeoutId);
       }
-
-      // OpenAI fallback
-      const baseApiUrl = apiUrl.replace(/\/chat\/completions$/, '').replace(/\/$/, '');
-      return fetch(`${baseApiUrl}/embeddings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          input: text,
-          model: 'text-embedding-3-small'
-        })
-      });
-    })();
-
-    clearTimeout(timeout);
-    if (!response.ok) {
-      const errBody = await response.text().catch(() => '');
-      console.error(`Embedding API error (Status: ${response.status}):`, errBody);
-      return null;
+    } catch (error) {
+      errors.push({ provider: provider.name, error: error.message });
     }
-
-    const data = await response.json();
-    if (isGemini) {
-      return data?.embedding?.values || null;
-    } else {
-      return data?.data?.[0]?.embedding || null;
-    }
-  } catch (error) {
-    clearTimeout(timeout);
-    console.error("[LLM] generateEmbedding failed:", error.message);
-    return null;
   }
+
+  throw new Error(`Vision: tất cả providers đều thất bại`);
 }
 
-module.exports = {
-  maybeParseQueryWithLlm,
-  maybeGenerateLlmReply,
-  generateEmbedding,
-};
+module.exports = { callLLMWithTools, callLLMStreaming, callLLMWithImage };

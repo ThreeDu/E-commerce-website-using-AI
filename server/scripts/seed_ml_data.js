@@ -9,7 +9,11 @@ const AnalyticsEvent = require("../models/AnalyticsEvent");
 const ChatbotEvent = require("../chatbot-service/models/ChatbotEvent");
 const Cart = require("../models/Cart");
 
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/e-commerce-app";
+const MONGO_URI = process.env.MONGO_URI;
+if (!MONGO_URI) {
+  console.error("MONGO_URI not configured in env");
+  process.exit(1);
+}
 
 const NUM_USERS = 200; // Increase size to seed more cases
 const NUM_PRODUCTS = 50;

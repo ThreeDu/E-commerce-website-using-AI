@@ -24,7 +24,7 @@ function parseOptionalUserId(req) {
   }
 
   try {
-    const secret = process.env.JWT_SECRET || "dev_secret_change_me";
+    const secret = process.env.JWT_SECRET;
     const decoded = jwt.verify(token, secret);
     return decoded?.userId || null;
   } catch (error) {

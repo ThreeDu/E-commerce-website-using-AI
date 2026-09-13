@@ -47,8 +47,12 @@ function compileProductTextForEmbedding(product) {
 }
 
 async function run() {
-  const uri = process.env.MONGO_URI || "mongodb://localhost:27017/e-commerce-app";
-  console.log("Connecting to MongoDB:", uri);
+  const uri = process.env.MONGO_URI;
+  if (!uri) {
+    console.error("MONGO_URI not configured in env");
+    process.exit(1);
+  }
+  console.log("Connecting to MongoDB...");
   await mongoose.connect(uri);
 
   const products = await Product.find({

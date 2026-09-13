@@ -8,15 +8,21 @@ const orderRoutes = require("./routes/orderRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const pointRoutes = require("./routes/pointRoutes");
-const chatbotRoutes = require("./chatbot-service/routes");
+const chatbotRoutes = require("./chatbot-service/chatbotRoutes");
+const adminChatbotRoutes = require("./admin-chatbot/adminChatRoutes");
+const chatbotAnalyticsRoutes = require("./routes/chatbotAnalyticsRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const path = require("path");
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const MONGO_URI =
-  process.env.MONGO_URI || "mongodb://localhost:27017/e-commerce-app";
+const MONGO_URI = process.env.MONGO_URI;
+if (!MONGO_URI) {
+  console.error('[FATAL] MONGO_URI chưa được cấu hình trong .env');
+  process.exit(1);
+}
 
 app.use(
   cors({
@@ -33,12 +39,16 @@ app.use(
   })
 );
 
+app.use("/reports", express.static(path.join(__dirname, "../public/reports")));
+
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/chatbot", chatbotRoutes);
+app.use("/api/admin/chatbot", adminChatbotRoutes);
+app.use("/api/admin/chatbot-analytics", chatbotAnalyticsRoutes);
 app.use("/api/points", pointRoutes);
 app.use("/api/payments", paymentRoutes);
 

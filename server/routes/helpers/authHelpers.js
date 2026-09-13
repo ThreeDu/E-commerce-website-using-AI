@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../../models/User");
 
 const createToken = (user) => {
-  const secret = process.env.JWT_SECRET || "dev_secret_change_me";
+  const secret = process.env.JWT_SECRET;
 
   return jwt.sign(
     {
@@ -32,7 +32,7 @@ const verifyUserRequest = async (req, res) => {
   }
 
   try {
-    const secret = process.env.JWT_SECRET || "dev_secret_change_me";
+    const secret = process.env.JWT_SECRET;
     const decoded = jwt.verify(token, secret);
     const user = await User.findById(decoded.userId).select("_id name email role phone address");
 
@@ -56,7 +56,7 @@ const verifyAdminRequest = async (req, res) => {
   }
 
   try {
-    const secret = process.env.JWT_SECRET || "dev_secret_change_me";
+    const secret = process.env.JWT_SECRET;
     const decoded = jwt.verify(token, secret);
     const user = await User.findById(decoded.userId).select("_id name email role");
 
