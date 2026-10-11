@@ -229,101 +229,212 @@ function HomePage() {
 
 
   return (
-    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10 py-3 px-5 text-text-primary max-[680px]:py-2 max-[680px]:px-2.5">
-      <section className="grid grid-cols-1 gap-4 mb-[22px]">
-        <div className="border border-text-primary rounded-[22px] bg-white p-[26px]">
-          <p className="m-0 mb-2.5 text-xs font-extrabold tracking-[0.08em] uppercase text-shop-primary">Thương mại ưu tiên công nghệ</p>
-          <h2 className="m-0 text-[clamp(1.7rem,3vw,2.7rem)] leading-[1.05] tracking-[-0.02em]">Trải nghiệm nổi bật.</h2>
-          <p className="mt-3.5 mb-0 max-w-[640px] leading-relaxed text-[#2d3748]">
-            Tech Shop mang tinh thần Neo-Brutalism: đường nét rõ ràng, độ tương phản cao và trải nghiệm mua sắm gọn, nhanh, chính xác.
-          </p>
-          <div className="mt-[18px] flex gap-2.5 flex-wrap">
-            <Link to="/products" className="min-h-[46px] px-[18px] inline-flex items-center justify-center rounded-[14px] border border-text-primary text-sm font-extrabold no-underline cursor-pointer transition-all duration-[180ms] hover:-translate-y-px bg-[#0f314f] text-white hover:bg-[#174f7c]">Mua ngay</Link>
-            <Link to="/about" className="min-h-[46px] px-[18px] inline-flex items-center justify-center rounded-[14px] border border-text-primary text-sm font-extrabold no-underline cursor-pointer transition-all duration-[180ms] hover:-translate-y-px bg-white text-text-primary hover:bg-[#ecf8f6]">Khám phá thêm</Link>
+    <main className="w-[min(1140px,92%)] mx-auto flex-1 py-7 text-slate-800">
+      {/* ── 1. Hero Section: Bento Grid Macrostructure ── */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-8">
+        {/* Main Hero Card (8 cols) */}
+        <div className="lg:col-span-8 bg-white border border-slate-200/90 rounded-3xl p-7 sm:p-10 shadow-xs flex flex-col justify-between relative overflow-hidden">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200/60 mb-5">
+              <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse" />
+              <span>Hệ thống bán lẻ thiết bị công nghệ chính hãng</span>
+            </div>
+            <h1 className="m-0 text-[clamp(1.9rem,3.2vw,2.9rem)] font-black leading-[1.1] tracking-tight text-slate-900">
+              Công nghệ đỉnh cao. <br />
+              <span className="text-teal-700">Trải nghiệm thông minh.</span>
+            </h1>
+            <p className="mt-4 mb-0 max-w-[580px] text-sm sm:text-base leading-relaxed text-slate-600">
+              Khám phá các dòng smartphone, máy tính xách tay và phụ kiện mới nhất. So sánh thông số thực tế và nhận tư vấn cấu hình chính xác cùng trợ lý AI 24/7.
+            </p>
+          </div>
+
+          <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex gap-3 items-center flex-wrap">
+              <Link
+                to="/products"
+                className="inline-flex items-center justify-center gap-2 min-h-[46px] px-6 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-bold no-underline transition-all shadow-xs hover:-translate-y-0.5"
+              >
+                <span>Khám phá sản phẩm</span>
+                <span>→</span>
+              </Link>
+              <a
+                href="#recommendations"
+                className="inline-flex items-center justify-center min-h-[46px] px-5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-bold no-underline transition-all"
+              >
+                Gợi ý cho bạn
+              </a>
+            </div>
+
+            <div className="flex items-center gap-4 text-xs font-semibold text-slate-500">
+              <span>✓ Bảo hành 12T</span>
+              <span>✓ Đổi trả 30 ngày</span>
+              <span>✓ Giao hỏa tốc 2h</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Bento Column (4 cols) */}
+        <div className="lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-5">
+          {/* Bento Tile 1: AI Assistant Feature Card */}
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 border border-slate-800 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-lg">
+                  🤖
+                </span>
+                <span className="text-[10px] uppercase font-black tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2 py-0.5 rounded-full">
+                  AI Powered
+                </span>
+              </div>
+              <h3 className="m-0 text-base font-bold text-white">Trợ lý công nghệ AI</h3>
+              <p className="mt-2 mb-0 text-xs text-slate-300 leading-relaxed">
+                Nhận diện thiết bị qua hình ảnh, tư vấn chọn máy theo ngân sách và so sánh chi tiết thông số kỹ thuật.
+              </p>
+            </div>
+            <div className="mt-5 pt-3 border-t border-white/10 text-xs text-teal-300 font-semibold flex items-center justify-between">
+              <span>Mở khung chat ở góc phải</span>
+              <span>💬</span>
+            </div>
+          </div>
+
+          {/* Bento Tile 2: Danh mục mua sắm hot */}
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-xs flex flex-col justify-between">
+            <div>
+              <h3 className="m-0 text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Truy cập nhanh</h3>
+              <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+                <Link to="/products" className="p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50 hover:text-teal-800 border border-slate-100 text-slate-700 no-underline transition-colors flex items-center gap-2">
+                  <span>📱</span>
+                  <span>Điện thoại</span>
+                </Link>
+                <Link to="/products" className="p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50 hover:text-teal-800 border border-slate-100 text-slate-700 no-underline transition-colors flex items-center gap-2">
+                  <span>💻</span>
+                  <span>Laptop</span>
+                </Link>
+                <Link to="/products" className="p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50 hover:text-teal-800 border border-slate-100 text-slate-700 no-underline transition-colors flex items-center gap-2">
+                  <span>🎧</span>
+                  <span>Tai nghe</span>
+                </Link>
+                <Link to="/products" className="p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50 hover:text-teal-800 border border-slate-100 text-slate-700 no-underline transition-colors flex items-center gap-2">
+                  <span>⌚</span>
+                  <span>Phụ kiện</span>
+                </Link>
+              </div>
+            </div>
+            <p className="m-0 mt-4 text-[11px] text-slate-400">Cam kết 100% hàng chính hãng full box</p>
           </div>
         </div>
       </section>
 
-      {/* ── Gợi ý sản phẩm cá nhân hóa ── */}
+      {/* ── 2. Gợi ý cá nhân hóa (AI Recommendations) ── */}
       {recommendReady && recommendedProducts.length > 0 && (
         <section
-          className="border border-[rgba(99,102,241,0.12)] rounded-[22px] bg-white p-4 mb-[18px] bg-[linear-gradient(135deg,#f0f7ff_0%,#fef6f0_40%,#f5f0ff_100%)] relative overflow-hidden"
           id="recommendations"
+          className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-xs mb-8"
         >
-          <div className="flex justify-between items-center gap-2.5 mb-3.5 max-[680px]:flex-col max-[680px]:items-start">
-            <h3 className="m-0 text-[1.35rem] flex items-center gap-1.5">
-              <span className="text-[1.2em] animate-[neo-sparkle_2s_ease-in-out_infinite]" aria-hidden="true">✨</span>
-              <span>Gợi ý cho bạn</span>
-              <span className="inline-flex items-center justify-center h-[18px] px-1.5 rounded-full text-[10px] font-black tracking-[0.08em] uppercase bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] text-white border border-[rgba(99,102,241,0.3)] shadow-[0_2px_8px_rgba(99,102,241,0.25),inset_0_1px_0_rgba(255,255,255,0.2)] animate-[neo-badge-glow_3s_ease-in-out_infinite] leading-none">AI</span>
-            </h3>
-            <Link to="/products" className="text-[#0f314f] font-extrabold no-underline">Xem tất cả</Link>
+          <div className="flex justify-between items-end gap-3 mb-6 pb-4 border-b border-slate-100 max-[680px]:flex-col max-[680px]:items-start">
+            <div>
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 mb-1">
+                <span>✨</span>
+                <span>Cá nhân hóa theo hành vi</span>
+              </div>
+              <h2 className="m-0 text-xl font-extrabold text-slate-900 tracking-tight">Gợi ý dành riêng cho bạn</h2>
+              <p className="m-0 mt-1 text-xs text-slate-500">Được tối ưu theo lịch sử tìm kiếm và các dòng sản phẩm bạn quan tâm</p>
+            </div>
+            <Link to="/products" className="text-xs font-bold text-teal-700 hover:text-teal-800 no-underline flex items-center gap-1 shrink-0">
+              <span>Xem tất cả</span>
+              <span>→</span>
+            </Link>
           </div>
-          <div className="grid gap-3 grid-cols-4 max-[1024px]:grid-cols-2 max-[680px]:grid-cols-1 relative z-[1]">
-            {recommendedProducts.map((product, index) => {
+
+          <div className="grid gap-4 grid-cols-4 max-[1024px]:grid-cols-2 max-[640px]:grid-cols-1">
+            {recommendedProducts.map((product) => {
               const pricing = getProductPricing(product);
               const outOfStock = isOutOfStock(product);
+              const isWishlisted = wishlistIds.includes(String(product._id));
+              const isPendingWish = pendingWishlistIds.includes(String(product._id));
 
               return (
                 <article
-                  className="bg-shop-surface border border-shop-line rounded-shop-md shadow-shop p-3.5 flex flex-col h-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_35px_rgba(15,23,42,0.08)] hover:border-[rgba(99,102,241,0.18)] hover:shadow-[0_14px_35px_rgba(15,23,42,0.08),0_0_0_1px_rgba(99,102,241,0.06)] animate-[neo-card-reveal_0.5s_ease_both]"
                   key={product._id}
-                  style={{ animationDelay: `${index * 0.06}s` }}
+                  className="bg-white border border-slate-200/80 rounded-2xl p-3 flex flex-col h-full transition-all duration-200 hover:border-teal-500 hover:shadow-md group"
                 >
-                  <Link to={`/products/${product._id}`} style={{ textDecoration: "none" }}>
-                    <div className="relative rounded-[16px] overflow-hidden border border-shop-line bg-gradient-to-br from-[#f3f8ff] to-[#fdf6f1] mb-3">
-                      {pricing.hasDiscount ? <span className="absolute top-2 left-2 z-10 inline-flex items-center justify-center min-h-[24px] px-2.5 py-0.5 rounded-full text-[11px] font-extrabold tracking-wider bg-[#ef4444] text-white border border-[#dc2626]">-{pricing.discountPercent}%</span> : null}
-                      {outOfStock ? <span className="absolute left-2 right-2 bottom-2 z-10 inline-flex items-center justify-center min-h-[24px] px-2 py-0.5 rounded-full text-[11px] font-extrabold tracking-wider bg-[#ef4444] text-white border border-[#dc2626]">Hết hàng</span> : null}
+                  <div className="relative rounded-xl overflow-hidden bg-slate-50 border border-slate-100 mb-3 aspect-square flex items-center justify-center">
+                    {pricing.hasDiscount ? (
+                      <span className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-black tracking-wide shadow-xs">
+                        -{pricing.discountPercent}%
+                      </span>
+                    ) : null}
+
+                    {outOfStock ? (
+                      <span className="absolute left-2 right-2 bottom-2 z-10 py-1 rounded-md bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold text-center">
+                        Tạm hết hàng
+                      </span>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      aria-label={isWishlisted ? "Bỏ yêu thích" : "Thêm yêu thích"}
+                      disabled={isPendingWish}
+                      onClick={() => handleToggleWishlist(product._id, product.name)}
+                      className={`absolute top-2 right-2 z-10 w-7 h-7 rounded-full flex items-center justify-center border cursor-pointer transition-transform active:scale-90 ${
+                        isWishlisted
+                          ? "bg-rose-50 border-rose-200 text-rose-600"
+                          : "bg-white/90 border-slate-200 text-slate-400 hover:text-rose-500 hover:bg-white"
+                      }`}
+                    >
+                      <span className="text-xs">{isWishlisted ? "❤️" : "🤍"}</span>
+                    </button>
+
+                    <Link to={`/products/${product._id}`} className="w-full h-full flex items-center justify-center">
                       <img
                         src={getProductImageSrc(product)}
                         alt={product.name}
-                        className={`w-full h-[212px] object-cover block ${outOfStock ? "grayscale-[55%] brightness-[88%]" : ""}`}
+                        className={`max-w-full max-h-full object-contain p-2 transition-transform duration-200 group-hover:scale-105 ${
+                          outOfStock ? "grayscale-[40%] opacity-70" : ""
+                        }`}
                         onError={(event) => {
                           event.currentTarget.onerror = null;
                           event.currentTarget.src = "/placeholder.svg";
                         }}
                       />
-                    </div>
-                    <h3 className="m-0 text-[17px] text-shop-ink font-bold">{product.name}</h3>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      <span className="inline-flex items-center rounded-full border border-shop-line px-2.5 py-1 text-xs font-bold bg-[#fff5d9] text-[#92400e]">
-                        {Number(product.averageRating || 0).toFixed(1)} sao ({Number(product.totalRatings || 0)})
-                      </span>
-                      <span className="inline-flex items-center rounded-full border border-shop-line px-2.5 py-1 text-xs font-bold bg-[#e6f7ff] text-[#075985]">{Number(product.totalViews || 0)} lượt xem</span>
-                      <span className="inline-flex items-center rounded-full border border-shop-line px-2.5 py-1 text-xs font-bold bg-[#ebfbe8] text-[#166534]">{Number(product.totalPurchases || 0)} lượt mua</span>
-                    </div>
-                    <p className="my-3 text-[#be2f00] text-[21px] font-extrabold">{pricing.finalPrice.toLocaleString("vi-VN")} đ</p>
-                    {pricing.hasDiscount ? (
-                      <p className="-mt-1.5 mb-2.5 text-[#94a3b8] text-sm line-through font-bold">{pricing.basePrice.toLocaleString("vi-VN")} đ</p>
-                    ) : null}
-                  </Link>
-                  <div className="mt-auto grid gap-2 pt-3">
-                    <button
-                      type="button"
-                      disabled={pendingWishlistIds.includes(product._id)}
-                      className={wishlistIds.includes(product._id)
-                        ? "rounded-[14px] border border-[#fca5a5] bg-[#fee2e2] text-[#b91c1c] px-3 py-2.5 text-sm font-bold cursor-pointer transition-all duration-150 hover:-translate-y-px hover:shadow-xs disabled:cursor-not-allowed disabled:opacity-70"
-                        : "rounded-[14px] border border-[#fdba74] bg-[#fff7ed] text-[#c2410c] px-3 py-2.5 text-sm font-bold cursor-pointer transition-all duration-150 hover:-translate-y-px hover:shadow-xs hover:bg-[#ffedd5] disabled:cursor-not-allowed disabled:opacity-70"
-                      }
-                      onClick={() => handleToggleWishlist(product._id, product.name)}
-                    >
-                      {pendingWishlistIds.includes(product._id)
-                        ? "Đang xử lý..."
-                        : wishlistIds.includes(product._id)
-                        ? "Đã yêu thích"
-                        : "Thêm yêu thích"}
-                    </button>
-                    <button
-                      type="button"
-                      className={outOfStock
-                        ? "rounded-[14px] border border-[#fca5a5] bg-[#fee2e2] text-[#b91c1c] px-3 py-2.5 text-sm font-bold cursor-not-allowed opacity-100"
-                        : "rounded-[14px] border border-[#0f766e] bg-gradient-to-br from-[#0f766e] to-[#115e59] text-white px-3 py-2.5 text-sm font-bold cursor-pointer transition-all duration-150 hover:-translate-y-px hover:shadow-xs hover:from-[#159287] hover:to-[#0f766e] disabled:cursor-not-allowed disabled:opacity-70"
-                      }
-                      disabled={outOfStock}
-                      onClick={() => handleAddToCart(product)}
-                    >
-                      {outOfStock ? "Hết hàng" : "Thêm vào giỏ"}
-                    </button>
+                    </Link>
                   </div>
+
+                  <Link to={`/products/${product._id}`} className="no-underline flex-1 flex flex-col">
+                    <h3 className="m-0 text-xs font-bold text-slate-800 line-clamp-2 leading-snug group-hover:text-teal-700 transition-colors">
+                      {product.name}
+                    </h3>
+
+                    <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-500">
+                      <span className="text-amber-500 font-bold">★ {Number(product.averageRating || 0).toFixed(1)}</span>
+                      <span>•</span>
+                      <span>{Number(product.totalPurchases || 0)} đã mua</span>
+                    </div>
+
+                    <div className="mt-2.5">
+                      <div className="text-sm font-extrabold text-slate-900">
+                        {pricing.finalPrice.toLocaleString("vi-VN")} đ
+                      </div>
+                      {pricing.hasDiscount ? (
+                        <div className="text-[11px] text-slate-400 line-through">
+                          {pricing.basePrice.toLocaleString("vi-VN")} đ
+                        </div>
+                      ) : null}
+                    </div>
+                  </Link>
+
+                  <button
+                    type="button"
+                    disabled={outOfStock}
+                    onClick={() => handleAddToCart(product)}
+                    className={`mt-3 w-full py-2 px-3 rounded-xl text-xs font-bold border cursor-pointer transition-all ${
+                      outOfStock
+                        ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                        : "bg-teal-700 hover:bg-teal-800 border-teal-700 text-white shadow-xs active:scale-[0.98]"
+                    }`}
+                  >
+                    {outOfStock ? "Hết hàng" : "Thêm vào giỏ"}
+                  </button>
                 </article>
               );
             })}
@@ -331,99 +442,140 @@ function HomePage() {
         </section>
       )}
 
-      <section id="about" className="border border-text-primary rounded-[22px] bg-white p-4 mb-[18px]">
-        <div className="flex justify-between items-center gap-2.5 mb-3.5 max-[680px]:flex-col max-[680px]:items-start">
-          <h3 className="m-0 text-[1.35rem]">Khám phá theo danh mục</h3>
-          <Link to="/products" className="text-[#0f314f] font-extrabold no-underline">Xem tất cả sản phẩm</Link>
+      {/* ── 3. Khám phá theo danh mục ── */}
+      <section id="categories" className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-xs mb-8">
+        <div className="flex justify-between items-center gap-2.5 mb-5 pb-4 border-b border-slate-100 max-[680px]:flex-col max-[680px]:items-start">
+          <div>
+            <h2 className="m-0 text-xl font-extrabold text-slate-900 tracking-tight">Danh mục sản phẩm</h2>
+            <p className="m-0 mt-1 text-xs text-slate-500">Phân loại theo nhu cầu sử dụng và phân khúc giá</p>
+          </div>
+          <Link to="/products" className="text-xs font-bold text-teal-700 hover:text-teal-800 no-underline">
+            Tất cả danh mục →
+          </Link>
         </div>
-        <div className="grid gap-3 grid-cols-4 max-[1024px]:grid-cols-2 max-[680px]:grid-cols-1">
-          {level2Categories.map((category, index) => (
+
+        <div className="grid gap-3.5 grid-cols-4 max-[1024px]:grid-cols-2 max-[640px]:grid-cols-1">
+          {level2Categories.map((category) => (
             <button
               type="button"
               key={category._id}
               onClick={() => handleCategoryClick(category)}
-              className={`border border-text-primary rounded-[22px] bg-white min-h-[116px] text-left p-3.5 cursor-pointer transition-transform duration-150 hover:-translate-y-0.5 ${CAT_COLORS[index % 5]}`}
+              className="border border-slate-200/80 rounded-2xl bg-slate-50/60 hover:bg-white hover:border-teal-500 hover:shadow-sm min-h-[96px] text-left p-4 cursor-pointer transition-all duration-150 flex flex-col justify-between"
             >
-              <span className="inline-flex text-[11px] tracking-[0.07em] uppercase font-extrabold text-[#334155] mb-3">Dòng sản phẩm</span>
-              <strong className="block text-[1.05rem] leading-[1.2]">{category.name}</strong>
+              <span className="text-[10px] tracking-wider uppercase font-bold text-teal-700">Khám phá</span>
+              <strong className="block text-sm font-bold text-slate-900 leading-snug">{category.name}</strong>
+              <span className="text-[11px] text-slate-400 font-medium">Xem ngay →</span>
             </button>
           ))}
         </div>
       </section>
 
-      <section className="border border-text-primary rounded-[22px] bg-white p-4 mb-[18px]">
-        <div className="flex justify-between items-center gap-2.5 mb-3.5 max-[680px]:flex-col max-[680px]:items-start">
-          <h3 className="m-0 text-[1.35rem]">Sản phẩm nổi bật</h3>
-          <Link to="/products" className="text-[#0f314f] font-extrabold no-underline">Mua theo bộ sưu tập</Link>
+      {/* ── 4. Sản phẩm bán chạy nhất (Featured Products) ── */}
+      <section className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-xs mb-8">
+        <div className="flex justify-between items-center gap-2.5 mb-5 pb-4 border-b border-slate-100 max-[680px]:flex-col max-[680px]:items-start">
+          <div>
+            <h2 className="m-0 text-xl font-extrabold text-slate-900 tracking-tight">Sản phẩm nổi bật</h2>
+            <p className="m-0 mt-1 text-xs text-slate-500">Thiết bị bán chạy và được đánh giá cao nhất trong tháng</p>
+          </div>
+          <Link to="/products" className="text-xs font-bold text-teal-700 hover:text-teal-800 no-underline">
+            Xem trọn bộ sưu tập →
+          </Link>
         </div>
-        <div className="grid gap-3 grid-cols-4 max-[1024px]:grid-cols-2 max-[680px]:grid-cols-1">
+
+        <div className="grid gap-4 grid-cols-4 max-[1024px]:grid-cols-2 max-[640px]:grid-cols-1">
           {featuredProducts.map((product) => {
             const pricing = getProductPricing(product);
             const outOfStock = isOutOfStock(product);
+            const isWishlisted = wishlistIds.includes(String(product._id));
+            const isPendingWish = pendingWishlistIds.includes(String(product._id));
 
             return (
-            <article className="bg-shop-surface border border-shop-line rounded-shop-md shadow-shop p-3.5 flex flex-col h-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_35px_rgba(15,23,42,0.08)] animate-shopx-fade-up" key={product._id}>
-              <Link to={`/products/${product._id}`} style={{ textDecoration: "none" }}>
-                <div className="relative rounded-[16px] overflow-hidden border border-shop-line bg-gradient-to-br from-[#f3f8ff] to-[#fdf6f1] mb-3">
-                  {pricing.hasDiscount ? <span className="absolute top-2 left-2 z-10 inline-flex items-center justify-center min-h-[24px] px-2.5 py-0.5 rounded-full text-[11px] font-extrabold tracking-wider bg-[#ef4444] text-white border border-[#dc2626]">-{pricing.discountPercent}%</span> : null}
-                  {outOfStock ? <span className="absolute left-2 right-2 bottom-2 z-10 inline-flex items-center justify-center min-h-[24px] px-2 py-0.5 rounded-full text-[11px] font-extrabold tracking-wider bg-[#ef4444] text-white border border-[#dc2626]">Hết hàng</span> : null}
-                  <img
-                    src={getProductImageSrc(product)}
-                    alt={product.name}
-                    className={`w-full h-[212px] object-cover block ${outOfStock ? "grayscale-[55%] brightness-[88%]" : ""}`}
-                    onError={(event) => {
-                      event.currentTarget.onerror = null;
-                      event.currentTarget.src = "/placeholder.svg";
-                    }}
-                  />
+              <article
+                key={product._id}
+                className="bg-white border border-slate-200/80 rounded-2xl p-3 flex flex-col h-full transition-all duration-200 hover:border-teal-500 hover:shadow-md group"
+              >
+                <div className="relative rounded-xl overflow-hidden bg-slate-50 border border-slate-100 mb-3 aspect-square flex items-center justify-center">
+                  {pricing.hasDiscount ? (
+                    <span className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-black tracking-wide shadow-xs">
+                      -{pricing.discountPercent}%
+                    </span>
+                  ) : null}
+
+                  {outOfStock ? (
+                    <span className="absolute left-2 right-2 bottom-2 z-10 py-1 rounded-md bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold text-center">
+                      Tạm hết hàng
+                    </span>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    aria-label={isWishlisted ? "Bỏ yêu thích" : "Thêm yêu thích"}
+                    disabled={isPendingWish}
+                    onClick={() => handleToggleWishlist(product._id, product.name)}
+                    className={`absolute top-2 right-2 z-10 w-7 h-7 rounded-full flex items-center justify-center border cursor-pointer transition-transform active:scale-90 ${
+                      isWishlisted
+                        ? "bg-rose-50 border-rose-200 text-rose-600"
+                        : "bg-white/90 border-slate-200 text-slate-400 hover:text-rose-500 hover:bg-white"
+                    }`}
+                  >
+                    <span className="text-xs">{isWishlisted ? "❤️" : "🤍"}</span>
+                  </button>
+
+                  <Link to={`/products/${product._id}`} className="w-full h-full flex items-center justify-center">
+                    <img
+                      src={getProductImageSrc(product)}
+                      alt={product.name}
+                      className={`max-w-full max-h-full object-contain p-2 transition-transform duration-200 group-hover:scale-105 ${
+                        outOfStock ? "grayscale-[40%] opacity-70" : ""
+                      }`}
+                      onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = "/placeholder.svg";
+                      }}
+                    />
+                  </Link>
                 </div>
-                <h3 className="m-0 text-[17px] text-shop-ink font-bold">{product.name}</h3>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  <span className="inline-flex items-center rounded-full border border-shop-line px-2.5 py-1 text-xs font-bold bg-[#fff5d9] text-[#92400e]">
-                    {Number(product.averageRating || 0).toFixed(1)} sao ({Number(product.totalRatings || 0)})
-                  </span>
-                  <span className="inline-flex items-center rounded-full border border-shop-line px-2.5 py-1 text-xs font-bold bg-[#e6f7ff] text-[#075985]">{Number(product.totalViews || 0)} lượt xem</span>
-                  <span className="inline-flex items-center rounded-full border border-shop-line px-2.5 py-1 text-xs font-bold bg-[#ebfbe8] text-[#166534]">{Number(product.totalPurchases || 0)} lượt mua</span>
-                </div>
-                <p className="my-3 text-[#be2f00] text-[21px] font-extrabold">{pricing.finalPrice.toLocaleString("vi-VN")} đ</p>
-                {pricing.hasDiscount ? (
-                  <p className="-mt-1.5 mb-2.5 text-[#94a3b8] text-sm line-through font-bold">{pricing.basePrice.toLocaleString("vi-VN")} đ</p>
-                ) : null}
-              </Link>
-              <div className="mt-auto grid gap-2 pt-3">
+
+                <Link to={`/products/${product._id}`} className="no-underline flex-1 flex flex-col">
+                  <h3 className="m-0 text-xs font-bold text-slate-800 line-clamp-2 leading-snug group-hover:text-teal-700 transition-colors">
+                    {product.name}
+                  </h3>
+
+                  <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-500">
+                    <span className="text-amber-500 font-bold">★ {Number(product.averageRating || 0).toFixed(1)}</span>
+                    <span>•</span>
+                    <span>{Number(product.totalPurchases || 0)} đã mua</span>
+                  </div>
+
+                  <div className="mt-2.5">
+                    <div className="text-sm font-extrabold text-slate-900">
+                      {pricing.finalPrice.toLocaleString("vi-VN")} đ
+                    </div>
+                    {pricing.hasDiscount ? (
+                      <div className="text-[11px] text-slate-400 line-through">
+                        {pricing.basePrice.toLocaleString("vi-VN")} đ
+                      </div>
+                    ) : null}
+                  </div>
+                </Link>
+
                 <button
                   type="button"
-                  disabled={pendingWishlistIds.includes(product._id)}
-                  className={wishlistIds.includes(product._id)
-                    ? "rounded-[14px] border border-[#fca5a5] bg-[#fee2e2] text-[#b91c1c] px-3 py-2.5 text-sm font-bold cursor-pointer transition-all duration-150 hover:-translate-y-px hover:shadow-xs disabled:cursor-not-allowed disabled:opacity-70"
-                    : "rounded-[14px] border border-[#fdba74] bg-[#fff7ed] text-[#c2410c] px-3 py-2.5 text-sm font-bold cursor-pointer transition-all duration-150 hover:-translate-y-px hover:shadow-xs hover:bg-[#ffedd5] disabled:cursor-not-allowed disabled:opacity-70"
-                  }
-                  onClick={() => handleToggleWishlist(product._id, product.name)}
-                >
-                  {pendingWishlistIds.includes(product._id)
-                    ? "Đang xử lý..."
-                    : wishlistIds.includes(product._id)
-                    ? "Đã yêu thích"
-                    : "Thêm yêu thích"}
-                </button>
-                <button
-                  type="button"
-                  className={outOfStock
-                    ? "rounded-[14px] border border-[#fca5a5] bg-[#fee2e2] text-[#b91c1c] px-3 py-2.5 text-sm font-bold cursor-not-allowed opacity-100"
-                    : "rounded-[14px] border border-[#0f766e] bg-gradient-to-br from-[#0f766e] to-[#115e59] text-white px-3 py-2.5 text-sm font-bold cursor-pointer transition-all duration-150 hover:-translate-y-px hover:shadow-xs hover:from-[#159287] hover:to-[#0f766e] disabled:cursor-not-allowed disabled:opacity-70"
-                  }
                   disabled={outOfStock}
                   onClick={() => handleAddToCart(product)}
+                  className={`mt-3 w-full py-2 px-3 rounded-xl text-xs font-bold border cursor-pointer transition-all ${
+                    outOfStock
+                      ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                      : "bg-teal-700 hover:bg-teal-800 border-teal-700 text-white shadow-xs active:scale-[0.98]"
+                  }`}
                 >
                   {outOfStock ? "Hết hàng" : "Thêm vào giỏ"}
                 </button>
-              </div>
-            </article>
+              </article>
             );
           })}
         </div>
       </section>
-
     </main>
   );
 }

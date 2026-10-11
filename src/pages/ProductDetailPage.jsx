@@ -219,8 +219,8 @@ function ProductDetailPage() {
   }
 
   return (
-    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
-      <div className="bg-gradient-to-b from-[#f8fafc] to-[#f3f7fb] rounded-shop-lg p-[30px] max-[720px]:p-[18px] max-[720px]:rounded-[20px]">
+    <main className="w-[min(1140px,92%)] mx-auto flex-1 py-7 text-slate-800">
+      <div className="space-y-6">
         <ProductInfo
           product={product}
           isWishlisted={isWishlisted}
@@ -231,8 +231,11 @@ function ProductDetailPage() {
 
         <ProductDescriptionSection description={product.description} />
 
-        <section className="p-[22px] bg-gradient-to-b from-white to-shop-bg border border-shop-line rounded-shop-lg shadow-shop max-[720px]:p-[18px] max-[720px]:rounded-[20px]">
-          <h3 className="m-0 mb-3 text-lg font-extrabold text-shop-ink">Đánh giá sản phẩm</h3>
+        <section className="p-6 sm:p-8 bg-white border border-slate-200/90 rounded-3xl shadow-xs">
+          <h3 className="m-0 mb-4 text-lg font-bold text-slate-900 flex items-center gap-2">
+            <span>💬</span>
+            <span>Đánh giá & Nhận xét từ khách hàng</span>
+          </h3>
 
           <ReviewForm
             productId={id}

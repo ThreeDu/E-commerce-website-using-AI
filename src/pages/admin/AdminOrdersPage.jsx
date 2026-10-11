@@ -319,11 +319,8 @@ function AdminOrdersPage() {
   };
 
   return (
-    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
-      <section
-        className="bg-admin-surface border border-admin-line rounded-3xl shadow-admin p-6 md:p-8 grid gap-4 animate-admin-rise bg-[radial-gradient(circle_at_88%_-8%,rgba(255,111,60,0.12),transparent_36%),radial-gradient(circle_at_-8%_100%,rgba(15,118,110,0.1),transparent_30%),#ffffff]"
-        aria-busy={loading}
-      >
+    <main className="admin-page-container flex flex-col gap-6" aria-busy={loading}>
+      <section className="admin-card p-6 md:p-8 flex flex-col gap-5">
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-2">
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-admin-ink mt-0 mb-1 flex items-center gap-2.5">

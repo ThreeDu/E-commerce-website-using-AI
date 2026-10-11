@@ -13,13 +13,6 @@
   /* ── Font ── */
   --font-sans: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 
-  /* ── Spacing Tokens ── */
-  --spacing-xs: 8px;
-  --spacing-sm: 12px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-
   /* ── Profile Colors (User Dashboard — indigo palette) ── */
   --color-profile-primary: #6366f1;
   --color-profile-primary-light: #818cf8;
@@ -27,33 +20,44 @@
   --color-profile-secondary: #8b5cf6;
   --color-profile-secondary-light: #c4b5fd;
 
-  /* ── Shop Colors (teal/orange palette) ── */
+  /* ── Shop Colors (Modern-Minimal Tech Palette) ── */
   --color-shop-bg: #f8fafc;
   --color-shop-surface: #ffffff;
-  --color-shop-ink: #1d1d1f;
+  --color-shop-surface-alt: #f1f5f9;
+  --color-shop-ink: #0f172a;
+  --color-shop-ink-secondary: #334155;
   --color-shop-muted: #64748b;
-  --color-shop-line: rgba(148, 163, 184, 0.18);
+  --color-shop-line: rgba(15, 23, 42, 0.08);
+  --color-shop-line-strong: rgba(15, 23, 42, 0.16);
   --color-shop-primary: #0f766e;
-  --color-shop-accent: #ff6f3c;
-  --color-shop-accent-soft: #ffe8dc;
-  --color-shop-soft-blue: #eef5ff;
-  --color-shop-soft-orange: #fff1e4;
+  --color-shop-primary-hover: #115e59;
+  --color-shop-tech: #0284c7;
+  --color-shop-accent: #f97316;
+  --color-shop-accent-soft: #fff7ed;
+  --color-shop-soft-blue: #f0f7ff;
+  --color-shop-soft-orange: #fff7ed;
   --color-shop-success: #166534;
 
-  /* ── Admin Colors (dark navy/teal) ── */
-  --color-admin-bg: #f8f9fa;
+  /* ── Admin Colors (Enterprise Slate & Modern Blue) ── */
+  --color-admin-bg: #f8fafc;
   --color-admin-surface: #ffffff;
-  --color-admin-ink: #1d1d1f;
-  --color-admin-muted: #6c7d90;
-  --color-admin-line: rgba(0, 0, 0, 0.1);
-  --color-admin-primary: #0f766e;
-  --color-admin-accent: #ff6f3c;
-  --color-admin-accent-soft: #ffe8dc;
-  --color-admin-soft-blue: #eef5ff;
-  --color-admin-soft-orange: #fff1e4;
-  --color-admin-success: #166534;
-  --color-admin-sidebar-start: #0b1f33;
-  --color-admin-sidebar-end: #0f314f;
+  --color-admin-surface-alt: #f1f5f9;
+  --color-admin-ink: #0f172a;
+  --color-admin-body: #334155;
+  --color-admin-muted: #64748b;
+  --color-admin-line: #e2e8f0;
+  --color-admin-line-subtle: #f1f5f9;
+  --color-admin-line-strong: #cbd5e1;
+  --color-admin-primary: #2563eb;
+  --color-admin-primary-hover: #1d4ed8;
+  --color-admin-primary-soft: #eff6ff;
+  --color-admin-accent: #0ea5e9;
+  --color-admin-accent-soft: #f0f9ff;
+  --color-admin-success: #10b981;
+  --color-admin-warning: #f59e0b;
+  --color-admin-danger: #ef4444;
+  --color-admin-sidebar-start: #0f172a;
+  --color-admin-sidebar-end: #1e293b;
 
   /* ── Auth Colors (orange palette) ── */
   --color-auth-primary: #eb5b00;
@@ -322,13 +326,15 @@
     box-sizing: border-box;
   }
 
+  html,
   body {
     margin: 0;
     font-family: var(--font-sans);
-    background: #f8f9fa;
-    color: #0f2233;
+    background: #f8fafc;
+    color: #0f172a;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
   }
 
   /* Global hover effects for pointer devices */
@@ -346,36 +352,7 @@
    ============================================================ */
 
 @layer components {
-  /* ── Admin sidebar curved corners (pseudo-element trick) ── */
-  .admin-sidebar-link {
-    position: relative;
-  }
 
-  .admin-sidebar-link:hover::before,
-  .admin-sidebar-link.active::before {
-    content: "";
-    position: absolute;
-    right: 0;
-    top: -36px;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    box-shadow: 22px 22px 0 8px #ffffff;
-    pointer-events: none;
-  }
-
-  .admin-sidebar-link:hover::after,
-  .admin-sidebar-link.active::after {
-    content: "";
-    position: absolute;
-    right: 0;
-    bottom: -36px;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    box-shadow: 22px -22px 0 8px #ffffff;
-    pointer-events: none;
-  }
 
   /* ── Toast progress bar ── */
   .toast-progress-bar {
@@ -516,69 +493,98 @@
     color: #0f766e;
   }
 
-  /* ── Admin sidebar layout offset (Modern Glass Sidebar) ── */
-  .admin-sidebar-active .min-h-screen {
-    margin-left: 80px;
-    transition: margin-left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  /* ── Admin layout offsets ── */
+  .admin-sidebar-active {
+    background: #f8fafc;
   }
 
-  @media (max-width: 960px) {
-    .admin-sidebar-active .min-h-screen {
+  .admin-sidebar-active .min-h-screen {
+    margin-left: 260px;
+    transition: margin-left 0.25s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .admin-sidebar-active.admin-sidebar-collapsed .min-h-screen {
+    margin-left: 76px;
+  }
+
+  @media (max-width: 1023px) {
+    .admin-sidebar-active .min-h-screen,
+    .admin-sidebar-active.admin-sidebar-collapsed .min-h-screen {
       margin-left: 0;
     }
   }
 
-  /* ── Modern Glass Sidebar Custom Styles ── */
+  /* ── Admin Sidebar Tooltip (When collapsed on desktop) ── */
   .admin-sidebar-nav-item {
     position: relative;
   }
 
-  .admin-sidebar-nav-item::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    left: 85px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: #ffffff;
-    color: #121212;
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
-    white-space: nowrap;
-    z-index: 1200;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-  }
-
-  @media (min-width: 961px) {
-    .admin-sidebar-glass:not(:hover) .admin-sidebar-nav-item:hover::after {
+  @media (min-width: 1024px) {
+    .admin-sidebar-collapsed .admin-sidebar-nav-item:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: calc(100% + 12px);
+      top: 50%;
+      transform: translateY(-50%);
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+      z-index: 1200;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      pointer-events: none;
       opacity: 1;
-      transition-delay: 0.15s;
+      animation: fade-in 0.15s ease-out;
     }
   }
 
-  /* ── Admin theme surface styles ── */
-  .admin-sidebar-active {
-    background: #f8f9fa;
+  /* ── Admin shared container and card utilities ── */
+  .admin-page-container {
+    width: 100%;
+    max-width: 84rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1.5rem 1rem 3rem 1rem;
   }
 
-  /* ── Admin form surface gradient ── */
-  .admin-form-surface {
-    background:
-      radial-gradient(circle at 88% -8%, rgba(255, 111, 60, 0.12), transparent 36%),
-      radial-gradient(circle at -8% 100%, rgba(15, 118, 110, 0.1), transparent 30%),
-      #ffffff;
-    animation: admin-rise 0.35s ease-out both;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .admin-form-surface {
-      animation: none;
+  @media (min-width: 640px) {
+    .admin-page-container {
+      padding: 2rem 1.75rem 3.5rem 1.75rem;
     }
+  }
+
+  .admin-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1.25rem;
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  }
+
+  /* ── Universal Admin Page Shell Overrides ── */
+  .admin-sidebar-active main.w-\[min\(1100px\,92\%\)\],
+  .admin-sidebar-active main.max-w-\[1100px\] {
+    width: 100% !important;
+    max-width: 84rem !important;
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+  }
+
+  @media (min-width: 640px) {
+    .admin-sidebar-active main.w-\[min\(1100px\,92\%\)\],
+    .admin-sidebar-active main.max-w-\[1100px\] {
+      padding-left: 1.75rem !important;
+      padding-right: 1.75rem !important;
+    }
+  }
+
+  .admin-sidebar-active section.bg-admin-surface {
+    background: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04) !important;
   }
 }
 

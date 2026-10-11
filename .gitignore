@@ -7,6 +7,7 @@
 /build
 /dist
 /coverage
+.eslintcache
 /src/tailwind-built.css
 
 # ─── Environment Variables & Secrets ───
@@ -16,9 +17,12 @@
 .env.test.local
 .env.production.local
 .env.*.local
+*.pem
+*.key
 
 # ─── Python / ML Service ───
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -32,6 +36,13 @@ venv.bak/
 .pytest_cache/
 .coverage
 htmlcov/
+*.ipynb_checkpoints
+
+# ─── AI Agents & Tooling Cache ───
+.agents/
+.hallmark/
+.gemini/
+.antigravity/
 
 # ─── Generated Reports & Dynamic Uploads ───
 /public/reports/*
@@ -53,5 +64,6 @@ Thumbs.db:encryptable
 ehthumbs.db
 Desktop.ini
 .idea/
+.vscode/
 *.sublime-workspace
 *.sublime-project
