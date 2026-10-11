@@ -130,21 +130,44 @@ function UserHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-[1000] bg-bg-secondary text-text-primary border-b border-border-subtle">
-      <div className="w-[min(1100px,92%)] mx-auto min-h-[82px] flex items-center gap-4 justify-between py-3.5 flex-nowrap max-[720px]:grid max-[720px]:grid-cols-1 max-[720px]:gap-2.5">
-        <Link to="/" className="no-underline" aria-label="Trang chủ Tech Shop">
-          <h1 className="m-0 text-[1.45rem] tracking-[0.02em] text-text-primary font-extrabold">Tech Shop</h1>
-        </Link>
+    <header className="sticky top-0 z-[1000] bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.03)] transition-all">
+      <div className="w-[min(1140px,92%)] mx-auto min-h-[72px] flex items-center gap-5 justify-between py-3 flex-nowrap max-[880px]:grid max-[880px]:grid-cols-1 max-[880px]:gap-3 max-[880px]:py-3">
+        {/* Brand Logo & Main Nav */}
+        <div className="flex items-center gap-7">
+          <Link to="/" className="no-underline flex items-center gap-2 shrink-0" aria-label="Trang chủ Tech Shop">
+            <span className="w-8 h-8 rounded-xl bg-teal-700 text-white flex items-center justify-center font-black text-sm shadow-sm">
+              T
+            </span>
+            <span className="text-[1.3rem] tracking-tight text-slate-900 font-black">
+              TechShop<span className="text-teal-600 font-black">.ai</span>
+            </span>
+          </Link>
 
-        <nav className="flex gap-2 items-center min-w-0 max-[720px]:flex-wrap max-[720px]:w-full" aria-label="Điều hướng chính">
-          <Link to="/" className="text-text-primary no-underline bg-white border border-border-subtle rounded-full py-2 px-3.5 text-[13px] font-bold transition-all duration-150 hover:-translate-y-px hover:bg-[#e8f5f4]">Trang chủ</Link>
-          <Link to="/products" className="text-text-primary no-underline bg-white border border-border-subtle rounded-full py-2 px-3.5 text-[13px] font-bold transition-all duration-150 hover:-translate-y-px hover:bg-[#e8f5f4]">Sản phẩm</Link>
-          <Link to="/about" className="text-text-primary no-underline bg-white border border-border-subtle rounded-full py-2 px-3.5 text-[13px] font-bold transition-all duration-150 hover:-translate-y-px hover:bg-[#e8f5f4]">Giới thiệu</Link>
-          <Link to="/contract" className="text-text-primary no-underline bg-white border border-border-subtle rounded-full py-2 px-3.5 text-[13px] font-bold transition-all duration-150 hover:-translate-y-px hover:bg-[#e8f5f4]">Liên hệ</Link>
-        </nav>
+          <nav className="flex gap-1.5 items-center max-[880px]:flex-wrap" aria-label="Điều hướng chính">
+            <Link to="/" className="text-slate-600 hover:text-slate-950 px-3 py-1.5 rounded-lg text-sm font-semibold no-underline transition-colors hover:bg-slate-100/70">
+              Trang chủ
+            </Link>
+            <Link to="/products" className="text-slate-600 hover:text-slate-950 px-3 py-1.5 rounded-lg text-sm font-semibold no-underline transition-colors hover:bg-slate-100/70">
+              Sản phẩm
+            </Link>
+            <Link to="/about" className="text-slate-600 hover:text-slate-950 px-3 py-1.5 rounded-lg text-sm font-semibold no-underline transition-colors hover:bg-slate-100/70">
+              Giới thiệu
+            </Link>
+            <Link to="/contract" className="text-slate-600 hover:text-slate-950 px-3 py-1.5 rounded-lg text-sm font-semibold no-underline transition-colors hover:bg-slate-100/70">
+              Liên hệ
+            </Link>
+          </nav>
+        </div>
 
-        <div className="relative flex-1 flex items-center min-w-[220px] max-w-[460px] max-[720px]:w-full max-[720px]:max-w-none" ref={searchWrapRef}>
-          <form className="flex-1 grid grid-cols-[1fr_auto] items-center min-w-[220px] max-w-[460px] border border-border-subtle rounded-full overflow-hidden bg-white max-[720px]:w-full max-[720px]:max-w-none" onSubmit={handleSearchSubmit}>
+        {/* Search Bar */}
+        <div className="relative flex-1 flex items-center min-w-[200px] max-w-[420px] max-[880px]:w-full max-[880px]:max-w-none" ref={searchWrapRef}>
+          <form className="w-full flex items-center border border-slate-200 rounded-full overflow-hidden bg-slate-50/80 transition-all focus-within:border-teal-600 focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(15,118,110,0.12)]" onSubmit={handleSearchSubmit}>
+            <div className="pl-3.5 pr-1.5 text-slate-400 flex items-center">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </div>
             <input
               type="search"
               value={searchKeyword}
@@ -153,38 +176,40 @@ function UserHeader() {
                 setIsSuggestOpen(true);
               }}
               onFocus={() => setIsSuggestOpen(true)}
-              placeholder="Tìm kiếm sản phẩm"
+              placeholder="Tìm iPhone, Laptop, linh kiện..."
               aria-label="Tìm kiếm sản phẩm"
-              className="border-none bg-transparent py-[11px] px-3.5 text-sm text-text-primary focus:outline-none"
+              className="w-full border-none bg-transparent py-2 px-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
             />
-            <button type="submit" className="border-none border-l border-l-border-subtle bg-[#eaf5ff] text-text-primary py-[11px] px-[15px] text-[13px] font-extrabold cursor-pointer">Tìm</button>
+            <button type="submit" className="border-none bg-teal-700 hover:bg-teal-800 text-white py-1.5 px-3.5 m-1 rounded-full text-xs font-bold cursor-pointer transition-colors shadow-xs">
+              Tìm
+            </button>
           </form>
 
           {isSuggestOpen && searchKeyword.trim() ? (
-            <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white border border-border-subtle rounded-2xl shadow-[0_18px_35px_rgba(0,0,0,0.08)] p-1.5 z-[1100]" role="listbox">
+            <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white border border-slate-200 rounded-2xl shadow-[0_18px_35px_rgba(15,23,42,0.1)] p-1.5 z-[1100]" role="listbox">
               {productSuggestions.length === 0 ? (
-                <div className="py-2.5 px-3 text-xs text-[#64748b]">Không tìm thấy sản phẩm phù hợp.</div>
+                <div className="py-2.5 px-3 text-xs text-slate-500">Không tìm thấy sản phẩm phù hợp.</div>
               ) : (
                 productSuggestions.map((product) => (
                   <button
                     key={product._id}
                     type="button"
-                    className="w-full flex items-center justify-between gap-3 border-none bg-transparent py-2.5 px-3 rounded-xl text-left cursor-pointer font-sans text-text-primary hover:bg-[#eef5ff]"
+                    className="w-full flex items-center justify-between gap-3 border-none bg-transparent py-2 px-2.5 rounded-xl text-left cursor-pointer font-sans text-slate-800 hover:bg-slate-50 transition-colors"
                     onClick={() => handleSuggestionClick(product._id)}
                   >
                     <span className="inline-flex items-center gap-2.5 min-w-0">
                       <img
                         src={getProductImageSrc(product)}
                         alt={product.name}
-                        className="w-9 h-9 rounded-[10px] object-cover border border-[rgba(0,0,0,0.08)] bg-[#f1f5f9] shrink-0"
+                        className="w-9 h-9 rounded-lg object-cover border border-slate-200 bg-slate-100 shrink-0"
                         onError={(event) => {
                           event.currentTarget.onerror = null;
                           event.currentTarget.src = "/placeholder.svg";
                         }}
                       />
-                      <span className="text-[13px] font-bold whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">{product.name}</span>
+                      <span className="text-xs font-bold text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">{product.name}</span>
                     </span>
-                    <span className="text-xs font-bold text-shop-primary whitespace-nowrap">
+                    <span className="text-xs font-bold text-teal-700 whitespace-nowrap">
                       {Number(product.finalPrice || product.price || 0).toLocaleString("vi-VN")} đ
                     </span>
                   </button>
@@ -194,25 +219,32 @@ function UserHeader() {
           ) : null}
         </div>
 
-        <div className="flex items-center gap-2 max-[720px]:w-full max-[720px]:justify-start max-[720px]:flex-wrap">
+        {/* User Actions (Cart, Notifications, Account) */}
+        <div className="flex items-center gap-2.5 max-[880px]:w-full max-[880px]:justify-end">
           {isAuthenticated ? (
             <>
-              <Link to="/cart" className="relative inline-flex items-center gap-1.5 border border-border-subtle rounded-[20px] bg-white text-text-primary py-2 px-3 no-underline text-[13px] font-bold transition-all duration-150 hover:-translate-y-px hover:shadow-[0_8px_18px_rgba(15,23,42,0.16)]" aria-label="Giỏ hàng">
+              <Link to="/cart" className="relative inline-flex items-center gap-2 border border-slate-200/80 rounded-full bg-white hover:bg-slate-50 text-slate-700 py-1.5 px-3.5 no-underline text-xs font-bold transition-all shadow-xs" aria-label="Giỏ hàng">
                 <IconCart />
-                <span>Giỏ hàng</span>
-                {totalItems > 0 ? <span className="min-w-5 h-5 px-1.5 rounded-full inline-flex items-center justify-center bg-shop-accent-soft text-[#9a3412] text-[11px] font-extrabold border border-border-subtle">{totalItems}</span> : null}
+                <span className="hidden sm:inline">Giỏ hàng</span>
+                {totalItems > 0 ? (
+                  <span className="min-w-5 h-5 px-1.5 rounded-full inline-flex items-center justify-center bg-teal-700 text-white text-[10px] font-black">
+                    {totalItems}
+                  </span>
+                ) : null}
               </Link>
               <NotificationBell />
             </>
           ) : null}
 
           {!auth ? (
-            <Link to="/login" className="inline-flex items-center justify-center rounded-[20px] border border-border-subtle bg-white text-text-primary no-underline py-2 px-3.5 text-[13px] font-extrabold transition-all duration-150 hover:-translate-y-px hover:shadow-[0_8px_18px_rgba(15,23,42,0.16)]">Đăng nhập</Link>
+            <Link to="/login" className="inline-flex items-center justify-center rounded-full bg-teal-700 hover:bg-teal-800 text-white no-underline py-2 px-4.5 text-xs font-bold transition-all shadow-xs">
+              Đăng nhập
+            </Link>
           ) : (
             <div className="relative" ref={accountMenuRef}>
               <button
                 type="button"
-                className="inline-flex items-center gap-2 text-text-primary bg-white border border-border-subtle rounded-[20px] py-2 px-3 cursor-pointer font-sans text-[13px] font-bold hover:bg-[#e8f5f4] transition-all duration-150"
+                className="inline-flex items-center gap-2 text-slate-700 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-full py-1.5 px-3 cursor-pointer font-sans text-xs font-bold transition-all shadow-xs"
                 aria-expanded={isAccountMenuOpen}
                 aria-haspopup="menu"
                 onClick={() => setIsAccountMenuOpen((prev) => !prev)}
@@ -221,35 +253,33 @@ function UserHeader() {
                   <img
                     src={auth.user.avatar}
                     alt={auth.user.name || "Avatar"}
-                    className="w-[18px] h-[18px] rounded-full object-cover border border-border-subtle block"
+                    className="w-5 h-5 rounded-full object-cover border border-slate-200 block"
                     onError={(e) => {
                       e.currentTarget.onerror = null;
                       e.currentTarget.src = "/placeholder-avatar.svg";
                     }}
                   />
                 ) : (
-                  <span className="relative w-[18px] h-[18px] inline-flex items-center justify-center" aria-hidden="true">
-                    <span className="absolute rounded-full w-4 h-4 border border-border-subtle bg-[#ffd9cb] -translate-x-0.5 -translate-y-px" />
-                    <span className="absolute rounded-full w-4 h-4 border border-border-subtle bg-[#dff5f2] translate-x-px translate-y-px" />
-                    <span className="absolute rounded-full w-4 h-4 border border-border-subtle bg-white inline-flex items-center justify-center text-text-primary text-[10px] font-extrabold">{String(auth?.user?.name || "T").slice(0, 1).toUpperCase()}</span>
+                  <span className="w-5 h-5 rounded-full bg-teal-100 text-teal-800 inline-flex items-center justify-center text-[11px] font-bold">
+                    {String(auth?.user?.name || "T").slice(0, 1).toUpperCase()}
                   </span>
                 )}
-                <span className="font-bold text-text-primary">Tài khoản</span>
-                <span className={`transition-transform duration-[220ms] text-text-primary ${isAccountMenuOpen ? "rotate-180" : ""}`}>▾</span>
+                <span className="font-semibold text-slate-800 max-w-[100px] truncate">{auth?.user?.name || "Tài khoản"}</span>
+                <span className={`text-[10px] text-slate-400 transition-transform duration-200 ${isAccountMenuOpen ? "rotate-180" : ""}`}>▾</span>
               </button>
 
-              <div className={`absolute top-[calc(100%+6px)] right-0 min-w-[220px] bg-white border border-border-subtle rounded-[20px] shadow-admin p-1.5 z-[1200] transition-all duration-[220ms] ease-in-out max-[720px]:right-auto max-[720px]:left-0 max-[720px]:min-w-[200px] ${isAccountMenuOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-2 pointer-events-none"}`} role="menu">
-                <Link to="/profile" className="w-full flex items-center gap-2 no-underline text-gray-800 border-none bg-transparent py-2 px-2.5 rounded-lg cursor-pointer text-left text-[13px] font-semibold leading-[1.35] font-sans hover:bg-[#eef6ff]" role="menuitem">
-                  <span className="inline-flex items-center justify-center [&_svg]:w-3.5 [&_svg]:h-3.5"><IconProfile /></span>
-                  <span>Hồ sơ của tôi</span>
+              <div className={`absolute top-[calc(100%+6px)] right-0 min-w-[210px] bg-white border border-slate-200 rounded-2xl shadow-[0_12px_32px_rgba(15,23,42,0.12)] p-1.5 z-[1200] transition-all duration-200 ease-in-out ${isAccountMenuOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-2 pointer-events-none"}`} role="menu">
+                <Link to="/profile" className="w-full flex items-center gap-2.5 no-underline text-slate-700 hover:text-slate-900 border-none bg-transparent py-2 px-3 rounded-xl cursor-pointer text-xs font-semibold hover:bg-slate-50 transition-colors" role="menuitem">
+                  <span className="text-slate-400"><IconProfile /></span>
+                  <span>Hồ sơ cá nhân</span>
                 </Link>
-                <Link to="/order-history" className="w-full flex items-center gap-2 no-underline text-gray-800 border-none bg-transparent py-2 px-2.5 rounded-lg cursor-pointer text-left text-[13px] font-semibold leading-[1.35] font-sans hover:bg-[#eef6ff]" role="menuitem">
-                  <span className="inline-flex items-center justify-center [&_svg]:w-3.5 [&_svg]:h-3.5"><IconOrder /></span>
-                  <span>Đơn hàng của tôi</span>
+                <Link to="/order-history" className="w-full flex items-center gap-2.5 no-underline text-slate-700 hover:text-slate-900 border-none bg-transparent py-2 px-3 rounded-xl cursor-pointer text-xs font-semibold hover:bg-slate-50 transition-colors" role="menuitem">
+                  <span className="text-slate-400"><IconOrder /></span>
+                  <span>Lịch sử đơn hàng</span>
                 </Link>
-                <div className="h-px mx-1 my-[5px] bg-[#d5e0ec]" aria-hidden="true" />
-                <button type="button" className="w-full flex items-center gap-2 no-underline text-red-700 border-none bg-transparent py-2 px-2.5 rounded-lg cursor-pointer text-left text-[13px] font-semibold leading-[1.35] font-sans hover:bg-[#eef6ff]" role="menuitem" onClick={logout}>
-                  <span className="inline-flex items-center justify-center [&_svg]:w-3.5 [&_svg]:h-3.5"><IconLogout /></span>
+                <div className="h-px mx-1.5 my-1 bg-slate-100" aria-hidden="true" />
+                <button type="button" className="w-full flex items-center gap-2.5 no-underline text-rose-600 hover:text-rose-700 border-none bg-transparent py-2 px-3 rounded-xl cursor-pointer text-xs font-semibold hover:bg-rose-50 transition-colors" role="menuitem" onClick={logout}>
+                  <span className="text-rose-500"><IconLogout /></span>
                   <span>Đăng xuất</span>
                 </button>
               </div>

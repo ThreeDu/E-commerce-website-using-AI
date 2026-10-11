@@ -18,33 +18,34 @@ import {
   faCartPlus,
   faCircleXmark,
   faClock,
+  faArrowTrendUp,
+  faBoxesStacked,
+  faCircleInfo,
 } from "@fortawesome/free-solid-svg-icons";
+
 const AUTO_REFRESH_MS = 30000;
 
 const quickActions = [
-  { label: "Trung tâm thông báo", to: "/admin/notifications", icon: faBell },
-  { label: "Quản lý đơn hàng", to: "/admin/orders", icon: faReceipt },
-  { label: "Thêm sản phẩm", to: "/admin/products/add", icon: faPlusCircle },
-  { label: "Thêm mã giảm giá", to: "/admin/discounts/add", icon: faTag },
+  { label: "Trung tâm thông báo", to: "/admin/notifications", icon: faBell, color: "text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-200" },
+  { label: "Quản lý đơn hàng", to: "/admin/orders", icon: faReceipt, color: "text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border-indigo-200" },
+  { label: "Thêm sản phẩm mới", to: "/admin/products/add", icon: faPlusCircle, color: "text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border-emerald-200" },
+  { label: "Tạo mã giảm giá", to: "/admin/discounts/add", icon: faTag, color: "text-amber-600 bg-amber-50 hover:bg-amber-100 border-amber-200" },
 ];
 
 const PIE_COLORS = [
-  "#0f766e",
-  "#0f314f",
-  "#ff6f3c",
-  "#1d4ed8",
-  "#b45309",
-  "#0891b2",
-  "#7c3aed",
-  "#b91c1c",
-  "#6b7280",
+  "#2563eb", // blue-600
+  "#0ea5e9", // sky-500
+  "#10b981", // emerald-500
+  "#f59e0b", // amber-500
+  "#8b5cf6", // violet-500
+  "#ec4899", // pink-500
+  "#06b6d4", // cyan-500
+  "#f97316", // orange-500
+  "#64748b", // slate-500
 ];
 
 function formatDateTime(value) {
-  if (!value) {
-    return "-";
-  }
-
+  if (!value) return "-";
   return new Date(value).toLocaleString("vi-VN");
 }
 
@@ -64,31 +65,16 @@ function formatPercent(value) {
 }
 
 function formatRelativeTime(value) {
-  if (!value) {
-    return "Không rõ thời gian";
-  }
-
+  if (!value) return "Không rõ thời gian";
   const now = Date.now();
   const target = new Date(value).getTime();
-
-  if (Number.isNaN(target)) {
-    return "Không rõ thời gian";
-  }
+  if (Number.isNaN(target)) return "Không rõ thời gian";
 
   const diffMinutes = Math.max(0, Math.floor((now - target) / 60000));
-  if (diffMinutes < 1) {
-    return "Vừa xong";
-  }
-
-  if (diffMinutes < 60) {
-    return `${diffMinutes} phút trước`;
-  }
-
+  if (diffMinutes < 1) return "Vừa xong";
+  if (diffMinutes < 60) return `${diffMinutes} phút trước`;
   const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) {
-    return `${diffHours} giờ trước`;
-  }
-
+  if (diffHours < 24) return `${diffHours} giờ trước`;
   const diffDays = Math.floor(diffHours / 24);
   return `${diffDays} ngày trước`;
 }
@@ -113,9 +99,7 @@ function AdminDashboard() {
 
   const loadDashboard = useCallback(
     async ({ silent = false } = {}) => {
-      if (!auth?.token) {
-        return;
-      }
+      if (!auth?.token) return;
 
       if (!silent) {
         setLoading(true);
@@ -151,14 +135,10 @@ function AdminDashboard() {
   }, [loadDashboard]);
 
   useEffect(() => {
-    if (!auth?.token) {
-      return undefined;
-    }
-
+    if (!auth?.token) return undefined;
     const timerId = setInterval(() => {
       loadDashboard({ silent: true });
     }, AUTO_REFRESH_MS);
-
     return () => clearInterval(timerId);
   }, [auth?.token, loadDashboard]);
 
@@ -172,16 +152,11 @@ function AdminDashboard() {
     if (Array.isArray(revenueFilter.availableYears) && revenueFilter.availableYears.length > 0) {
       return revenueFilter.availableYears;
     }
-
     return [currentDate.getFullYear()];
   }, [revenueFilter, currentDate]);
 
   const yearOptions = useMemo(() => {
-    const merged = new Set([
-      ...availableYears,
-      Number(selectedYear),
-    ]);
-
+    const merged = new Set([...availableYears, Number(selectedYear)]);
     return Array.from(merged)
       .filter((value) => Number.isInteger(value) && value >= 2000)
       .sort((a, b) => b - a);
@@ -222,7 +197,7 @@ function AdminDashboard() {
 
   const pieBackground = useMemo(() => {
     if (pieSlices.length === 0) {
-      return "conic-gradient(#dbe7f6 0 100%)";
+      return "conic-gradient(#e2e8f0 0 100%)";
     }
 
     return `conic-gradient(${pieSlices
@@ -235,30 +210,38 @@ function AdminDashboard() {
       {
         label: "Đơn hàng mới",
         value: Number(summary.newOrders || 0),
-        trend: `Trong ${Number(config.recentWindowHours || 24)} giờ gần nhất`,
-        tone: "info",
+        trend: `Trong ${Number(config.recentWindowHours || 24)}h gần nhất`,
         icon: faCartPlus,
+        colorClass: "bg-blue-50 text-blue-600 border-blue-100",
+        badgeClass: "bg-blue-100 text-blue-700",
+        accent: "text-blue-600",
       },
       {
         label: "Đơn bị hủy",
         value: Number(summary.cancelledOrders || 0),
-        trend: "Cần kiểm tra nguyên nhân",
-        tone: "danger",
+        trend: "Cần kiểm tra lý do",
         icon: faCircleXmark,
+        colorClass: "bg-rose-50 text-rose-600 border-rose-100",
+        badgeClass: "bg-rose-100 text-rose-700",
+        accent: "text-rose-600",
       },
       {
         label: "Sản phẩm sắp hết",
         value: Number(summary.lowStockProducts || 0),
-        trend: `Ngưỡng cảnh báo <= ${Number(config.lowStockThreshold || 5)} sản phẩm`,
-        tone: "warning",
+        trend: `Ngưỡng báo <= ${Number(config.lowStockThreshold || 5)} sản phẩm`,
         icon: faTriangleExclamation,
+        colorClass: "bg-amber-50 text-amber-600 border-amber-100",
+        badgeClass: "bg-amber-100 text-amber-700",
+        accent: "text-amber-600",
       },
       {
         label: "Sản phẩm hết hàng",
         value: Number(summary.outOfStockProducts || 0),
-        trend: "Ưu tiên bổ sung kho",
-        tone: "danger",
+        trend: "Ưu tiên nhập kho bổ sung",
         icon: faBoxArchive,
+        colorClass: "bg-red-50 text-red-600 border-red-100",
+        badgeClass: "bg-red-100 text-red-700",
+        accent: "text-red-600",
       },
     ],
     [summary, config]
@@ -271,7 +254,7 @@ function AdminDashboard() {
       nextAlerts.push({
         key: "new-orders",
         title: `${summary.newOrders} đơn hàng mới`,
-        description: "Đơn mới phát sinh gần đây, ưu tiên xác nhận và xử lý sớm.",
+        description: "Đơn mới phát sinh gần đây, cần xử lý và chuyển giao sớm.",
         level: "info",
         to: "/admin/orders",
       });
@@ -281,7 +264,7 @@ function AdminDashboard() {
       nextAlerts.push({
         key: "cancelled-orders",
         title: `${summary.cancelledOrders} đơn hàng bị hủy`,
-        description: "Kiểm tra lý do hủy để giảm tỉ lệ thất thoát đơn hàng.",
+        description: "Kiểm tra lý do khách hủy để giảm tỷ lệ tổn thất doanh số.",
         level: "danger",
         to: "/admin/orders?status=cancelled",
       });
@@ -291,7 +274,7 @@ function AdminDashboard() {
       nextAlerts.push({
         key: "out-of-stock",
         title: `${summary.outOfStockProducts} sản phẩm đã hết hàng`,
-        description: "Một số sản phẩm không thể bán tiếp. Cần nhập kho hoặc ẩn bán.",
+        description: "Sản phẩm không thể bán tiếp. Cần nhập hàng hoặc cập nhật trạng thái.",
         level: "danger",
         to: "/admin/notifications",
       });
@@ -301,7 +284,7 @@ function AdminDashboard() {
       nextAlerts.push({
         key: "low-stock",
         title: `${summary.lowStockProducts} sản phẩm sắp hết hàng`,
-        description: "Nên lên kế hoạch bổ sung kho để tránh đứt gãy nguồn cung.",
+        description: "Cần lên lịch nhập hàng bổ sung để tránh đứt gãy nguồn cung.",
         level: "warning",
         to: "/admin/notifications",
       });
@@ -310,8 +293,8 @@ function AdminDashboard() {
     if (Number(summary.exhaustedDiscounts || 0) > 0) {
       nextAlerts.push({
         key: "discount-exhausted",
-        title: `${summary.exhaustedDiscounts} mã giảm giá đã hết hiệu lực`,
-        description: "Mã giảm giá đã hết lượt hoặc hết hạn. Cần thay chiến dịch mới.",
+        title: `${summary.exhaustedDiscounts} mã giảm giá hết lượt/hạn`,
+        description: "Mã giảm giá đã cạn ngân sách hoặc quá hạn sử dụng.",
         level: "danger",
         to: "/admin/discounts",
       });
@@ -320,8 +303,8 @@ function AdminDashboard() {
     if (Number(summary.nearLimitDiscounts || 0) > 0) {
       nextAlerts.push({
         key: "discount-near-limit",
-        title: `${summary.nearLimitDiscounts} mã giảm giá sắp hết`,
-        description: "Chuẩn bị mã thay thế để không gián đoạn chuyển đổi bán hàng.",
+        title: `${summary.nearLimitDiscounts} mã giảm giá sắp chạm hạn`,
+        description: "Chuẩn bị mã thay thế để không gián đoạn chuyển đổi mua hàng.",
         level: "warning",
         to: "/admin/discounts",
       });
@@ -331,29 +314,15 @@ function AdminDashboard() {
       nextAlerts.push({
         key: "all-good",
         title: "Hệ thống đang ổn định",
-        description: "Chưa phát hiện cảnh báo ưu tiên cao trong chu kỳ theo dõi hiện tại.",
+        description: "Chưa ghi nhận cảnh báo ưu tiên cao trong chu kỳ theo dõi hiện tại.",
         level: "info",
         to: "/admin/notifications",
       });
     }
 
-    const levelPriority = {
-      danger: 0,
-      warning: 1,
-      info: 2,
-    };
-
+    const levelPriority = { danger: 0, warning: 1, info: 2 };
     return nextAlerts
-      .sort((a, b) => {
-        const levelDiff = (levelPriority[a.level] ?? 99) - (levelPriority[b.level] ?? 99);
-        if (levelDiff !== 0) {
-          return levelDiff;
-        }
-
-        const titleA = String(a.title || "");
-        const titleB = String(b.title || "");
-        return titleA.localeCompare(titleB, "vi");
-      })
+      .sort((a, b) => (levelPriority[a.level] ?? 99) - (levelPriority[b.level] ?? 99))
       .slice(0, 3);
   }, [summary]);
 
@@ -366,286 +335,477 @@ function AdminDashboard() {
         action: `Đơn hàng mới #${String(item._id).slice(-6)}`,
         actor: item.customerName || "Khách hàng",
         time: item.createdAt,
+        type: "order",
       });
     });
 
     (sections.cancelledOrders || []).forEach((item) => {
       activityItems.push({
         key: `cancel-${item._id}`,
-        action: `Đơn hàng hủy #${String(item._id).slice(-6)}`,
+        action: `Đơn hàng bị hủy #${String(item._id).slice(-6)}`,
         actor: item.customerName || "Khách hàng",
         time: item.cancelledAt || item.updatedAt,
+        type: "cancel",
       });
     });
 
     (sections.lowStockProducts || []).forEach((item) => {
       activityItems.push({
         key: `low-${item._id}`,
-        action: `Sản phẩm sắp hết: ${item.name}`,
+        action: `Sắp hết hàng: ${item.name}`,
         actor: `Tồn kho còn ${Number(item.stock || 0)}`,
         time: item.updatedAt,
+        type: "stock",
       });
     });
 
     (sections.outOfStockProducts || []).forEach((item) => {
       activityItems.push({
         key: `out-${item._id}`,
-        action: `Sản phẩm hết hàng: ${item.name}`,
+        action: `Đã hết hàng: ${item.name}`,
         actor: "Cần bổ sung kho",
         time: item.updatedAt,
+        type: "out",
       });
     });
 
     return activityItems
       .sort((a, b) => new Date(b.time || 0).getTime() - new Date(a.time || 0).getTime())
-      .slice(0, 8);
+      .slice(0, 7);
   }, [sections]);
 
   return (
-    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
-      <section
-        className="bg-admin-surface border border-admin-line rounded-3xl shadow-admin p-6 grid gap-4 animate-admin-rise bg-[radial-gradient(circle_at_92%_-10%,rgba(16,55,92,0.15),transparent_38%),radial-gradient(circle_at_0%_100%,rgba(20,109,80,0.09),transparent_30%),#ffffff]"
-        aria-label="Tổng quan quản trị"
-        aria-busy={loading}
-      >
-        <header className="flex flex-col md:flex-row justify-between items-start gap-3">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-admin-ink mt-0 mb-1">Bảng điều khiển Admin</h2>
-            <p className="text-admin-muted mt-2 mb-0 text-sm md:text-base">
-              Xin chào <strong>{auth?.user?.name || "Admin"}</strong>. Dữ liệu bên dưới đang đồng bộ theo thời gian thực để theo dõi vận hành nhanh.
-            </p>
-            <p className="text-xs md:text-sm text-admin-muted mt-2.5">
-              Cập nhật lúc: <strong>{formatDateTime(payload?.generatedAt)}</strong>
-            </p>
-          </div>
-          <div className="grid gap-2 justify-items-start md:justify-items-end">
-            <span className="inline-flex items-center px-2.5 py-1.5 rounded-full border border-[#c8d9ef] text-[#0f3f84] text-xs font-bold bg-[#f0f6ff]">
-              Dữ liệu trực tuyến
+    <main className="admin-page-container flex flex-col gap-6" aria-busy={loading}>
+      {/* ── Dashboard Header ── */}
+      <section className="admin-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-admin-ink tracking-tight m-0">
+              Bảng điều khiển Quản trị
+            </h1>
+            <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+              Live Real-time
             </span>
-            <button
-              type="button"
-              className="inline-flex items-center justify-center min-h-[36px] px-3.5 rounded-xl border border-[#cdd9e8] bg-[#f9fbfe] text-[#3f4f67] text-xs font-bold cursor-pointer transition-all duration-150 hover:-translate-y-px hover:bg-[#eef4fb] hover:shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
-              onClick={() => loadDashboard({ silent: true })}
-              disabled={refreshing}
-            >
-              <FontAwesomeIcon icon={faRotate} spin={refreshing} style={{ marginRight: "6px" }} />
-              {refreshing ? "Đang làm mới..." : "Làm mới"}
-            </button>
           </div>
-        </header>
-
-        {errorMessage ? (
-          <p className="text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl p-3" role="status" aria-live="polite">
-            {errorMessage}
+          <p className="text-sm text-admin-muted m-0">
+            Xin chào <strong className="text-admin-ink">{auth?.user?.name || "Admin"}</strong>. Dữ liệu đang được đồng bộ theo thời gian thực.
           </p>
-        ) : null}
-
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3" aria-label="Chỉ số nhanh">
-          {metrics.map((metric) => (
-            <article
-              key={metric.label}
-              className={`grid gap-1.5 rounded-2xl border border-[#dfebf8] bg-gradient-to-b from-white to-[#f7faff] p-4 transition-all hover:-translate-y-0.5 hover:shadow-md ${
-                metric.tone === "success"
-                  ? "[&>strong]:text-admin-success"
-                  : metric.tone === "info"
-                  ? "[&>strong]:text-blue-700"
-                  : metric.tone === "warning"
-                  ? "[&>strong]:text-amber-700"
-                  : "[&>strong]:text-red-700"
-              }`}
-            >
-              <div className="flex justify-between items-start mb-2">
-                <p className="m-0 text-admin-muted text-xs md:text-sm font-medium">{metric.label}</p>
-                <FontAwesomeIcon icon={metric.icon} className="text-lg opacity-60" />
-              </div>
-              <strong className="text-admin-ink text-xl md:text-2xl font-extrabold leading-none">{metric.value}</strong>
-              <span className="text-admin-muted text-[11px] md:text-xs">{metric.trend}</span>
-            </article>
-          ))}
-        </section>
-
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
-          <article className="rounded-2xl border border-[#e1ebf6] bg-white p-4">
-            <div className="flex justify-between items-center gap-2.5 mb-2.5">
-              <h3 className="m-0 text-base font-bold text-admin-ink">Cảnh báo cần xử lý</h3>
-              <span className="text-admin-muted text-xs">Top {alerts.length} ưu tiên</span>
-            </div>
-            <div className="grid gap-2.5">
-              {alerts.map((alert) => (
-                <div
-                  key={alert.title}
-                  className={`rounded-xl border p-3 ${
-                    alert.level === "danger"
-                      ? "border-[#f2b8b8] bg-[#fff3f3] [&>div>h4]:text-red-800"
-                      : alert.level === "warning"
-                      ? "border-[#f6d5a8] bg-[#fff8eb] [&>div>h4]:text-amber-800"
-                      : "border-[#c6dbf7] bg-[#f3f8ff] [&>div>h4]:text-blue-800"
-                  }`}
-                >
-                  <div className="flex gap-2 items-center mb-1">
-                    <FontAwesomeIcon
-                      icon={alert.level === "danger" ? faCircleXmark : alert.level === "warning" ? faTriangleExclamation : faBell}
-                    />
-                    <h4 className="m-0 text-sm font-semibold">{alert.title}</h4>
-                  </div>
-                  <p className="mt-1.5 mb-0 text-admin-muted text-[13px] leading-relaxed">{alert.description}</p>
-                  <Link to={alert.to} className="mt-2 inline-flex items-center text-xs font-bold text-[#0f3f84] hover:underline">
-                    Xem chi tiết <FontAwesomeIcon icon={faChevronRight} style={{ fontSize: "10px", marginLeft: "4px" }} />
-                  </Link>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <article className="rounded-2xl border border-[#e1ebf6] bg-white p-4">
-            <div className="flex justify-between items-center gap-2.5 mb-2.5">
-              <h3 className="m-0 text-base font-bold text-admin-ink">Hoạt động gần đây</h3>
-              <span className="text-admin-muted text-xs">Top 8 mới nhất</span>
-            </div>
-            <ul className="m-0 p-0 list-none grid gap-2.5">
-              {activities.map((activity) => (
-                <li key={activity.key} className="border border-[#e7edf6] rounded-xl p-2.5">
-                  <p className="m-0 text-[#1f3348] text-[13px] font-semibold">{activity.action}</p>
-                  <div className="mt-1.5 flex justify-between gap-2.5 text-admin-muted text-xs">
-                    <span>{activity.actor}</span>
-                    <span>
-                      <FontAwesomeIcon icon={faClock} style={{ marginRight: "4px", fontSize: "11px", opacity: 0.7 }} />
-                      {formatRelativeTime(activity.time)}
-                    </span>
-                  </div>
-                </li>
-              ))}
-              {activities.length === 0 ? (
-                <li className="text-admin-muted text-[13px] py-4 text-center">Chưa có hoạt động nào để hiển thị.</li>
-              ) : null}
-            </ul>
-          </article>
-        </section>
-
-        <section className="rounded-2xl border border-[#e1ebf6] bg-white p-4 grid gap-3" aria-label="Doanh thu và phân bổ sản phẩm bán ra">
-          <div className="flex justify-between items-center gap-2.5 mb-1.5">
-            <h3 className="m-0 text-base font-bold text-admin-ink">Doanh thu</h3>
-            <span className="text-admin-muted text-xs font-medium">Tổng bán ra: {Number(totalSoldUnits || 0).toLocaleString("vi-VN")} sản phẩm</span>
+          <div className="flex items-center gap-3 mt-2 text-xs text-admin-muted">
+            <span className="inline-flex items-center gap-1.5">
+              <FontAwesomeIcon icon={faClock} className="text-slate-400 text-[11px]" />
+              Cập nhật: <strong className="text-slate-700">{formatDateTime(payload?.generatedAt)}</strong>
+            </span>
           </div>
+        </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end" role="group" aria-label="Bộ lọc doanh thu">
-            <div className="grid gap-1.5 min-w-0 sm:min-w-[150px]">
-              <label htmlFor="revenue-period-type" className="text-admin-muted text-xs font-bold">Kiểu xem</label>
-              <select
-                id="revenue-period-type"
-                value={periodType}
-                onChange={(event) => setPeriodType(event.target.value)}
-                className="w-full border border-admin-line rounded-xl p-[8px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
-              >
-                <option value="month">Theo tháng</option>
-                <option value="year">Theo năm</option>
-              </select>
+        <div className="flex items-center gap-2.5 shrink-0 w-full sm:w-auto justify-end">
+          <button
+            type="button"
+            onClick={() => loadDashboard({ silent: true })}
+            disabled={refreshing}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-admin-line bg-white hover:bg-slate-50 text-admin-body text-xs sm:text-sm font-semibold transition-all shadow-2xs hover:shadow-xs disabled:opacity-60 cursor-pointer"
+          >
+            <FontAwesomeIcon icon={faRotate} spin={refreshing} className="text-admin-primary" />
+            <span>{refreshing ? "Đang đồng bộ..." : "Làm mới"}</span>
+          </button>
+        </div>
+      </section>
+
+      {/* ── Error Banner ── */}
+      {errorMessage && (
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium flex items-center gap-2.5 animate-slide-down">
+          <FontAwesomeIcon icon={faCircleXmark} className="text-rose-500 text-base" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
+      {/* ── Bento KPI Metric Grid ── */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Các chỉ số chính">
+        {metrics.map((metric) => (
+          <article
+            key={metric.label}
+            className="admin-card p-5 flex flex-col justify-between transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <span className="text-xs font-bold text-admin-muted uppercase tracking-wider">
+                {metric.label}
+              </span>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center border text-sm shrink-0 ${metric.colorClass}`}>
+                <FontAwesomeIcon icon={metric.icon} />
+              </div>
             </div>
-
-            <div className="grid gap-1.5 min-w-0 sm:min-w-[150px]">
-              <label htmlFor="revenue-year" className="text-admin-muted text-xs font-bold">Năm</label>
-              <select
-                id="revenue-year"
-                value={selectedYear}
-                onChange={(event) => setSelectedYear(Number(event.target.value))}
-                className="w-full border border-admin-line rounded-xl p-[8px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
-              >
-                {yearOptions.map((year) => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
+            <div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-admin-ink tracking-tight leading-none mb-2">
+                {metric.value.toLocaleString("vi-VN")}
+              </div>
+              <div className="text-xs text-admin-muted truncate" title={metric.trend}>
+                {metric.trend}
+              </div>
             </div>
+          </article>
+        ))}
+      </section>
 
-            {periodType === "month" ? (
-              <div className="grid gap-1.5 min-w-0 sm:min-w-[150px]">
-                <label htmlFor="revenue-month" className="text-admin-muted text-xs font-bold">Tháng</label>
+      {/* ── Revenue Intelligence & Product Breakdown ── */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6" aria-label="Phân tích doanh thu và sản phẩm">
+        {/* Left Column (8 cols): Revenue Analytics & Filters */}
+        <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-4">
+          <article className="admin-card p-5 sm:p-6 flex flex-col gap-5 h-full">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-admin-line">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-admin-ink m-0 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faArrowTrendUp} className="text-admin-primary" />
+                  Tổng quan Doanh thu
+                </h2>
+                <p className="text-xs text-admin-muted m-0 mt-0.5">
+                  Thống kê doanh thu theo chu kỳ thanh toán và đơn hoàn tất
+                </p>
+              </div>
+
+              {/* Filter controls */}
+              <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                {/* Period segmented buttons */}
+                <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setPeriodType("month")}
+                    className={`px-3 py-1 rounded-lg transition-colors cursor-pointer border-none ${
+                      periodType === "month"
+                        ? "bg-white text-admin-ink shadow-2xs font-bold"
+                        : "text-slate-500 hover:text-slate-800 bg-transparent"
+                    }`}
+                  >
+                    Tháng
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPeriodType("year")}
+                    className={`px-3 py-1 rounded-lg transition-colors cursor-pointer border-none ${
+                      periodType === "year"
+                        ? "bg-white text-admin-ink shadow-2xs font-bold"
+                        : "text-slate-500 hover:text-slate-800 bg-transparent"
+                    }`}
+                  >
+                    Năm
+                  </button>
+                </div>
+
+                {/* Year select */}
                 <select
-                  id="revenue-month"
-                  value={selectedMonth}
-                  onChange={(event) => setSelectedMonth(Number(event.target.value))}
-                  className="w-full border border-admin-line rounded-xl p-[8px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className="px-2.5 py-1.5 rounded-xl border border-admin-line bg-white text-xs font-semibold text-admin-ink focus:outline-none focus:border-admin-primary"
+                  aria-label="Chọn năm"
                 >
-                  {Array.from({ length: 12 }, (_, index) => index + 1).map((monthNumber) => (
-                    <option key={monthNumber} value={monthNumber}>{getMonthLabel(monthNumber)}</option>
+                  {yearOptions.map((year) => (
+                    <option key={year} value={year}>
+                      Năm {year}
+                    </option>
                   ))}
                 </select>
-              </div>
-            ) : null}
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-            <article className="rounded-xl border border-[#dde7f4] bg-gradient-to-b from-white to-[#f7fbff] p-3">
-              <p className="m-0 text-admin-muted text-xs font-medium">Doanh thu kỳ đã chọn</p>
-              <strong className="mt-1.5 block text-[#0f2233] text-lg md:text-xl font-bold leading-tight">{formatCurrency(revenue?.totals?.selectedPeriodRevenue)}</strong>
-            </article>
-            <article className="rounded-xl border border-[#dde7f4] bg-gradient-to-b from-white to-[#f7fbff] p-3">
-              <p className="m-0 text-admin-muted text-xs font-medium">Đơn đã giao kỳ đã chọn</p>
-              <strong className="mt-1.5 block text-[#0f2233] text-lg md:text-xl font-bold leading-tight">{Number(revenue?.totals?.selectedPeriodOrders || 0).toLocaleString("vi-VN")}</strong>
-            </article>
-            <article className="rounded-xl border border-[#dde7f4] bg-gradient-to-b from-white to-[#f7fbff] p-3">
-              <p className="m-0 text-admin-muted text-xs font-medium">Doanh thu tháng này</p>
-              <strong className="mt-1.5 block text-[#0f2233] text-lg md:text-xl font-bold leading-tight">{formatCurrency(revenue?.totals?.thisMonth)}</strong>
-            </article>
-            <article className="rounded-xl border border-[#dde7f4] bg-gradient-to-b from-white to-[#f7fbff] p-3">
-              <p className="m-0 text-admin-muted text-xs font-medium">Doanh thu năm nay</p>
-              <strong className="mt-1.5 block text-[#0f2233] text-lg md:text-xl font-bold leading-tight">{formatCurrency(revenue?.totals?.thisYear)}</strong>
-            </article>
-          </div>
-
-          <div className="border border-[#e1ebf6] rounded-2xl bg-[#fbfdff] p-4">
-            <div className="text-admin-muted text-xs mb-3 font-semibold">
-              {periodType === "month"
-                ? `Biểu đồ tròn sản phẩm bán ra trong ${getMonthLabel(selectedMonth)}/${selectedYear}`
-                : `Biểu đồ tròn sản phẩm bán ra trong năm ${selectedYear}`}
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4 items-start">
-              <div className="border border-[#dbe6f4] rounded-2xl bg-gradient-to-b from-white to-[#f7fbff] p-4 flex justify-center">
-                <div className="w-[180px] h-[180px] rounded-full relative border border-[#d5e2f2] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.8)]" style={{ background: pieBackground }}>
-                  <div className="absolute inset-[25%] rounded-full bg-white border border-[#dbe6f4] grid place-items-center text-center shadow-[0_6px_14px_rgba(15,49,79,0.08)]">
-                    <strong className="text-[#0f2233] text-base md:text-lg font-bold leading-tight">{Number(totalSoldUnits || 0).toLocaleString("vi-VN")}</strong>
-                    <span className="text-admin-muted text-[10px] md:text-xs font-bold uppercase tracking-wider">đã bán</span>
-                  </div>
-                </div>
-              </div>
-              <div className="grid gap-2 max-h-[260px] overflow-y-auto pr-1 scrollbar-thin">
-                {pieSlices.length > 0 ? (
-                  pieSlices.map((slice) => (
-                    <div key={slice.key} className="grid grid-cols-[12px_1fr] gap-2 items-start border border-[#e3ebf7] rounded-xl bg-white p-2.5 shadow-xs">
-                      <span className="w-3 h-3 rounded-full mt-1 shrink-0" style={{ background: slice.color }} />
-                      <div className="min-w-0">
-                        <p className="m-0 text-[#0f2233] text-[13px] font-bold truncate" title={slice.label}>{slice.label}</p>
-                        <p className="m-0 mt-1 text-admin-muted text-xs leading-relaxed">
-                          {Number(slice.soldQuantity || 0).toLocaleString("vi-VN")} sp • {formatPercent(slice.percent)} • {formatCompactCurrency(slice.revenue)} đ
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-admin-muted text-xs py-4 text-center">Chưa có dữ liệu sản phẩm đã bán để dựng biểu đồ.</p>
+                {/* Month select (if month view) */}
+                {periodType === "month" && (
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    className="px-2.5 py-1.5 rounded-xl border border-admin-line bg-white text-xs font-semibold text-admin-ink focus:outline-none focus:border-admin-primary"
+                    aria-label="Chọn tháng"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <option key={m} value={m}>
+                        {getMonthLabel(m)}
+                      </option>
+                    ))}
+                  </select>
                 )}
               </div>
             </div>
-          </div>
-        </section>
 
-        <section className="rounded-2xl border border-[#e1ebf6] bg-white p-4 pb-5" aria-label="Tác vụ nhanh">
-          <div className="flex justify-between items-center gap-2.5 mb-3">
-            <h3 className="m-0 text-base font-bold text-admin-ink">Tác vụ nhanh</h3>
-            <span className="text-admin-muted text-xs">Điều hướng</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-            {quickActions.map((action) => (
-              <Link
-                key={action.label}
-                to={action.to}
-                className="inline-flex items-center justify-center rounded-xl border border-[#d3e1f0] bg-[#f6faff] text-[#0f3f84] font-bold min-h-[42px] text-xs md:text-sm hover:bg-[#eef6ff] transition-all hover:-translate-y-px hover:shadow-xs gap-2"
+            {/* Financial KPI Highlights Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="p-4 rounded-xl border border-slate-200/90 bg-slate-50/60 flex flex-col justify-between">
+                <span className="text-xs font-bold text-admin-muted uppercase tracking-wider">
+                  Doanh thu kỳ đã chọn
+                </span>
+                <div className="text-xl sm:text-2xl font-black text-admin-ink tracking-tight mt-1.5">
+                  {formatCurrency(revenue?.totals?.selectedPeriodRevenue)}
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1">
+                  {periodType === "month" ? `${getMonthLabel(selectedMonth)}/${selectedYear}` : `Cả năm ${selectedYear}`}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-slate-200/90 bg-slate-50/60 flex flex-col justify-between">
+                <span className="text-xs font-bold text-admin-muted uppercase tracking-wider">
+                  Đơn đã hoàn tất kỳ này
+                </span>
+                <div className="text-xl sm:text-2xl font-black text-admin-ink tracking-tight mt-1.5">
+                  {Number(revenue?.totals?.selectedPeriodOrders || 0).toLocaleString("vi-VN")} đơn
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1">
+                  Đã thanh toán và giao thành công
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-slate-200/90 bg-slate-50/60 flex flex-col justify-between">
+                <span className="text-xs font-bold text-admin-muted uppercase tracking-wider">
+                  Doanh thu tháng này
+                </span>
+                <div className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight mt-1">
+                  {formatCurrency(revenue?.totals?.thisMonth)}
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1">
+                  Tháng {currentDate.getMonth() + 1}/{currentDate.getFullYear()}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-slate-200/90 bg-slate-50/60 flex flex-col justify-between">
+                <span className="text-xs font-bold text-admin-muted uppercase tracking-wider">
+                  Doanh thu năm nay
+                </span>
+                <div className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight mt-1">
+                  {formatCurrency(revenue?.totals?.thisYear)}
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1">
+                  Năm {currentDate.getFullYear()}
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        {/* Right Column (4-5 cols): Product Breakdown & Doughnut */}
+        <div className="lg:col-span-5 xl:col-span-4 flex flex-col">
+          <article className="admin-card p-5 sm:p-6 flex flex-col gap-4 h-full">
+            <div className="flex items-center justify-between pb-3 border-b border-admin-line">
+              <div>
+                <h2 className="text-base font-bold text-admin-ink m-0 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faBoxesStacked} className="text-indigo-600" />
+                  Sản phẩm bán ra
+                </h2>
+                <span className="text-xs text-admin-muted mt-0.5">
+                  Tỷ trọng doanh số theo mặt hàng
+                </span>
+              </div>
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                {totalSoldUnits.toLocaleString("vi-VN")} sp
+              </span>
+            </div>
+
+            {/* Donut Chart Visual */}
+            <div className="flex items-center justify-center py-2">
+              <div
+                className="w-36 h-36 rounded-full relative shadow-xs flex items-center justify-center transition-all"
+                style={{ background: pieBackground }}
               >
-                <FontAwesomeIcon icon={action.icon} />
-                <span>{action.label}</span>
-              </Link>
-            ))}
+                {/* Center Hole */}
+                <div className="w-24 h-24 rounded-full bg-white flex flex-col items-center justify-center shadow-inner">
+                  <span className="text-base font-black text-admin-ink leading-none">
+                    {totalSoldUnits.toLocaleString("vi-VN")}
+                  </span>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-admin-muted mt-1">
+                    Đã bán
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Product breakdown list with progress bars */}
+            <div className="flex-1 overflow-y-auto max-h-[220px] flex flex-col gap-2.5 pr-1 scrollbar-thin">
+              {pieSlices.length > 0 ? (
+                pieSlices.map((slice) => (
+                  <div
+                    key={slice.key || slice.label}
+                    className="p-2.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-slate-100/80 transition-colors"
+                  >
+                    <div className="flex items-center justify-between text-xs font-semibold mb-1.5">
+                      <div className="flex items-center gap-2 truncate max-w-[170px]" title={slice.label}>
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: slice.color }} />
+                        <span className="truncate text-slate-800">{slice.label}</span>
+                      </div>
+                      <span className="text-slate-600 font-bold shrink-0">{formatPercent(slice.percent)}</span>
+                    </div>
+
+                    {/* Progress line */}
+                    <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden mb-1">
+                      <div
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{ width: `${slice.percent}%`, background: slice.color }}
+                      />
+                    </div>
+
+                    <div className="flex justify-between text-[11px] text-admin-muted">
+                      <span>{Number(slice.soldQuantity || 0).toLocaleString("vi-VN")} sản phẩm</span>
+                      <span className="font-medium text-slate-700">{formatCompactCurrency(slice.revenue)} đ</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-8 text-center text-xs text-admin-muted">
+                  Chưa có dữ liệu sản phẩm trong kỳ đã chọn.
+                </div>
+              )}
+            </div>
+          </article>
+        </div>
+      </section>
+
+      {/* ── Operational Intelligence (Alerts & Activity Hub) ── */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6" aria-label="Cảnh báo và hoạt động">
+        {/* Column 1: Actionable Alerts */}
+        <article className="admin-card p-5 sm:p-6 flex flex-col gap-4">
+          <div className="flex items-center justify-between pb-3 border-b border-admin-line">
+            <div>
+              <h2 className="text-base font-bold text-admin-ink m-0 flex items-center gap-2">
+                <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-500" />
+                Cảnh báo cần xử lý
+              </h2>
+              <span className="text-xs text-admin-muted">
+                Các vấn đề ưu tiên cần admin kiểm tra
+              </span>
+            </div>
+            <Link
+              to="/admin/notifications"
+              className="text-xs font-bold text-admin-primary hover:underline"
+            >
+              Xem tất cả
+            </Link>
           </div>
-        </section>
+
+          <div className="flex flex-col gap-3">
+            {alerts.map((alert) => {
+              const isDanger = alert.level === "danger";
+              const isWarning = alert.level === "warning";
+
+              return (
+                <div
+                  key={alert.key || alert.title}
+                  className={`p-3.5 rounded-xl border transition-all ${
+                    isDanger
+                      ? "bg-rose-50/70 border-rose-200"
+                      : isWarning
+                      ? "bg-amber-50/70 border-amber-200"
+                      : "bg-blue-50/70 border-blue-200"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2.5">
+                      <div className="mt-0.5">
+                        <FontAwesomeIcon
+                          icon={isDanger ? faCircleXmark : isWarning ? faTriangleExclamation : faCircleInfo}
+                          className={isDanger ? "text-rose-600" : isWarning ? "text-amber-600" : "text-blue-600"}
+                        />
+                      </div>
+                      <div>
+                        <h3 className={`text-sm font-bold m-0 leading-tight ${
+                          isDanger ? "text-rose-900" : isWarning ? "text-amber-900" : "text-blue-900"
+                        }`}>
+                          {alert.title}
+                        </h3>
+                        <p className="text-xs text-slate-600 m-0 mt-1 leading-relaxed">
+                          {alert.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Link
+                      to={alert.to}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 transition-colors ${
+                        isDanger
+                          ? "bg-rose-600 text-white hover:bg-rose-700"
+                          : isWarning
+                          ? "bg-amber-600 text-white hover:bg-amber-700"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                      }`}
+                    >
+                      <span>Xử lý</span>
+                      <FontAwesomeIcon icon={faChevronRight} className="text-[9px]" />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </article>
+
+        {/* Column 2: Live Activity Feed */}
+        <article className="admin-card p-5 sm:p-6 flex flex-col gap-4">
+          <div className="flex items-center justify-between pb-3 border-b border-admin-line">
+            <div>
+              <h2 className="text-base font-bold text-admin-ink m-0 flex items-center gap-2">
+                <FontAwesomeIcon icon={faClock} className="text-blue-600" />
+                Hoạt động gần đây
+              </h2>
+              <span className="text-xs text-admin-muted">
+                Dòng thời gian sự kiện mới nhất
+              </span>
+            </div>
+            <span className="text-xs font-semibold text-slate-500">
+              {activities.length} sự kiện
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-2.5">
+            {activities.length > 0 ? (
+              activities.map((act) => (
+                <div
+                  key={act.key}
+                  className="p-3 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-slate-100/80 transition-colors flex items-center justify-between gap-3 text-xs"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${
+                      act.type === "order"
+                        ? "bg-emerald-500"
+                        : act.type === "cancel"
+                        ? "bg-rose-500"
+                        : "bg-amber-500"
+                    }`} />
+                    <div className="truncate">
+                      <div className="font-bold text-slate-800 truncate" title={act.action}>
+                        {act.action}
+                      </div>
+                      <div className="text-slate-500 text-[11px] truncate">
+                        {act.actor}
+                      </div>
+                    </div>
+                  </div>
+
+                  <span className="text-slate-400 font-medium shrink-0 whitespace-nowrap text-[11px]">
+                    {formatRelativeTime(act.time)}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="py-8 text-center text-xs text-admin-muted">
+                Chưa có hoạt động gần đây để hiển thị.
+              </div>
+            )}
+          </div>
+        </article>
+      </section>
+
+      {/* ── Quick Actions Grid ── */}
+      <section className="admin-card p-5 sm:p-6 flex flex-col gap-4" aria-label="Tác vụ nhanh">
+        <div className="flex items-center justify-between pb-2 border-b border-admin-line">
+          <h2 className="text-base font-bold text-admin-ink m-0">
+            Tác vụ quản trị nhanh
+          </h2>
+          <span className="text-xs text-admin-muted">Phím tắt thao tác</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {quickActions.map((action) => (
+            <Link
+              key={action.label}
+              to={action.to}
+              className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xs no-underline font-bold text-xs sm:text-sm ${action.color}`}
+            >
+              <FontAwesomeIcon icon={action.icon} className="text-base" />
+              <span>{action.label}</span>
+            </Link>
+          ))}
+        </div>
       </section>
     </main>
   );

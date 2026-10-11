@@ -1,27 +1,69 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
+# ─── Dependencies ───
 /node_modules
 /.pnp
 .pnp.js
 
-# testing
-/coverage
-
-# production
+# ─── Production Builds & Compiled Assets ───
 /build
+/dist
+/coverage
+.eslintcache
+/src/tailwind-built.css
 
-# misc
-.DS_Store
+# ─── Environment Variables & Secrets ───
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*.local
+*.pem
+*.key
 
+# ─── Python / ML Service ───
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.coverage
+htmlcov/
+*.ipynb_checkpoints
+
+# ─── AI Agents & Tooling Cache ───
+.agents/
+.hallmark/
+.gemini/
+.antigravity/
+
+# ─── Generated Reports & Dynamic Uploads ───
+/public/reports/*
+!/public/reports/.gitkeep
+
+# ─── Logs & Debugging ───
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# compiled tailwind output
-/src/tailwind-built.css
+# ─── Editor & OS Files ───
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project

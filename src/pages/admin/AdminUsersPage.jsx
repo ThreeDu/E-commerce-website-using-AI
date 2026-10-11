@@ -513,11 +513,8 @@ function AdminUsersPage() {
   );
 
   return (
-    <main className="w-[min(1100px,92%)] mx-auto flex-1 py-10">
-      <section
-        className="bg-admin-surface border border-admin-line rounded-3xl shadow-admin p-6 md:p-8 grid gap-4 animate-admin-rise bg-[radial-gradient(circle_at_88%_-8%,rgba(255,111,60,0.12),transparent_36%),radial-gradient(circle_at_-8%_100%,rgba(15,118,110,0.1),transparent_30%),#ffffff]"
-        aria-busy={loading || deleting}
-      >
+    <main className="admin-page-container flex flex-col gap-6" aria-busy={loading || deleting}>
+      <section className="admin-card p-6 md:p-8 flex flex-col gap-5">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-admin-ink mt-0 mb-1">Quản lý người dùng</h2>
           <p className="text-admin-muted mt-1.5 mb-0 text-sm md:text-base">Theo dõi tài khoản, phân quyền và cập nhật thông tin người dùng trong hệ thống.</p>
