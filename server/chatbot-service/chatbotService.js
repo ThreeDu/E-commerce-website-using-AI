@@ -289,7 +289,7 @@ async function processMessage({ message, sessionId, userId, history, context }) 
   const products = await fetchProductCards(productIds);
 
   // 7. Save assistant reply to session
-  session.messages.push({ role: 'assistant', content: cleanText || '', timestamp: new Date() });
+  session.messages.push({ role: 'assistant', content: cleanText || '', productIds: products.map((p) => String(p._id)), timestamp: new Date() });
 
   // Trim session history to prevent unbounded growth
   if (session.messages.length > MAX_HISTORY_MESSAGES * 3) {
@@ -408,7 +408,7 @@ async function processMessageStream({ message, sessionId, userId, context, onChu
   }
 
   // Save to session
-  session.messages.push({ role: 'assistant', content: cleanText || '', timestamp: new Date() });
+  session.messages.push({ role: 'assistant', content: cleanText || '', productIds: products.map((p) => String(p._id)), timestamp: new Date() });
   if (session.messages.length > MAX_HISTORY_MESSAGES * 3) {
     session.messages = session.messages.slice(-MAX_HISTORY_MESSAGES * 2);
   }
@@ -417,4 +417,28 @@ async function processMessageStream({ message, sessionId, userId, context, onChu
   return { sessionId: session.sessionId, cartUpdated };
 }
 
-module.exports = { processMessage, processMessageStream };
+const HISTORY_LIMIT = 30;
+
+/**
+ * Lịch sử hội thoại để widget hiển thị lại sau khi tải trang.
+ * Phiên gắn với tài khoản chỉ trả cho đúng tài khoản đó; trả null nếu không có quyền
+ * (controller trả 404 để không lộ việc phiên tồn tại).
+ */
+async function getSessionHistory(sessionId, userId) {
+  if (!sessionId || typeof sessionId !== 'string') return null;
+  const session = await ChatSession.findOne({ sessionId }).lean();
+  if (!session) return null;
+  if (session.userId && String(session.userId) !== String(userId || '')) return null;
+
+  const visible = (session.messages || [])
+    .filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content)
+    .slice(-HISTORY_LIMIT);
+
+  return Promise.all(visible.map(async (m) => ({
+    role: m.role,
+    text: m.content,
+    products: m.role === 'assistant' && m.productIds?.length ? await fetchProductCards(m.productIds) : [],
+  })));
+}
+
+module.exports = { processMessage, processMessageStream, getSessionHistory };

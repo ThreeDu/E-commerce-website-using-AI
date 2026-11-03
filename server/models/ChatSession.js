@@ -14,6 +14,11 @@ const chatMessageSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  // Sản phẩm gợi ý kèm câu trả lời của assistant, để dựng lại thẻ sản phẩm khi khôi phục lịch sử
+  productIds: {
+    type: [String],
+    default: undefined,
+  },
   timestamp: {
     type: Date,
     default: Date.now,

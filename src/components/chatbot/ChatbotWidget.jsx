@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
-import { sendChatbotMessage, trackChatbotEvent } from "../../services/chatbotService";
+import { fetchChatHistory, sendChatbotMessage, trackChatbotEvent } from "../../services/chatbotService";
 import { postStream, readSseEvents } from "../../services/streamClient";
 import ChatInputForm from "./ChatInputForm";
 import ChatMessageList from "./ChatMessageList";
@@ -12,8 +12,21 @@ const OPEN_STORAGE_KEY = "chatbot_open";
 
 function ChatbotWidget() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { cart, addToCart, reloadCart } = useCart();
   const { auth } = useAuth();
+
+  // Giỏ hàng chỉ dành cho khách đã đăng nhập (giống trang chủ / danh sách / chi tiết sản phẩm)
+  const handleAddToCart = useCallback(
+    (product) => {
+      if (!auth?.token) {
+        navigate("/login", { state: { from: location.pathname } });
+        return;
+      }
+      addToCart(product);
+    },
+    [auth?.token, addToCart, navigate, location.pathname]
+  );
   // Mặc định đóng để không che nội dung; nhớ lựa chọn mở/đóng của người dùng giữa các lần tải trang.
   const [open, setOpen] = useState(() => {
     try {
@@ -122,6 +135,31 @@ function ChatbotWidget() {
     const nextSession = getOrCreateSessionId();
     setSessionId(nextSession);
   }, [isAdminArea]);
+
+  // Khôi phục hội thoại đã lưu trên server sau khi tải lại trang
+  useEffect(() => {
+    if (isAdminArea || !sessionId) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    fetchChatHistory(sessionId, auth?.token)
+      .then((data) => {
+        const restored = (data?.messages || []).map((m) => createMessage(m.role, m.text, { products: m.products }));
+        if (cancelled || restored.length === 0) {
+          return;
+        }
+        // Không ghi đè nếu người dùng đã bắt đầu nhắn trong lúc chờ tải
+        setMessages((prev) => (prev.some((m) => m.role === "user") ? prev : restored));
+      })
+      .catch(() => {
+        // Phiên hết hạn / không thuộc người dùng này: giữ lời chào mặc định
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdminArea, sessionId, auth?.token]);
 
   useEffect(() => {
     if (isAdminArea) {
@@ -473,7 +511,7 @@ function ChatbotWidget() {
             onScroll={handleScroll}
             className="p-2.5 overflow-y-auto display grid gap-2.5 bg-gradient-to-b from-[#f3f7ff] to-[#fbf9ff] scrollbar-thin"
           >
-            <ChatMessageList addToCart={addToCart} compareProduct1={compareProduct1} createMessage={createMessage} latestAiId={latestAiId} latestAiMessageRef={latestAiMessageRef} messages={messages} sendMessage={sendMessage} setCompareProduct1={setCompareProduct1} setMessages={setMessages} trackEvent={trackEvent} />
+            <ChatMessageList addToCart={handleAddToCart}compareProduct1={compareProduct1} createMessage={createMessage} latestAiId={latestAiId} latestAiMessageRef={latestAiMessageRef} messages={messages} sendMessage={sendMessage} setCompareProduct1={setCompareProduct1} setMessages={setMessages} trackEvent={trackEvent} />
             {pending && !messages.some((m) => m.streaming) ? (
               <article className="w-full">
                 <div className="flex gap-2 items-start justify-start">

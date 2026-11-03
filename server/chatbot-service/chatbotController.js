@@ -2,7 +2,7 @@
  * chatbotController.js — Request handling & response formatting
  */
 
-const { processMessage, processMessageStream } = require('./chatbotService');
+const { processMessage, processMessageStream, getSessionHistory } = require('./chatbotService');
 const { callLLMWithImage } = require('./llmHelper');
 const { executeTool } = require('./chatbotToolExecutor');
 const ChatbotEvent = require('../models/ChatbotEvent');
@@ -168,4 +168,20 @@ Trả lời bằng tiếng Việt.`;
   }
 }
 
-module.exports = { chatWithAssistant, chatWithAssistantStream, chatWithImage, trackEvent };
+/**
+ * GET /api/chatbot/session/:sessionId — lịch sử hội thoại của phiên (kiểm tra chủ sở hữu)
+ */
+async function getChatHistory(req, res) {
+  try {
+    const messages = await getSessionHistory(req.params.sessionId, getOptionalUserId(req));
+    if (!messages) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy phiên chat.' });
+    }
+    return res.json({ success: true, sessionId: req.params.sessionId, messages });
+  } catch (error) {
+    console.error('[Chatbot] getChatHistory error:', error.message);
+    return res.status(500).json({ success: false, message: 'Không thể tải lịch sử chat.' });
+  }
+}
+
+module.exports = { chatWithAssistant, chatWithAssistantStream, chatWithImage, trackEvent, getChatHistory };
