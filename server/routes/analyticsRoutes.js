@@ -1,23 +1,13 @@
 const express = require("express");
-const jwt = require("jsonwebtoken");
 const { createAnalyticsEvent, getMyWeeklyStats } = require("../controllers/analyticsController");
 const {
   getPersonalizedRecommendations,
   getAnonymousRecommendations,
   getTrendingProducts,
 } = require("../services/recommendationService");
-const { getTokenFromHeader, verifyUserRequest } = require("./helpers/authHelpers");
+const { getOptionalUserId, requireUser } = require("./helpers/authHelpers");
 
 const router = express.Router();
-
-const requireUser = async (req, res, next) => {
-  const user = await verifyUserRequest(req, res);
-  if (!user) {
-    return;
-  }
-  req.user = user;
-  next();
-};
 
 router.post("/events", createAnalyticsEvent);
 router.get("/my-weekly-stats", requireUser, getMyWeeklyStats);
@@ -36,18 +26,7 @@ router.get("/recommendations", async (req, res) => {
       ? rawCartIds.split(",").map((id) => id.trim()).filter(Boolean)
       : [];
 
-    // Try to extract userId from token
-    let userId = null;
-    const token = getTokenFromHeader(req);
-    if (token) {
-      try {
-        const secret = process.env.JWT_SECRET;
-        const decoded = jwt.verify(token, secret);
-        userId = decoded?.userId || null;
-      } catch {
-        // Invalid token — continue as anonymous
-      }
-    }
+    const userId = getOptionalUserId(req);
 
     let products;
     let strategy;

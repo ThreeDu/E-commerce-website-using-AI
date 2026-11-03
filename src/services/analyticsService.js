@@ -1,3 +1,5 @@
+import { apiClient } from "./apiClient";
+
 const ANALYTICS_ANON_KEY = "analytics_anonymous_id";
 const ANALYTICS_SESSION_KEY = "analytics_session_id";
 const EVENT_DEDUPE_WINDOW_MS = 15000;
@@ -26,7 +28,7 @@ export function getAnonymousId() {
   return getOrCreateStorageValue(window.localStorage, ANALYTICS_ANON_KEY, "anon");
 }
 
-export function getSessionId() {
+function getSessionId() {
   return getOrCreateStorageValue(window.sessionStorage, ANALYTICS_SESSION_KEY, "session");
 }
 
@@ -71,14 +73,6 @@ export async function trackEvent({ eventName, pagePath, metadata = {}, token }) 
       return;
     }
 
-    const headers = {
-      "Content-Type": "application/json",
-    };
-
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-
     const resolvedPagePath = pagePath || window.location.pathname;
     const sessionId = getSessionId();
     const dedupeKey = buildDedupeKey(eventName, resolvedPagePath, metadata, sessionId);
@@ -87,19 +81,23 @@ export async function trackEvent({ eventName, pagePath, metadata = {}, token }) 
       return;
     }
 
-    await fetch("/api/analytics/events", {
+    await apiClient("/api/analytics/events", {
       method: "POST",
-      headers,
-      body: JSON.stringify({
+      body: {
         eventName,
         anonymousId: getAnonymousId(),
         sessionId,
         pagePath: resolvedPagePath,
         source: "web",
         metadata,
-      }),
+      },
+      token,
     });
   } catch (error) {
     // Tracking failures should not block user actions.
   }
+}
+
+export async function getMyWeeklyStats(token) {
+  return apiClient("/api/analytics/my-weekly-stats", { token });
 }

@@ -6,6 +6,7 @@ const Discount = require("../../models/Discount");
 const Notification = require("../../models/Notification");
 const bcrypt = require("bcryptjs");
 const { logAdminAction } = require("../../utils/adminAuditLogger");
+const { escapeRegex } = require("../../chatbot-service/textUtils");
 
 const listUsers = async (req, res) => {
   try {
@@ -14,8 +15,8 @@ const listUsers = async (req, res) => {
     if (search) {
       query = {
         $or: [
-          { name: { $regex: search, $options: "i" } },
-          { email: { $regex: search, $options: "i" } }
+          { name: { $regex: escapeRegex(search), $options: "i" } },
+          { email: { $regex: escapeRegex(search), $options: "i" } }
         ]
       };
     }

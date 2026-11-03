@@ -1,10 +1,10 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import Header from "./components/Header";
-import Footer from "./components/Footer";
-import ChatbotWidget from "./components/ChatbotWidget";
-import StatusNotificationCenter from "./components/StatusNotificationCenter";
-import ProtectedRoute from "./components/ProtectedRoute";
+import Header from "./components/layout/Header";
+import Footer from "./components/layout/Footer";
+import ChatbotWidget from "./components/chatbot/ChatbotWidget";
+import StatusNotificationCenter from "./components/common/StatusNotificationCenter";
+import ProtectedRoute from "./components/common/ProtectedRoute";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import LoadingFallback from "./components/common/LoadingFallback";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -26,32 +26,32 @@ const ContractPage = lazy(() => import("./pages/ContractPage"));
 const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
 const OrderHistoryPage = lazy(() => import("./pages/OrderHistoryPage"));
 const OrderDetailPage = lazy(() => import("./pages/OrderDetailPage"));
-const UserDashboard = lazy(() => import("./pages/UserDashboard"));
+const UserDashboard = lazy(() => import("./pages/account/UserDashboard"));
 const WishlistPage = lazy(() => import("./pages/WishlistPage"));
 
 // ── Admin pages (lazy — only loaded when admin navigates) ──
-const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminDashboard = lazy(() => import("./pages/admin/dashboard/AdminDashboard"));
 const AdminListCategoriesPage = lazy(() => import("./pages/admin/category/AdminListCategoriesPage"));
 const AdminAddCategoryPage = lazy(() => import("./pages/admin/category/AdminAddCategoryPage"));
 const AdminListProductPage = lazy(() => import("./pages/admin/product/AdminListProductPage"));
 const AdminAddProductPage = lazy(() => import("./pages/admin/product/AdminAddProductPage"));
 const AdminBulkImportProductPage = lazy(() => import("./pages/admin/product/AdminBulkImportProductPage"));
 const AdminEditProductPage = lazy(() => import("./pages/admin/product/AdminEditProductPage"));
-const AdminUsersPage = lazy(() => import("./pages/admin/AdminUsersPage"));
+const AdminUsersPage = lazy(() => import("./pages/admin/user/AdminUsersPage"));
 const AdminListDiscountsPage = lazy(() => import("./pages/admin/discount/AdminListDiscountsPage"));
 const AdminAddDiscountPage = lazy(() => import("./pages/admin/discount/AdminAddDiscountPage"));
 const AdminEditDiscountPage = lazy(() => import("./pages/admin/discount/AdminEditDiscountPage"));
-const AdminOrdersPage = lazy(() => import("./pages/admin/AdminOrdersPage"));
-const AdminSystemLogsPage = lazy(() => import("./pages/admin/AdminSystemLogsPage"));
-const AdminNotificationsPage = lazy(() => import("./pages/admin/AdminNotificationsPage"));
+const AdminOrdersPage = lazy(() => import("./pages/admin/order/AdminOrdersPage"));
+const AdminSystemLogsPage = lazy(() => import("./pages/admin/system/AdminSystemLogsPage"));
+const AdminNotificationsPage = lazy(() => import("./pages/admin/system/AdminNotificationsPage"));
 
-const AdminCustomerIntelligencePage = lazy(() => import("./pages/admin/AdminCustomerIntelligencePage"));
-const AdminRetentionCampaignPage = lazy(() => import("./pages/admin/AdminRetentionCampaignPage"));
+const AdminCustomerIntelligencePage = lazy(() => import("./pages/admin/intelligence/AdminCustomerIntelligencePage"));
+const AdminRetentionCampaignPage = lazy(() => import("./pages/admin/intelligence/AdminRetentionCampaignPage"));
 const AdminRewardTiersPage = lazy(() => import("./pages/admin/reward/AdminRewardTiersPage"));
 const AdminAddRewardTierPage = lazy(() => import("./pages/admin/reward/AdminAddRewardTierPage"));
 const AdminEditRewardTierPage = lazy(() => import("./pages/admin/reward/AdminEditRewardTierPage"));
-const AdminChatbotPage = lazy(() => import("./pages/admin/AdminChatbotPage"));
-const ChatbotAnalyticsPage = lazy(() => import("./pages/admin/ChatbotAnalyticsPage"));
+const AdminChatbotPage = lazy(() => import("./pages/admin/chatbot/AdminChatbotPage"));
+const AdminChatbotAnalyticsPage = lazy(() => import("./pages/admin/chatbot/AdminChatbotAnalyticsPage"));
 
 function GuestRoute({ children }) {
   const { auth } = useAuth();
@@ -314,7 +314,7 @@ function App() {
                       path="/admin/chatbot-analytics"
                       element={
                         <ProtectedRoute requiredRole="admin">
-                          <ChatbotAnalyticsPage />
+                          <AdminChatbotAnalyticsPage />
                         </ProtectedRoute>
                       }
                     />

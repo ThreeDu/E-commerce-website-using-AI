@@ -3,12 +3,13 @@ import { Link, useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { useAuth } from "../../../context/AuthContext";
 import { useNotification } from "../../../context/NotificationContext";
-import { getAdminCategories } from "../../../services/admin/categoryService";
+import { getAdminCategories } from "../../../services/admin/adminCategoryService";
 import {
   commitAdminProductImport,
   previewAdminProductImport,
-} from "../../../services/admin/productService";
-import { getErrorMessage } from "../../../utils/adminErrorUtils";
+} from "../../../services/admin/adminProductService";
+import { getErrorMessage } from "../../../utils/adminErrorUtils";
+import { formatPrice } from "../../../utils/priceUtils";
 const TEMPLATE_COLUMNS = [
   "name",
   "category_path",
@@ -316,7 +317,7 @@ function AdminBulkImportProductPage() {
                         <td className="p-2 break-words whitespace-normal align-middle border-b border-[#edf2f8] text-center">{item.rowNumber}</td>
                         <td className="p-2 break-words whitespace-normal align-middle border-b border-[#edf2f8] text-left">{item.payload?.name}</td>
                         <td className="p-2 break-words whitespace-normal align-middle border-b border-[#edf2f8] text-left">{item.payload?.category}</td>
-                        <td className="p-2 break-words whitespace-normal align-middle border-b border-[#edf2f8] text-left">{Number(item.payload?.price || 0).toLocaleString("vi-VN")} đ</td>
+                        <td className="p-2 break-words whitespace-normal align-middle border-b border-[#edf2f8] text-left">{formatPrice(item.payload?.price || 0)}</td>
                         <td className="p-2 break-words whitespace-normal align-middle border-b border-[#edf2f8] text-left">{item.payload?.stock}</td>
                         <td className="p-2 break-words whitespace-normal align-middle border-b border-[#edf2f8] text-left">{item.payload?.discountPercent}%</td>
                       </tr>

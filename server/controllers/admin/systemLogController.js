@@ -1,4 +1,6 @@
 const AuditLog = require("../../models/AuditLog");
+const { parsePagination } = require("../../helpers/pagination");
+const { escapeRegex } = require("../../chatbot-service/textUtils");
 
 const listSystemLogs = async (req, res) => {
   try {
@@ -11,8 +13,7 @@ const listSystemLogs = async (req, res) => {
       adminEmail = "",
     } = req.query;
 
-    const parsedPage = Math.max(1, Number(page) || 1);
-    const parsedLimit = Math.min(100, Math.max(5, Number(limit) || 20));
+    const { page: parsedPage, limit: parsedLimit } = parsePagination({ page, limit }, { minLimit: 5 });
 
     const filter = {};
 
@@ -25,11 +26,11 @@ const listSystemLogs = async (req, res) => {
     }
 
     if (adminEmail && String(adminEmail).trim()) {
-      filter.adminEmail = new RegExp(String(adminEmail).trim(), "i");
+      filter.adminEmail = new RegExp(escapeRegex(String(adminEmail).trim()), "i");
     }
 
     if (q && String(q).trim()) {
-      const keyword = new RegExp(String(q).trim(), "i");
+      const keyword = new RegExp(escapeRegex(String(q).trim()), "i");
       filter.$or = [{ adminEmail: keyword }, { resourceId: keyword }, { path: keyword }];
     }
 

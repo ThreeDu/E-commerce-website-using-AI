@@ -1,8 +1,7 @@
-const jwt = require("jsonwebtoken");
 const AnalyticsEvent = require("../models/AnalyticsEvent");
 const Order = require("../models/Order");
 const Notification = require("../models/Notification");
-const { getTokenFromHeader } = require("../routes/helpers/authHelpers");
+const { getOptionalUserId } = require("../routes/helpers/authHelpers");
 
 const ALLOWED_EVENTS = new Set([
   "product_view",
@@ -16,21 +15,6 @@ const ALLOWED_EVENTS = new Set([
 
 const FUNNEL_EVENTS = ["product_view", "add_to_cart", "wishlist_add", "checkout_success"];
 const ANALYTICS_TIMEZONE = "Asia/Ho_Chi_Minh";
-
-function parseOptionalUserId(req) {
-  const token = getTokenFromHeader(req);
-  if (!token) {
-    return null;
-  }
-
-  try {
-    const secret = process.env.JWT_SECRET;
-    const decoded = jwt.verify(token, secret);
-    return decoded?.userId || null;
-  } catch (error) {
-    return null;
-  }
-}
 
 const createAnalyticsEvent = async (req, res) => {
   try {
@@ -49,7 +33,7 @@ const createAnalyticsEvent = async (req, res) => {
       return res.status(400).json({ message: "eventName không hợp lệ." });
     }
 
-    const userId = parseOptionalUserId(req);
+    const userId = getOptionalUserId(req);
 
     await AnalyticsEvent.create({
       eventName,

@@ -5,6 +5,7 @@ import { faTrashCan } from "@fortawesome/free-solid-svg-icons";
 import { useCart } from "../context/CartContext";
 import { getProductImageSrc } from "../utils/productUtils";
 import { parsePrice, formatPrice } from "../utils/priceUtils";
+import { fetchProductsByIds } from "../services/productService";
 function CartPage() {
   const {
     cart,
@@ -28,15 +29,7 @@ function CartPage() {
       setIsLoadingPrices(true);
       try {
         const productIds = cart.map((item) => item.id);
-        const response = await fetch("/api/products", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids: productIds }),
-        });
-
-        if (!response.ok) throw new Error("Failed to fetch prices");
-
-        const data = await response.json();
+        const data = await fetchProductsByIds(productIds);
         const priceMap = {};
         (Array.isArray(data) ? data : []).forEach((product) => {
           priceMap[product._id] = {

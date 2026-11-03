@@ -1,5 +1,5 @@
 const {
-  TOOL_DEFINITIONS,
+  TOOL_SCHEMAS,
   getDashboardStats,
   searchOrders,
   updateOrderStatus,
@@ -55,23 +55,10 @@ const SYSTEM_PROMPT = [
   '- Không bịa dữ liệu, chỉ trả lời dựa trên kết quả từ tools',
 ].join('\n');
 
-// Convert tool schemas for shared llmHelper format
-const GENERIC_TOOLS = (TOOL_DEFINITIONS.openai || []).map((t) => ({
-  name: t.function.name,
-  description: t.function.description,
-  parameters: t.function.parameters,
-}));
+// Tool schemas đã ở dạng { name, description, parameters } mà llmHelper dùng
+const GENERIC_TOOLS = TOOL_SCHEMAS;
 
 // ─── LLM API call ──────────────────────────────────────────────────────────────
-
-function getLlmConfig() {
-  const apiUrl = String(process.env.CHATBOT_LLM_API_URL || '').trim();
-  const apiKey = String(process.env.CHATBOT_LLM_API_KEY || '').trim();
-  const model = String(process.env.CHATBOT_LLM_MODEL || 'gpt-4.1-mini').trim();
-  const isGemini = apiUrl.includes('generativelanguage.googleapis.com');
-
-  return { apiUrl, apiKey, model, isGemini };
-}
 
 /**
  * Build the messages array from conversation history + current message.
@@ -114,57 +101,22 @@ async function callLlm(messages, includeTools = true) {
   };
 }
 
-function parseOpenAIResponse(data) {
-  const message = data?.choices?.[0]?.message;
-  const textContent = message?.content?.trim() || null;
-
-  const toolCalls = (message?.tool_calls || []).map((tc) => ({
-    id: tc.id,
-    name: tc.function.name,
-    args: safeParseJson(tc.function.arguments),
-  }));
-
-  return { textContent, toolCalls };
-}
-
-function safeParseJson(str) {
-  try {
-    return JSON.parse(str || '{}');
-  } catch {
-    return {};
-  }
-}
-
 // ─── Tool call feed-back helpers ───────────────────────────────────────────────
 
 /**
  * After executing a tool, append the tool result into the messages array
  * so the LLM can use it in the next turn.
  */
-function appendToolResultToMessages(messages, toolCall, result, isGemini) {
-  if (isGemini) {
-    // For Gemini: add model's function call + user's function response as text
-    // (Gemini REST API function response format)
-    messages.push({
-      role: 'assistant',
-      content: `Đã gọi hàm ${toolCall.name} với tham số: ${JSON.stringify(toolCall.args)}`,
-    });
-    messages.push({
-      role: 'user',
-      content: `Kết quả từ hàm ${toolCall.name}:\n${JSON.stringify(result, null, 2)}`,
-    });
-  } else {
-    // For OpenAI: assistant message with tool_calls + tool role message
-    // We simplify by using text-based tool result feeding
-    messages.push({
-      role: 'assistant',
-      content: `Đã gọi hàm ${toolCall.name} với tham số: ${JSON.stringify(toolCall.args)}`,
-    });
-    messages.push({
-      role: 'user',
-      content: `Kết quả từ hàm ${toolCall.name}:\n${JSON.stringify(result, null, 2)}`,
-    });
-  }
+function appendToolResultToMessages(messages, toolCall, result) {
+  // Đưa kết quả tool vào dạng text để chạy được với mọi provider (OpenAI-compatible / Gemini)
+  messages.push({
+    role: 'assistant',
+    content: `Đã gọi hàm ${toolCall.name} với tham số: ${JSON.stringify(toolCall.args)}`,
+  });
+  messages.push({
+    role: 'user',
+    content: `Kết quả từ hàm ${toolCall.name}:\n${JSON.stringify(result, null, 2)}`,
+  });
 }
 
 /**
@@ -242,7 +194,6 @@ function generateConfirmationDescription(toolName, args) {
  * @returns {Object} { reply, requiresConfirmation?, confirmationData?, toolsUsed, sessionId }
  */
 async function processAdminMessage({ message, history = [], sessionId, adminUserId, confirmed, confirmationData }) {
-  const { isGemini } = getLlmConfig();
   const toolsUsed = [];
 
   try {
@@ -265,7 +216,7 @@ async function processAdminMessage({ message, history = [], sessionId, adminUser
 
       // Feed result back to LLM for a natural response
       const messages = buildMessages(history, message);
-      appendToolResultToMessages(messages, { name: toolName, args }, result, isGemini);
+      appendToolResultToMessages(messages, { name: toolName, args }, result);
 
       const { textContent } = await callLlm(messages, false);
 
@@ -316,7 +267,7 @@ async function processAdminMessage({ message, history = [], sessionId, adminUser
       const result = await TOOL_FUNCTIONS[toolName](args);
       toolsUsed.push({ name: toolName, args });
 
-      appendToolResultToMessages(messages, toolCall, result, isGemini);
+      appendToolResultToMessages(messages, toolCall, result);
 
       // If this is the last iteration, get a final response without tools
       if (iteration === MAX_TOOL_ITERATIONS - 1) {
@@ -362,7 +313,7 @@ async function processAdminMessageStream({ message, history = [], sessionId, adm
       if (onToolsUsed) onToolsUsed(toolsUsed);
 
       const messages = buildMessages(history, message);
-      appendToolResultToMessages(messages, { name: toolName, args }, result, false);
+      appendToolResultToMessages(messages, { name: toolName, args }, result);
 
       const streamedText = await callLLMStreaming(SYSTEM_PROMPT, messages, onChunk);
       return { reply: streamedText, toolsUsed, sessionId };
@@ -403,7 +354,7 @@ async function processAdminMessageStream({ message, history = [], sessionId, adm
       toolsUsed.push({ name: toolName, args });
       if (onToolsUsed) onToolsUsed(toolsUsed);
 
-      appendToolResultToMessages(messages, toolCall, result, false);
+      appendToolResultToMessages(messages, toolCall, result);
     }
 
     const streamedText = await callLLMStreaming(SYSTEM_PROMPT, messages, onChunk);

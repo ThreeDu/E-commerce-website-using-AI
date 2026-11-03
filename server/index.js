@@ -1,7 +1,8 @@
+// Nạp .env trước mọi require khác: nhiều module đọc process.env lúc load.
+require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const dotenv = require("dotenv");
 const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
@@ -14,8 +15,6 @@ const chatbotAnalyticsRoutes = require("./routes/chatbotAnalyticsRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const path = require("path");
 
-dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
@@ -26,7 +25,7 @@ if (!MONGO_URI) {
 
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: process.env.CLIENT_ORIGIN || "http://localhost:3000",
     credentials: true,
   })
 );

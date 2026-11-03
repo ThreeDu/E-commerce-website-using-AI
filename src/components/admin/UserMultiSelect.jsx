@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
+import { getAdminUsers } from '../../services/admin/adminUserService';
 
 const UserMultiSelect = ({ value, onChange, token }) => {
   const [options, setOptions] = useState([]);
@@ -9,20 +10,12 @@ const UserMultiSelect = ({ value, onChange, token }) => {
     const fetchUsers = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch('/api/auth/admin/users', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          const users = data.users || [];
-          setOptions(users.map(user => ({
-            value: user._id,
-            label: `${user.name} (${user.email})`
-          })));
-        }
+        const data = await getAdminUsers(token);
+        const users = data.users || [];
+        setOptions(users.map(user => ({
+          value: user._id,
+          label: `${user.name} (${user.email})`
+        })));
       } catch (error) {
         console.error("Error fetching users:", error);
       } finally {

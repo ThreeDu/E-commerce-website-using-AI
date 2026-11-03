@@ -10,6 +10,7 @@
  * - onCancel     {function} Called when user cancels
  * - confirmLabel {string}   Custom label for confirm button (default: "Xác nhận")
  * - cancelLabel  {string}   Custom label for cancel button (default: "Hủy")
+ * - loadingLabel {string}   Confirm button label while loading (default: "Đang xử lý...")
  */
 function ConfirmDeleteModal({
   isOpen,
@@ -20,6 +21,7 @@ function ConfirmDeleteModal({
   onCancel,
   confirmLabel = "Xác nhận",
   cancelLabel = "Hủy",
+  loadingLabel = "Đang xử lý...",
 }) {
   if (!isOpen) {
     return null;
@@ -47,7 +49,7 @@ function ConfirmDeleteModal({
             onClick={onConfirm}
             disabled={isLoading}
           >
-            {isLoading ? "Đang xử lý..." : confirmLabel}
+            {isLoading ? loadingLabel : confirmLabel}
           </button>
         </div>
       </div>

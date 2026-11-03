@@ -6,7 +6,6 @@ const {
   createToken,
   getTokenFromHeader,
   verifyAdminRequest,
-  verifyUserRequest,
 } = require("../routes/helpers/authHelpers");
 
 const WISHLIST_PRODUCT_SELECT = "_id name image price category";
@@ -37,7 +36,7 @@ const register = async (req, res) => {
         .json({ message: "Mật khẩu phải có ít nhất 6 ký tự." });
     }
 
-    const existedUser = await User.findOne({ email });
+    const existedUser = await User.findOne({ email: String(email) });
     if (existedUser) {
       return res.status(409).json({ message: "Email đã tồn tại." });
     }
@@ -77,7 +76,7 @@ const login = async (req, res) => {
         .json({ message: "Email và mật khẩu là bắt buộc." });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: String(email) });
     if (!user) {
       return res.status(401).json({ message: "Thông tin đăng nhập không hợp lệ." });
     }
@@ -156,10 +155,7 @@ const verifyToken = async (req, res) => {
 };
 
 const getProfile = async (req, res) => {
-  const user = await verifyUserRequest(req, res);
-  if (!user) {
-    return;
-  }
+  const user = req.user;
 
   return res.json({
     message: "Lấy hồ sơ thành công.",
@@ -176,10 +172,7 @@ const getProfile = async (req, res) => {
 };
 
 const updateProfile = async (req, res) => {
-  const user = await verifyUserRequest(req, res);
-  if (!user) {
-    return;
-  }
+  const user = req.user;
 
   try {
     const { name, phone, address } = req.body;
@@ -211,10 +204,7 @@ const updateProfile = async (req, res) => {
 };
 
 const changePassword = async (req, res) => {
-  const authUser = await verifyUserRequest(req, res);
-  if (!authUser) {
-    return;
-  }
+  const authUser = req.user;
 
   try {
     const { currentPassword, newPassword } = req.body;
@@ -248,10 +238,7 @@ const changePassword = async (req, res) => {
 };
 
 const getWishlist = async (req, res) => {
-  const authUser = await verifyUserRequest(req, res);
-  if (!authUser) {
-    return;
-  }
+  const authUser = req.user;
 
   try {
     const user = await User.findById(authUser._id)
@@ -268,10 +255,7 @@ const getWishlist = async (req, res) => {
 };
 
 const addWishlist = async (req, res) => {
-  const authUser = await verifyUserRequest(req, res);
-  if (!authUser) {
-    return;
-  }
+  const authUser = req.user;
 
   try {
     const { productId } = req.body;
@@ -302,10 +286,7 @@ const addWishlist = async (req, res) => {
 };
 
 const removeWishlist = async (req, res) => {
-  const authUser = await verifyUserRequest(req, res);
-  if (!authUser) {
-    return;
-  }
+  const authUser = req.user;
 
   try {
     const { productId } = req.params;
@@ -327,15 +308,12 @@ const removeWishlist = async (req, res) => {
 };
 
 const uploadAvatar = async (req, res) => {
-  const user = await verifyUserRequest(req, res);
-  if (!user) {
-    return;
-  }
+  const user = req.user;
 
   try {
     const { avatar } = req.body;
 
-    if (!avatar || typeof avatar !== "string") {
+    if (!avatar || typeof avatar !== "string" || !/^data:image\/(png|jpe?g|gif|webp|avif|bmp);base64,/.test(avatar)) {
       return res.status(400).json({ message: "Avatar không hợp lệ." });
     }
 

@@ -6,7 +6,7 @@ const User = require("../models/User");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const AnalyticsEvent = require("../models/AnalyticsEvent");
-const ChatbotEvent = require("../chatbot-service/models/ChatbotEvent");
+const ChatbotEvent = require("../models/ChatbotEvent");
 const Cart = require("../models/Cart");
 
 const MONGO_URI = process.env.MONGO_URI;
@@ -15,10 +15,42 @@ if (!MONGO_URI) {
   process.exit(1);
 }
 
-const NUM_USERS = 200; // Increase size to seed more cases
 const NUM_PRODUCTS = 50;
-const RECENT_WINDOW_DAYS = 30;
-const PREV_WINDOW_START_DAYS = 60;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// PRNG có seed để mỗi lần chạy sinh cùng một bộ dữ liệu (đổi bằng SEED=<số>)
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function next() {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const random = mulberry32(Number(process.env.SEED || 42));
+
+/*
+ * Mô phỏng ~240 ngày lịch sử cho mỗi khách theo persona: khách mua lặp lại theo quá trình
+ * Poisson trong giai đoạn còn hoạt động; khách rời bỏ giảm dần hoạt động ~3 tuần trước khi
+ * ngừng hẳn. Nhờ vậy mô hình rời bỏ / tiềm năng / CLV (nhãn theo thời gian) có tín hiệu thật.
+ *   ordersPer30 / viewsPerDay / chatbotPer30: [min, max] cho mỗi khách
+ *   lapseAgo: ngừng mua cách đây [min, max] ngày (không có = vẫn đang hoạt động)
+ */
+const PERSONAS = [
+  { key: "champion", count: 20, signupAgo: [150, 240], ordersPer30: [3, 5], viewsPerDay: [1.5, 3], chatbotPer30: [1, 2], cancelRate: 0.03 },
+  { key: "loyal", count: 35, signupAgo: [90, 220], ordersPer30: [1.2, 2.5], viewsPerDay: [0.6, 1.5], chatbotPer30: [0.5, 1], cancelRate: 0.05 },
+  { key: "new_customer", count: 25, signupAgo: [10, 45], ordersPer30: [1, 3], viewsPerDay: [1, 2.5], chatbotPer30: [1, 3], cancelRate: 0.05 },
+  { key: "at_risk", count: 30, signupAgo: [100, 220], lapseAgo: [10, 30], ordersPer30: [1, 2], viewsPerDay: [0.5, 1.2], chatbotPer30: [0.3, 1], cancelRate: 0.1 },
+  { key: "churned", count: 45, signupAgo: [120, 240], lapseAgo: [40, 180], ordersPer30: [0.8, 2], viewsPerDay: [0.3, 1], chatbotPer30: [0, 0.5], cancelRate: 0.1 },
+  { key: "browser", count: 20, signupAgo: [20, 120], ordersPer30: [0, 0], viewsPerDay: [0.5, 1.5], chatbotPer30: [0.5, 2], cancelRate: 0, abandonedCart: true },
+  { key: "dormant", count: 25, signupAgo: [20, 200], ordersPer30: [0, 0], viewsPerDay: [0, 0], chatbotPer30: [0, 0], cancelRate: 0 },
+];
+const DECAY_DAYS = 21;        // số ngày hoạt động giảm dần trước khi rời bỏ
+const RESIDUAL_VIEWS = 0.03;  // lượt xem lác đác/ngày sau khi rời bỏ
+const CART_RATE = 0.25;       // xác suất một lượt xem dẫn tới thêm giỏ
+const WISHLIST_RATE = 0.05;
 
 
 function generateProductSpecs(brand, index) {
@@ -184,19 +216,17 @@ async function seed() {
     await mongoose.connect(MONGO_URI);
     console.log("Đã kết nối MongoDB.");
 
-    // Delete existing ML mock data if we want a fresh state (optional, but here we just append or clear)
-    // To be safe and not delete real admin data, we only delete users with email ending in @mock.com
+    // Chỉ xoá user có email @mock.com (và dữ liệu của họ) để không đụng dữ liệu thật
     console.log("Xoá dữ liệu mock cũ...");
     const mockUsers = await User.find({ email: /@mock\.com$/ });
-    const mockUserIds = mockUsers.map(u => u._id);
-    
+    const mockUserIds = mockUsers.map((u) => u._id);
+
     await Order.deleteMany({ user: { $in: mockUserIds } });
     await AnalyticsEvent.deleteMany({ userId: { $in: mockUserIds } });
     await ChatbotEvent.deleteMany({ user: { $in: mockUserIds } });
     await Cart.deleteMany({ user: { $in: mockUserIds } });
     await User.deleteMany({ _id: { $in: mockUserIds } });
 
-    // Xóa sản phẩm mock cũ
     console.log("Xoá sản phẩm mock cũ...");
     await Product.deleteMany({
       $or: [
@@ -205,173 +235,77 @@ async function seed() {
       ]
     });
 
-    // Create Products
     console.log("Tạo sản phẩm mock với cấu hình chi tiết...");
     const products = [];
     const brands = ["samsung", "iphone", "xiaomi", "macbook", "ipad", "acer", "dell", "oppo"];
     for (let i = 1; i <= NUM_PRODUCTS; i++) {
-      const brand = brands[Math.floor(Math.random() * brands.length)];
-      const price = Math.floor(Math.random() * 20000000) + 5000000;
+      const brand = pickOne(brands);
+      const price = randInt(5000000, 25000000);
       const specs = generateProductSpecs(brand, i);
-      
-      let p = new Product({
+      const p = new Product({
         name: specs.name,
-        price: price,
+        price,
         description: specs.description,
         category: specs.category,
         stock: 100,
-        finalPrice: price * 0.9,
+        discountPercent: 10,
+        finalPrice: Math.round(price * 0.9),
       });
       await p.save();
       products.push(p);
     }
-    
+
     const passwordHash = await bcrypt.hash("123456", 10);
+    const now = Date.now();
+    const totals = { users: 0, orders: 0, events: 0, chatbot: 0 };
 
-    // Create Users & Events
-    console.log("Tạo user và event mock...");
-    const now = new Date();
-
-    const scenarios = [
-      {
-        key: "champion",
-        count: 15,
-        profile: { completeness: 1, wishlistSize: 5, accountAgeDaysRange: [150, 300] },
-        orders: { completed: 6, cancelled: 0, completedDaysAgoRange: [1, 12] },
-        events: { recent: { product_view: 35, add_to_cart: 15, wishlist_add: 5 }, prev: { product_view: 20 } },
-        chatbot: { sessions: 1, messagesPerSession: 2, daysAgoRange: [1, 10] },
-      },
-      {
-        key: "loyal",
-        count: 25,
-        profile: { completeness: 1, wishlistSize: 3, accountAgeDaysRange: [100, 250] },
-        orders: { completed: 4, cancelled: 0, completedDaysAgoRange: [5, 28] },
-        events: { recent: { product_view: 22, add_to_cart: 8, wishlist_add: 3 }, prev: { product_view: 12 } },
-        chatbot: { sessions: 1, messagesPerSession: 2, daysAgoRange: [5, 25] },
-      },
-      {
-        key: "potential_loyalist",
-        count: 25,
-        profile: { completeness: 1, wishlistSize: 5, accountAgeDaysRange: [15, 45] },
-        orders: { completed: 2, cancelled: 0, completedDaysAgoRange: [2, 20] },
-        events: { recent: { product_view: 45, add_to_cart: 14, wishlist_add: 6 }, prev: { product_view: 5 } },
-        chatbot: { sessions: 3, messagesPerSession: 4, daysAgoRange: [1, 15] },
-      },
-      {
-        key: "medium_risk",
-        count: 35,
-        profile: { completeness: 0.8, wishlistSize: 2, accountAgeDaysRange: [60, 120] },
-        orders: { completed: 2, cancelled: 0, completedDaysAgoRange: [22, 40] },
-        events: { recent: { product_view: 8, add_to_cart: 2, wishlist_add: 1 }, prev: { product_view: 15, add_to_cart: 4 } },
-        chatbot: { sessions: 1, messagesPerSession: 1, daysAgoRange: [10, 20] },
-      },
-      {
-        key: "at_risk",
-        count: 25,
-        profile: { completeness: 1, wishlistSize: 1, accountAgeDaysRange: [90, 180] },
-        orders: { completed: 3, cancelled: 1, completedDaysAgoRange: [35, 60], cancelledDaysAgoRange: [32, 50] },
-        events: { recent: { product_view: 1, add_to_cart: 0, wishlist_add: 0 }, prev: { product_view: 18, add_to_cart: 6 } },
-        chatbot: { sessions: 0, messagesPerSession: 0, daysAgoRange: [10, 20] },
-      },
-      {
-        key: "hibernating",
-        count: 25,
-        profile: { completeness: 0.66, wishlistSize: 0, accountAgeDaysRange: [100, 200] },
-        orders: { completed: 1, cancelled: 0, completedDaysAgoRange: [50, 85] },
-        events: { recent: { product_view: 0, add_to_cart: 0, wishlist_add: 0 }, prev: { product_view: 8, add_to_cart: 1 } },
-        chatbot: { sessions: 0, messagesPerSession: 0, daysAgoRange: [20, 30] },
-      },
-      {
-        key: "lost",
-        count: 25,
-        profile: { completeness: 0.33, wishlistSize: 0, accountAgeDaysRange: [150, 300] },
-        orders: { completed: 1, cancelled: 0, completedDaysAgoRange: [100, 180] },
-        events: { recent: { product_view: 0, add_to_cart: 0, wishlist_add: 0 }, prev: { product_view: 0, add_to_cart: 0 } },
-        chatbot: { sessions: 0, messagesPerSession: 0, daysAgoRange: [30, 60] },
-      },
-      {
-        key: "cart_abandoners",
-        count: 20,
-        profile: { completeness: 0.66, wishlistSize: 2, accountAgeDaysRange: [30, 90] },
-        orders: { completed: 0, cancelled: 0 },
-        events: { recent: { product_view: 28, add_to_cart: 11, wishlist_add: 2 }, prev: { product_view: 6 } },
-        chatbot: { sessions: 1, messagesPerSession: 2, daysAgoRange: [2, 10] },
-      },
-    ];
-
+    console.log("Mô phỏng lịch sử mua sắm của user mock...");
     let userIndex = 1;
-    for (const scenario of scenarios) {
-      for (let i = 0; i < scenario.count; i++) {
-        const accountAgeDays = randInt(
-          scenario.profile.accountAgeDaysRange?.[0] || 30,
-          scenario.profile.accountAgeDaysRange?.[1] || 120
-        );
+    for (const persona of PERSONAS) {
+      for (let i = 0; i < persona.count; i++, userIndex++) {
+        const plan = makePlan(persona, now);
+        const buyer = plan.ordersPer30 > 0;
+
         const u = new User({
           name: `Mock User ${userIndex}`,
           email: `user${userIndex}@mock.com`,
           password: passwordHash,
-          phone: scenario.profile.completeness >= 0.66 ? `090${randInt(1000000, 9999999)}` : "",
-          address: scenario.profile.completeness >= 1 ? "Hà Nội, Việt Nam" : "",
-          createdAt: new Date(now.getTime() - accountAgeDays * 24 * 60 * 60 * 1000),
+          phone: buyer || random() < 0.5 ? `090${randInt(1000000, 9999999)}` : "",
+          address: buyer ? "Hà Nội, Việt Nam" : "",
+          createdAt: new Date(plan.signup),
         });
 
-        const wishlistSize = scenario.profile.wishlistSize || 0;
-        if (wishlistSize > 0) {
-          u.wishlist = pickManyUnique(products, wishlistSize).map((p) => p._id);
-        }
+        const events = simulateEvents(u._id, products, plan, now);
+        const orders = buyer ? simulateOrders(u._id, products, plan, events) : [];
+        const chatbot = simulateChatbot(u._id, products, plan, now);
 
+        const wishlisted = [...new Set(events.filter((e) => e.eventName === "wishlist_add").map((e) => String(e.productId)))];
+        u.wishlist = wishlisted.slice(0, 8);
         await u.save();
-        const uid = u._id;
 
-        // If cart_abandoners, create an abandoned Cart document (updated 24-72 hours ago)
-        if (scenario.key === "cart_abandoners") {
-          const cartProducts = pickManyUnique(products, randInt(1, 3));
-          const items = cartProducts.map(p => ({
-            product: p._id,
-            quantity: randInt(1, 2)
-          }));
-          const staleTime = new Date(now.getTime() - randInt(25, 75) * 60 * 60 * 1000); // 25-75 hours ago
-          
+        // productId chỉ dùng nội bộ để dựng wishlist; AnalyticsEvent không có field này
+        if (events.length) await AnalyticsEvent.insertMany(events.map(({ productId, ...e }) => e));
+        if (orders.length) await Order.insertMany(orders);
+        if (chatbot.length) await ChatbotEvent.insertMany(chatbot);
+
+        if (persona.abandonedCart) {
+          const staleTime = new Date(now - randInt(25, 75) * 60 * 60 * 1000);
           await Cart.collection.insertOne({
-            user: uid,
-            items,
+            user: u._id,
+            items: pickManyUnique(products, randInt(1, 3)).map((p) => ({ product: p._id, quantity: randInt(1, 2) })),
             createdAt: staleTime,
-            updatedAt: staleTime
+            updatedAt: staleTime,
           });
         }
 
-        if (scenario.orders?.completed || scenario.orders?.cancelled) {
-          await createOrders(uid, products, {
-            completed: scenario.orders.completed || 0,
-            cancelled: scenario.orders.cancelled || 0,
-            completedDaysAgoRange: scenario.orders.completedDaysAgoRange || [5, 45],
-            cancelledDaysAgoRange: scenario.orders.cancelledDaysAgoRange || [5, 45],
-          });
-        }
-
-        await createAnalyticsEvents(uid, scenario.events || {});
-        await createChatbotEvents(uid, scenario.chatbot || {});
-
-        userIndex += 1;
+        totals.users += 1;
+        totals.orders += orders.length;
+        totals.events += events.length;
+        totals.chatbot += chatbot.length;
       }
     }
 
-    if (userIndex - 1 < NUM_USERS) {
-      for (; userIndex <= NUM_USERS; userIndex++) {
-        const u = new User({
-          name: `Mock User ${userIndex}`,
-          email: `user${userIndex}@mock.com`,
-          password: passwordHash,
-          phone: "",
-          address: "",
-          createdAt: new Date(now.getTime() - randInt(20, 80) * 24 * 60 * 60 * 1000),
-        });
-        await u.save();
-      }
-    }
-
-    
-    console.log("Hoàn thành bơm dữ liệu!");
+    console.log(`Hoàn thành bơm dữ liệu: ${JSON.stringify(totals)}`);
     process.exit(0);
   } catch (err) {
     console.error("Lỗi:", err);
@@ -380,182 +314,142 @@ async function seed() {
 }
 
 function randInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return Math.floor(random() * (max - min + 1)) + min;
+}
+
+function randFloat(min, max) {
+  return min + random() * (max - min);
 }
 
 function pickOne(items) {
-  return items[Math.floor(Math.random() * items.length)];
+  return items[Math.floor(random() * items.length)];
 }
 
 function pickManyUnique(items, count) {
-  const shuffled = [...items].sort(() => 0.5 - Math.random());
+  const shuffled = [...items].sort(() => 0.5 - random());
   return shuffled.slice(0, Math.min(count, items.length));
 }
 
-function randomDateDaysAgo(minDays, maxDays) {
-  const daysAgo = randInt(minDays, maxDays);
-  const now = Date.now();
-  const offset = daysAgo * 24 * 60 * 60 * 1000;
-  const jitter = randInt(0, 6 * 60 * 60 * 1000);
-  return new Date(now - offset + jitter);
+function poisson(lambda) {
+  if (lambda <= 0) return 0;
+  const limit = Math.exp(-lambda);
+  let k = 0;
+  let p = 1;
+  do {
+    k += 1;
+    p *= random();
+  } while (p > limit);
+  return k - 1;
 }
 
-async function createOrders(userId, products, config) {
-  const completed = Number(config.completed || 0);
-  const cancelled = Number(config.cancelled || 0);
-  const completedRange = config.completedDaysAgoRange || [5, 45];
-  const cancelledRange = config.cancelledDaysAgoRange || [5, 45];
+function makePlan(persona, now) {
+  const signup = now - randFloat(...persona.signupAgo) * DAY_MS;
+  const activeStart = signup + randFloat(0, 5) * DAY_MS;
+  const lapseAt = persona.lapseAgo ? now - randFloat(...persona.lapseAgo) * DAY_MS : now;
+  return {
+    signup,
+    activeStart,
+    activeEnd: Math.min(now, Math.max(lapseAt, activeStart + 20 * DAY_MS)),
+    lapsing: Boolean(persona.lapseAgo),
+    ordersPer30: randFloat(...persona.ordersPer30),
+    viewsPerDay: randFloat(...persona.viewsPerDay),
+    chatbotPer30: randFloat(...persona.chatbotPer30),
+    cancelRate: persona.cancelRate,
+  };
+}
 
-  const orders = [];
+// Cường độ hoạt động tại thời điểm t: 1 khi còn hoạt động, giảm dần trong DECAY_DAYS trước khi rời bỏ
+function intensity(plan, t) {
+  if (t < plan.activeStart || t >= plan.activeEnd) return 0;
+  if (!plan.lapsing) return 1;
+  const daysLeft = (plan.activeEnd - t) / DAY_MS;
+  return daysLeft >= DECAY_DAYS ? 1 : 0.25 + 0.75 * (daysLeft / DECAY_DAYS);
+}
 
-  for (let i = 0; i < completed; i++) {
-    const p = pickOne(products);
-    const quantity = randInt(1, 3);
-    const price = Number(p.finalPrice || p.price || 0);
-    const createdAt = randomDateDaysAgo(completedRange[0], completedRange[1]);
-    orders.push({
-      user: userId,
-      shippingAddress: { fullName: "Mock User", phone: "090", address: "HN" },
-      paymentMethod: "cod",
-      orderItems: [{
-        name: p.name,
-        quantity,
-        price,
-        product: p._id,
-      }],
-      totalPrice: price * quantity,
-      subtotalPrice: price * quantity,
-      discountAmount: 0,
-      status: "delivered",
-      isDelivered: true,
-      deliveredAt: new Date(createdAt.getTime() + 2 * 24 * 60 * 60 * 1000),
-      createdAt,
-    });
+function simulateEvents(userId, products, plan, now) {
+  const events = [];
+  for (let day = plan.activeStart; day < now; day += DAY_MS) {
+    const rate = day < plan.activeEnd
+      ? plan.viewsPerDay * intensity(plan, day)
+      : (plan.viewsPerDay > 0 ? RESIDUAL_VIEWS : 0);
+    for (let v = poisson(rate); v > 0; v--) {
+      const at = new Date(day + random() * DAY_MS);
+      if (at.getTime() >= now) continue;
+      const productId = pickOne(products)._id;
+      events.push({ eventName: "product_view", userId, occurredAt: at, productId });
+      if (random() < CART_RATE) {
+        events.push({ eventName: "add_to_cart", userId, occurredAt: new Date(at.getTime() + 60000), productId });
+      }
+      if (random() < WISHLIST_RATE) {
+        events.push({ eventName: "wishlist_add", userId, occurredAt: new Date(at.getTime() + 30000), productId });
+      }
+    }
   }
+  return events;
+}
 
-  for (let i = 0; i < cancelled; i++) {
+function simulateOrders(userId, products, plan, events) {
+  const orders = [];
+  const meanGapDays = 30 / plan.ordersPer30;
+  let t = plan.activeStart + randFloat(0, meanGapDays) * DAY_MS;
+  while (t < plan.activeEnd) {
     const p = pickOne(products);
     const quantity = randInt(1, 2);
     const price = Number(p.finalPrice || p.price || 0);
-    const createdAt = randomDateDaysAgo(cancelledRange[0], cancelledRange[1]);
+    const cancelled = random() < plan.cancelRate;
     orders.push({
       user: userId,
-      shippingAddress: { fullName: "Mock User", phone: "090", address: "HN" },
+      shippingAddress: { fullName: "Mock User", phone: "0900000000", address: "Hà Nội" },
       paymentMethod: "cod",
-      orderItems: [{
-        name: p.name,
-        quantity,
-        price,
-        product: p._id,
-      }],
+      orderItems: [{ name: p.name, quantity, price, product: p._id }],
       totalPrice: price * quantity,
       subtotalPrice: price * quantity,
       discountAmount: 0,
-      status: "cancelled",
-      isDelivered: false,
-      createdAt,
+      status: cancelled ? "cancelled" : "delivered",
+      isDelivered: !cancelled,
+      deliveredAt: cancelled ? undefined : new Date(t + 2 * DAY_MS),
+      cancelledAt: cancelled ? new Date(t + DAY_MS) : undefined,
+      createdAt: new Date(t),
     });
-  }
+    // khách thêm giỏ ngay trước khi đặt
+    events.push({ eventName: "add_to_cart", userId, occurredAt: new Date(t - 10 * 60000), productId: p._id });
 
-  if (orders.length > 0) {
-    await Order.insertMany(orders);
+    // khoảng cách tới đơn kế tiếp ~ phân phối mũ, giãn ra khi khách đang giảm hoạt động
+    const gap = (-Math.log(1 - random()) * meanGapDays) / Math.max(intensity(plan, t), 0.25);
+    t += Math.max(gap, 1) * DAY_MS;
   }
+  return orders;
 }
 
-async function createAnalyticsEvents(userId, config) {
-  const recent = config.recent || {};
-  const prev = config.prev || {};
+function simulateChatbot(userId, products, plan, now) {
   const docs = [];
-
-  for (const [eventName, count] of Object.entries(recent)) {
-    for (let i = 0; i < Number(count || 0); i++) {
-      docs.push({
-        eventName,
-        userId,
-        occurredAt: randomDateDaysAgo(1, RECENT_WINDOW_DAYS),
-      });
-    }
-  }
-
-  for (const [eventName, count] of Object.entries(prev)) {
-    for (let i = 0; i < Number(count || 0); i++) {
-      docs.push({
-        eventName,
-        userId,
-        occurredAt: randomDateDaysAgo(RECENT_WINDOW_DAYS + 1, PREV_WINDOW_START_DAYS),
-      });
-    }
-  }
-
-  if (docs.length > 0) {
-    await AnalyticsEvent.insertMany(docs);
-  }
-}
-
-async function createChatbotEvents(userId, config) {
-  const sessions = Number(config.sessions || 0);
-  const messagesPerSession = Number(config.messagesPerSession || 0);
-  const daysRange = config.daysAgoRange || [2, 20];
-  const docs = [];
-
-  const products = await Product.find({}).select("_id").limit(100).lean();
-
+  const activeDays = Math.max(0, (Math.min(plan.activeEnd, now) - plan.activeStart) / DAY_MS);
+  const sessions = poisson((plan.chatbotPer30 * activeDays) / 30);
   for (let s = 0; s < sessions; s++) {
-    const sessionId = "sess_" + Math.random().toString(36).substring(7);
-    const baseDate = randomDateDaysAgo(daysRange[0], daysRange[1]);
-    for (let i = 0; i < messagesPerSession; i++) {
-      const msgTime = new Date(baseDate.getTime() + i * 60000);
-      docs.push({
-        user: userId,
-        sessionId,
-        eventType: "message",
-        message: "Tu van san pham",
-        createdAt: msgTime,
+    const sessionId = "sess_" + Math.floor(random() * 1e12).toString(36);
+    const start = new Date(plan.activeStart + random() * activeDays * DAY_MS);
+    for (let i = 0; i < randInt(1, 3); i++) {
+      const msgTime = new Date(start.getTime() + i * 60000);
+      docs.push({ user: userId, sessionId, eventType: "message", message: "Tu van san pham", createdAt: msgTime });
+      const shown = pickManyUnique(products, randInt(2, 4));
+      shown.forEach((p, j) => {
+        docs.push({ user: userId, sessionId, eventType: "impression", product: p._id, createdAt: new Date(msgTime.getTime() + 2000 + j * 500) });
       });
-
-      if (products.length > 0) {
-        const numImpressions = Math.floor(Math.random() * 3) + 2; 
-        const selectedProducts = [];
-        for (let j = 0; j < numImpressions; j++) {
-          const randomProduct = products[Math.floor(Math.random() * products.length)];
-          selectedProducts.push(randomProduct._id);
-          docs.push({
-            user: userId,
-            sessionId,
-            eventType: "impression",
-            product: randomProduct._id,
-            createdAt: new Date(msgTime.getTime() + 2000 + j * 500),
-          });
-        }
-
-        if (Math.random() > 0.5) {
-          const clickProdId = selectedProducts[Math.floor(Math.random() * selectedProducts.length)];
-          const clickTime = new Date(msgTime.getTime() + 10000 + Math.floor(Math.random() * 5000));
-          docs.push({
-            user: userId,
-            sessionId,
-            eventType: "click",
-            product: clickProdId,
-            createdAt: clickTime,
-          });
-
-          if (Math.random() > 0.8) {
-            docs.push({
-              user: userId,
-              sessionId,
-              eventType: "cart",
-              product: clickProdId,
-              createdAt: new Date(clickTime.getTime() + 5000 + Math.floor(Math.random() * 5000)),
-            });
-          }
+      if (random() > 0.5) {
+        const clicked = pickOne(shown);
+        const clickTime = new Date(msgTime.getTime() + 10000);
+        docs.push({ user: userId, sessionId, eventType: "click", product: clicked._id, createdAt: clickTime });
+        if (random() > 0.8) {
+          docs.push({ user: userId, sessionId, eventType: "cart", product: clicked._id, createdAt: new Date(clickTime.getTime() + 5000) });
         }
       }
     }
   }
-
-  if (docs.length > 0) {
-    await ChatbotEvent.insertMany(docs);
-  }
+  return docs;
 }
 
-seed();
+if (require.main === module) {
+  seed();
+}
+
+module.exports = { PERSONAS, DAY_MS, makePlan, intensity, simulateEvents, simulateOrders, simulateChatbot };

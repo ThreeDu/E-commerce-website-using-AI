@@ -8,15 +8,8 @@ import { fetchCategories } from "../services/categoryService";
 import { fetchRecommendations } from "../services/recommendationService";
 import { useNotification } from "../context/NotificationContext";
 import { trackEvent } from "../services/analyticsService";
-import { fetchWishlist, addToWishlist, removeFromWishlist } from "../services/wishlistService";
-
-const CAT_COLORS = [
-  "bg-[#e9f6ff]",
-  "bg-[#fef2e4]",
-  "bg-[#edf9f0]",
-  "bg-[#f6f0ff]",
-  "bg-[#fff4f4]",
-];
+import { fetchWishlist, addToWishlist, removeFromWishlist } from "../services/wishlistService";
+import { formatPrice } from "../utils/priceUtils";
 
 function HomePage() {
   const { addToCart, cart } = useCart();
@@ -413,11 +406,11 @@ function HomePage() {
 
                     <div className="mt-2.5">
                       <div className="text-sm font-extrabold text-slate-900">
-                        {pricing.finalPrice.toLocaleString("vi-VN")} đ
+                        {formatPrice(pricing.finalPrice)}
                       </div>
                       {pricing.hasDiscount ? (
                         <div className="text-[11px] text-slate-400 line-through">
-                          {pricing.basePrice.toLocaleString("vi-VN")} đ
+                          {formatPrice(pricing.basePrice)}
                         </div>
                       ) : null}
                     </div>
@@ -549,11 +542,11 @@ function HomePage() {
 
                   <div className="mt-2.5">
                     <div className="text-sm font-extrabold text-slate-900">
-                      {pricing.finalPrice.toLocaleString("vi-VN")} đ
+                      {formatPrice(pricing.finalPrice)}
                     </div>
                     {pricing.hasDiscount ? (
                       <div className="text-[11px] text-slate-400 line-through">
-                        {pricing.basePrice.toLocaleString("vi-VN")} đ
+                        {formatPrice(pricing.basePrice)}
                       </div>
                     ) : null}
                   </div>

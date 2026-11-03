@@ -77,9 +77,47 @@ const verifyAdminRequest = async (req, res) => {
   }
 };
 
+// userId từ token nếu có và hợp lệ, ngược lại null (cho các route không bắt buộc đăng nhập).
+const getOptionalUserId = (req) => {
+  const token = getTokenFromHeader(req);
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    return decoded?.userId || null;
+  } catch (error) {
+    return null;
+  }
+};
+
+const requireUser = async (req, res, next) => {
+  const user = await verifyUserRequest(req, res);
+  if (!user) {
+    return;
+  }
+
+  req.user = user;
+  next();
+};
+
+const requireAdmin = async (req, res, next) => {
+  const adminUser = await verifyAdminRequest(req, res);
+  if (!adminUser) {
+    return;
+  }
+
+  req.adminUser = adminUser;
+  next();
+};
+
 module.exports = {
   createToken,
   getTokenFromHeader,
+  getOptionalUserId,
   verifyUserRequest,
   verifyAdminRequest,
+  requireUser,
+  requireAdmin,
 };

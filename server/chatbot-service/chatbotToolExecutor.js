@@ -15,7 +15,7 @@ const Product = require('../models/Product');
 const Cart = require('../models/Cart');
 const Order = require('../models/Order');
 const Discount = require('../models/Discount');
-const { normalizeVietnamese } = require('./textUtils');
+const { normalizeVietnamese, escapeRegex } = require('./textUtils');
 const { generateEmbedding, cosineSimilarity } = require('./embeddingHelper');
 
 // ─── Tool 1: searchProducts ─────────────────────────────────────────────────
@@ -25,11 +25,11 @@ async function searchProducts({ keyword, brand, category, priceMin, priceMax, so
     const maxResults = Math.min(Number(limit) || 8, 12);
 
     if (brand) {
-      filter.brand = { $regex: normalizeVietnamese(brand).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+      filter.brand = { $regex: escapeRegex(normalizeVietnamese(brand)), $options: 'i' };
     }
 
     if (category) {
-      filter.category = { $regex: category.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+      filter.category = { $regex: escapeRegex(category), $options: 'i' };
     }
 
     if (priceMin !== undefined || priceMax !== undefined) {
@@ -48,7 +48,7 @@ async function searchProducts({ keyword, brand, category, priceMin, priceMax, so
 
     if (keyword) {
       const normalized = normalizeVietnamese(keyword);
-      const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escaped = escapeRegex(normalized);
       filter.$or = [
         { name: { $regex: escaped, $options: 'i' } },
         { description: { $regex: escaped, $options: 'i' } },
@@ -122,7 +122,7 @@ async function getProductDetail({ productId, productName }) {
         .lean();
     } else if (productName) {
       const normalized = normalizeVietnamese(productName);
-      const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escaped = escapeRegex(normalized);
       product = await Product.findOne({
         $or: [
           { name: { $regex: escaped, $options: 'i' } },
@@ -177,7 +177,7 @@ async function compareProducts({ productId1, productId2, productName1, productNa
       if (id) return Product.findById(id).select('-embedding -viewedBy').lean();
       if (name) {
         const normalized = normalizeVietnamese(name);
-        const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const escaped = escapeRegex(normalized);
         return Product.findOne({
           $or: [
             { name: { $regex: escaped, $options: 'i' } },
@@ -373,7 +373,7 @@ async function getPromotions({ category }) {
     // Get discounted products
     const productFilter = { discountPercent: { $gt: 0 } };
     if (category) {
-      productFilter.category = { $regex: category.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+      productFilter.category = { $regex: escapeRegex(category), $options: 'i' };
     }
 
     const discountedProducts = await Product.find(productFilter)

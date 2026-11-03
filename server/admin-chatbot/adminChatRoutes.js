@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { chat, chatStream, getSessions, getSessionDetail, deleteSession } = require('./adminChatController');
+const { requireAdmin } = require('../routes/helpers/authHelpers');
+
+router.use(requireAdmin);
 
 router.post('/message', chat);
 router.post('/message/stream', chatStream);

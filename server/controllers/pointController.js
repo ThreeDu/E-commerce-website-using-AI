@@ -2,7 +2,6 @@ const User = require("../models/User");
 const PointHistory = require("../models/PointHistory");
 const RewardTier = require("../models/RewardTier");
 const Discount = require("../models/Discount");
-const { verifyUserRequest } = require("../routes/helpers/authHelpers");
 
 /**
  * GET /api/points/me
@@ -10,10 +9,7 @@ const { verifyUserRequest } = require("../routes/helpers/authHelpers");
  */
 const getMyPoints = async (req, res) => {
   try {
-    const authUser = await verifyUserRequest(req, res);
-    if (!authUser) {
-      return;
-    }
+    const authUser = req.user;
 
     const user = await User.findById(authUser._id).select("loyaltyPoints");
     const history = await PointHistory.find({ user: authUser._id })
@@ -64,10 +60,7 @@ function generateRewardCode() {
  */
 const redeemPoints = async (req, res) => {
   try {
-    const authUser = await verifyUserRequest(req, res);
-    if (!authUser) {
-      return;
-    }
+    const authUser = req.user;
 
     const { rewardTierId } = req.body;
     if (!rewardTierId) {
@@ -80,11 +73,16 @@ const redeemPoints = async (req, res) => {
       return res.status(404).json({ message: "Mức đổi thưởng không tồn tại hoặc đã tắt." });
     }
 
-    // 2. Kiểm tra đủ điểm
-    const user = await User.findById(authUser._id);
-    if ((user.loyaltyPoints || 0) < tier.pointsRequired) {
+    // 2. Trừ điểm nguyên tử (chỉ trừ khi đủ điểm) để hai request song song không đổi được 2 voucher
+    const user = await User.findOneAndUpdate(
+      { _id: authUser._id, loyaltyPoints: { $gte: tier.pointsRequired } },
+      { $inc: { loyaltyPoints: -tier.pointsRequired } },
+      { new: true }
+    );
+    if (!user) {
+      const current = await User.findById(authUser._id).select("loyaltyPoints").lean();
       return res.status(400).json({
-        message: `Bạn cần ${tier.pointsRequired} điểm nhưng chỉ có ${user.loyaltyPoints || 0} điểm.`,
+        message: `Bạn cần ${tier.pointsRequired} điểm nhưng chỉ có ${current?.loyaltyPoints || 0} điểm.`,
       });
     }
 
@@ -102,25 +100,27 @@ const redeemPoints = async (req, res) => {
     const now = new Date();
     const endDate = new Date(now.getTime() + tier.voucherValidDays * 24 * 60 * 60 * 1000);
 
-    const discount = await Discount.create({
-      code,
-      type: tier.discountType,
-      value: tier.discountValue,
-      minOrderValue: tier.minOrderValue || 0,
-      maxDiscountValue: tier.maxDiscountValue || 0,
-      startDate: now,
-      endDate,
-      usageLimit: 1,
-      usageLimitPerUser: 1,
-      allowedUsers: [user._id],
-      isActive: true,
-    });
+    let discount;
+    try {
+      discount = await Discount.create({
+        code,
+        type: tier.discountType,
+        value: tier.discountValue,
+        minOrderValue: tier.minOrderValue || 0,
+        maxDiscountValue: tier.maxDiscountValue || 0,
+        startDate: now,
+        endDate,
+        usageLimit: 1,
+        usageLimitPerUser: 1,
+        allowedUsers: [user._id],
+        isActive: true,
+      });
+    } catch (createError) {
+      await User.updateOne({ _id: user._id }, { $inc: { loyaltyPoints: tier.pointsRequired } });
+      throw createError;
+    }
 
-    // 5. Trừ điểm
-    user.loyaltyPoints = Math.max(0, (user.loyaltyPoints || 0) - tier.pointsRequired);
-    await user.save();
-
-    // 6. Ghi lịch sử
+    // 5. Ghi lịch sử
     await PointHistory.create({
       user: user._id,
       amount: -tier.pointsRequired,

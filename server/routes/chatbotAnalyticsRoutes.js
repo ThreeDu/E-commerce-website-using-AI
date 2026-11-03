@@ -4,18 +4,15 @@
 
 const express = require('express');
 const router = express.Router();
-const ChatbotEvent = require('../chatbot-service/models/ChatbotEvent');
-const ChatSession = require('../chatbot-service/models/ChatSession');
-const { verifyAdminRequest } = require('./helpers/authHelpers');
+const ChatbotEvent = require('../models/ChatbotEvent');
+const ChatSession = require('../models/ChatSession');
+const { requireAdmin } = require('./helpers/authHelpers');
 
 /**
  * GET /api/admin/chatbot-analytics/overview
  */
-router.get('/overview', async (req, res) => {
+router.get('/overview', requireAdmin, async (req, res) => {
   try {
-    const admin = await verifyAdminRequest(req, res);
-    if (!admin) return;
-
     const totalSessions = await ChatSession.countDocuments();
     const totalEvents = await ChatbotEvent.countDocuments();
     const impressions = await ChatbotEvent.countDocuments({ eventType: 'impression' });

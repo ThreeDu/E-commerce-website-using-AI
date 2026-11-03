@@ -1,22 +1,16 @@
 const Order = require("../../models/Order");
-const User = require("../../models/User");
-const PointHistory = require("../../models/PointHistory");
 const { logAdminAction } = require("../../utils/adminAuditLogger");
-const { notifyOrderStatusChange } = require("../../helpers/notificationHelper");
+const { changeOrderStatus } = require("../../services/orderStatusService");
+const { buildPaymentConfig } = require("../../helpers/paymentHelper");
+const { parsePagination } = require("../../helpers/pagination");
+const { REVENUE_ORDER_FILTER } = require("../../services/orderService");
 
 const ALLOWED_STATUS = ["pending", "confirmed", "shipping", "delivered", "cancelled"];
-
-const POINTS_PER_UNIT = 10000; // 10.000đ = 1 điểm
-
-const calculatePoints = (totalPrice) => {
-  return Math.floor(Number(totalPrice || 0) / POINTS_PER_UNIT);
-};
 
 const listOrders = async (req, res) => {
   try {
     const { status = "all", page = "1", limit = "20" } = req.query;
-    const parsedPage = Math.max(1, Number(page) || 1);
-    const parsedLimit = Math.min(100, Math.max(5, Number(limit) || 20));
+    const { page: parsedPage, limit: parsedLimit } = parsePagination({ page, limit }, { minLimit: 5 });
 
     const filter = {};
     if (status !== "all") {
@@ -54,26 +48,9 @@ const getOrderById = async (req, res) => {
     }
 
     const orderObj = order.toObject();
-    if (
-      (orderObj.paymentMethod === "beepay" || orderObj.paymentMethod === "transfer") &&
-      orderObj.status === "pending"
-    ) {
-      const bankId = process.env.BANK_ID || "MB";
-      const accountNo = process.env.BANK_ACCOUNT_NO || "008000888";
-      const accountName = process.env.BANK_ACCOUNT_NAME || "NGUYEN VAN A";
-      const prefix = process.env.BEEPAY_PREFIX || "DH";
-      const description = `${prefix}${orderObj._id}`;
-      const qrUrl = `https://img.vietqr.io/image/${bankId}-${accountNo}-compact.png?amount=${
-        orderObj.totalPrice
-      }&addInfo=${description}&accountName=${encodeURIComponent(accountName)}`;
-
-      orderObj.paymentConfig = {
-        bankId,
-        accountNo,
-        accountName,
-        description,
-        qrUrl,
-      };
+    const paymentConfig = buildPaymentConfig(orderObj);
+    if (paymentConfig) {
+      orderObj.paymentConfig = paymentConfig;
     }
 
     return res.json({
@@ -93,92 +70,7 @@ const updateOrderStatus = async (req, res) => {
       return res.status(400).json({ message: "Trạng thái đơn hàng không hợp lệ." });
     }
 
-    // Lấy đơn hàng hiện tại để biết trạng thái cũ
-    const existingOrder = await Order.findById(req.params.id);
-    if (!existingOrder) {
-      return res.status(404).json({ message: "Không tìm thấy đơn hàng." });
-    }
-
-    const oldStatus = existingOrder.status;
-
-    const updatePayload = {
-      status,
-      isDelivered: status === "delivered",
-      deliveredAt: status === "delivered" ? new Date() : null,
-      cancelledAt: status === "cancelled" ? new Date() : null,
-    };
-
-    if (
-      status === "confirmed" &&
-      (existingOrder.paymentMethod === "beepay" || existingOrder.paymentMethod === "transfer") &&
-      !existingOrder.isPaid
-    ) {
-      updatePayload.isPaid = true;
-      updatePayload.paidAt = new Date();
-      updatePayload.paymentDetails = {
-        transactionRef: "MANUAL_CONFIRM_" + Date.now(),
-        bankCode: "MANUAL",
-        amount: existingOrder.totalPrice,
-        counterpartName: "ADMIN_MANUAL",
-      };
-    }
-
-    const updatedOrder = await Order.findByIdAndUpdate(req.params.id, updatePayload, {
-      new: true,
-      runValidators: true,
-    }).populate("user", "_id name email");
-
-    // Gửi thông báo trạng thái đơn hàng
-    notifyOrderStatusChange(updatedOrder, status).catch((err) =>
-      console.error("Gửi thông báo cập nhật đơn hàng thất bại:", err)
-    );
-
-    // ── Xử lý điểm tích lũy ──
-    const userId = existingOrder.user;
-
-    if (userId) {
-      // Trường hợp 1: Chuyển sang "delivered" (từ trạng thái khác) → Cộng điểm
-      if (status === "delivered" && oldStatus !== "delivered") {
-        const earnedPoints = calculatePoints(existingOrder.totalPrice);
-        if (earnedPoints > 0) {
-          const user = await User.findByIdAndUpdate(
-            userId,
-            { $inc: { loyaltyPoints: earnedPoints } },
-            { new: true }
-          );
-
-          await PointHistory.create({
-            user: userId,
-            amount: earnedPoints,
-            type: "earn",
-            reason: `Đơn hàng #${String(existingOrder._id).slice(-8)} giao thành công`,
-            relatedOrder: existingOrder._id,
-            balanceAfter: user.loyaltyPoints,
-          });
-        }
-      }
-
-      // Trường hợp 2: Hủy đơn đã giao → Trừ lại điểm
-      if (status === "cancelled" && oldStatus === "delivered") {
-        const revokedPoints = calculatePoints(existingOrder.totalPrice);
-        if (revokedPoints > 0) {
-          const user = await User.findById(userId);
-          const newBalance = Math.max(0, (user.loyaltyPoints || 0) - revokedPoints);
-
-          user.loyaltyPoints = newBalance;
-          await user.save();
-
-          await PointHistory.create({
-            user: userId,
-            amount: -revokedPoints,
-            type: "earn",
-            reason: `Hoàn trả điểm — đơn #${String(existingOrder._id).slice(-8)} bị hủy sau giao`,
-            relatedOrder: existingOrder._id,
-            balanceAfter: newBalance,
-          });
-        }
-      }
-    }
+    const { order: updatedOrder } = await changeOrderStatus(req.params.id, status);
 
     logAdminAction({
       req,
@@ -196,7 +88,7 @@ const updateOrderStatus = async (req, res) => {
       order: updatedOrder,
     });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(error.status || 500).json({ message: error.message });
   }
 };
 
@@ -226,9 +118,7 @@ const getRevenueOverview = async (req, res) => {
       ? new Date(selectedYear + 1, 0, 1)
       : new Date(selectedYear, selectedMonth, 1);
 
-    const deliveredMatch = {
-      status: "delivered",
-    };
+    const deliveredMatch = REVENUE_ORDER_FILTER;
 
     const [monthlyAggregation, yearlyAggregation, allTimeAggregation, periodAggregation, productSoldAggregation] = await Promise.all([
       Order.aggregate([

@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getStatusInfo } from "../utils/orderStatusUtils";
-import { fetchMyOrders } from "../services/orderService";
+import { fetchMyOrders } from "../services/orderService";
+import { formatPrice } from "../utils/priceUtils";
 function OrderHistoryPage() {
   const { auth } = useAuth();
   const [orders, setOrders] = useState([]);
@@ -67,7 +68,7 @@ function OrderHistoryPage() {
               <div className="p-[14px_16px] bg-white border border-[rgba(148,163,184,0.15)] rounded-[14px] shadow-[0_4px_12px_rgba(15,23,42,0.04)]">
                 <strong className="text-shop-ink">Tổng chi tiêu</strong>
                 <p className="mt-2 mb-0 text-2xl font-bold">
-                  {totalSpend.toLocaleString("vi-VN")} đ
+                  {formatPrice(totalSpend)}
                 </p>
               </div>
             </div>
@@ -94,7 +95,7 @@ function OrderHistoryPage() {
                       <span className="inline-flex items-center rounded-full text-xs font-bold px-[11px] py-1.5" style={{ backgroundColor: statusInfo.bg, color: statusInfo.color }}>
                         {statusInfo.label}
                       </span>
-                      <p className="font-black text-2xl text-[#be2f00] m-0 mt-1">{Number(order.totalPrice || 0).toLocaleString("vi-VN")} đ</p>
+                      <p className="font-black text-2xl text-[#be2f00] m-0 mt-1">{formatPrice(order.totalPrice || 0)}</p>
                     </div>
                   </div>
 
@@ -104,7 +105,7 @@ function OrderHistoryPage() {
                         <span className="text-shop-ink">
                           {item.name} <strong className="text-[#64748b] font-bold">x{item.quantity}</strong>
                         </span>
-                        <strong className="text-shop-ink font-bold">{Number(item.price * item.quantity).toLocaleString("vi-VN")} đ</strong>
+                        <strong className="text-shop-ink font-bold">{formatPrice(item.price * item.quantity)}</strong>
                       </div>
                     ))}
                   </div>

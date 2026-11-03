@@ -37,6 +37,7 @@
     "backfill:product-keys": "node server/scripts/backfillProductStructuredFields.js",
     "build": "npx @tailwindcss/cli -i ./src/app.css -o ./src/tailwind-built.css && react-scripts build",
     "test": "react-scripts test",
+    "test:server": "node --test --test-force-exit \"server/tests/**/*.test.js\"",
     "eject": "react-scripts eject"
   },
   "proxy": "http://localhost:5000",
@@ -59,6 +60,7 @@
     ]
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.0",
     "@tailwindcss/postcss": "^4.3.0",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.0"

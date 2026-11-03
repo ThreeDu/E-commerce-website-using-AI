@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { useStatusMessageBridge } from "../../../hooks/useStatusMessageBridge";
-import { createAdminDiscount } from "../../../services/admin/discountService";
+import { createAdminDiscount } from "../../../services/admin/adminDiscountService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
 import UserMultiSelect from "../../../components/admin/UserMultiSelect";
 const composeUtcDateTime = (date, time) => {

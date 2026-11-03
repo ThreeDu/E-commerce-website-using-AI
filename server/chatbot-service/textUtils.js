@@ -46,7 +46,15 @@ function formatPrice(num) {
   return num.toLocaleString('vi-VN') + '₫';
 }
 
+/**
+ * Escape user input before using it inside a RegExp / $regex (prevents ReDoS and wildcard abuse).
+ */
+function escapeRegex(text) {
+  return String(text ?? '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 module.exports = {
+  escapeRegex,
   normalizeVietnamese,
   extractJSON,
   formatPrice,

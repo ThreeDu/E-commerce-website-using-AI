@@ -43,6 +43,7 @@ htmlcov/
 .hallmark/
 .gemini/
 .antigravity/
+.claude/
 
 # ─── Generated Reports & Dynamic Uploads ───
 /public/reports/*
@@ -67,3 +68,5 @@ Desktop.ini
 .vscode/
 *.sublime-workspace
 *.sublime-project
+.codemem/
+claude.md
