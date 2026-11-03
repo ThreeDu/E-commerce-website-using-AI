@@ -27,15 +27,15 @@ function IntelligenceGuideModal({ setShowGuideModal, showGuideModal }) {
                   <span className="inline-block px-2.5 py-1 rounded-xl text-xs font-bold uppercase tracking-wider bg-red-100 text-red-800">Churn Risk (Tỷ lệ rời bỏ)</span>
                 </div>
                 <p className="m-0 text-[13px] text-[#334155] leading-relaxed">
-                  <strong>Định nghĩa:</strong> Xác suất khách hàng ngừng tương tác hoặc rời bỏ hệ thống trong tương lai gần.
+                  <strong>Định nghĩa:</strong> Xác suất một khách đã từng mua sẽ <strong>không có đơn hoàn tất nào trong 45 ngày tới</strong>.
                 </p>
                 <p className="m-0 text-[13px] text-[#334155] leading-relaxed">
-                  <strong>Cách tính:</strong> AI (Random Forest) phân tích chuỗi hoạt động thời gian thực (số lần tương tác chatbot, lượt xem sản phẩm, số ngày không mua hàng...) và so sánh với lịch sử rời bỏ của các khách hàng cũ để dự báo xác suất từ 0% đến 100%.
+                  <strong>Cách tính:</strong> Mô hình <strong>Gradient Boosting</strong> học từ lịch sử thật: tại nhiều mốc thời gian trong quá khứ, hệ thống lấy hành vi của khách trước mốc (số ngày từ lần mua cuối, tần suất, lượt xem, thêm giỏ, chatbot...) và đối chiếu khách đó có quay lại mua trong 45 ngày sau mốc hay không.
                 </p>
                 <div className="flex flex-col gap-1.5 mt-1 bg-white p-2.5 border border-[#f1f5f9] rounded-lg">
                   <div className="text-[12.5px] text-[#475569]"><strong className="text-green-600">Thấp (≤ 30%):</strong> Gắn kết tốt, hoạt động đều.</div>
-                  <div className="text-[12.5px] text-[#475569]"><strong className="text-orange-500">Trung bình (31-70%):</strong> Cần chú ý, gửi nhắc nhở nhẹ.</div>
-                  <div className="text-[12.5px] text-[#475569]"><strong className="text-red-600">Cao (> 70%):</strong> Nguy cơ rời đi cực lớn, cần can thiệp khẩn cấp.</div>
+                  <div className="text-[12.5px] text-[#475569]"><strong className="text-orange-500">Trung bình (30–60%):</strong> Cần chú ý, gửi nhắc nhở nhẹ.</div>
+                  <div className="text-[12.5px] text-[#475569]"><strong className="text-red-600">Cao (&gt; 60%):</strong> Nguy cơ rời đi lớn, cần can thiệp giữ chân.</div>
                 </div>
               </div>
 
@@ -44,26 +44,26 @@ function IntelligenceGuideModal({ setShowGuideModal, showGuideModal }) {
                   <span className="inline-block px-2.5 py-1 rounded-xl text-xs font-bold uppercase tracking-wider bg-purple-100 text-purple-800">Potential (Điểm tiềm năng)</span>
                 </div>
                 <p className="m-0 text-[13px] text-[#334155] leading-relaxed">
-                  <strong>Định nghĩa:</strong> Triển vọng đóng góp giá trị dài hạn của khách hàng mới để trở thành khách hàng trung thành.
+                  <strong>Định nghĩa:</strong> Xác suất khách <strong>phát sinh ít nhất một đơn hoàn tất trong 30 ngày tới</strong> (áp dụng cả cho khách mới chưa từng mua).
                 </p>
                 <p className="m-0 text-[13px] text-[#334155] leading-relaxed">
-                  <strong>Cách tính:</strong> Sử dụng mô hình <strong>Gradient Boosting Regressor</strong> để chấm điểm dựa trên hành vi ban đầu (tần suất thêm sản phẩm vào wishlist, xem chi tiết sản phẩm, tốc độ phản hồi chatbot và số lượng giao dịch ban đầu).
+                  <strong>Cách tính:</strong> Mô hình <strong>Gradient Boosting</strong> phân loại, học theo cùng cách với Churn: hành vi trước mốc thời gian và việc khách có mua trong 30 ngày sau mốc hay không.
                 </p>
                 <div className="flex flex-col gap-1.5 mt-1 bg-white p-2.5 border border-[#f1f5f9] rounded-lg">
-                  <div className="text-[12.5px] text-[#475569]"><strong className="text-green-600">Cao (≥ 50):</strong> Có triển vọng lớn để phát triển thành khách hàng trung thành.</div>
-                  <div className="text-[12.5px] text-[#475569]"><strong className="text-slate-500">Thấp (&lt; 50):</strong> Khách hàng vãng lai hoặc ít tương tác.</div>
+                  <div className="text-[12.5px] text-[#475569]"><strong className="text-green-600">Cao (&gt; 60):</strong> Nhiều khả năng sắp mua, nên ưu tiên gợi ý sản phẩm / ưu đãi.</div>
+                  <div className="text-[12.5px] text-[#475569]"><strong className="text-slate-500">Thấp (≤ 30):</strong> Khách vãng lai hoặc ít tương tác gần đây.</div>
                 </div>
               </div>
 
               <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4.5 flex flex-col gap-3 md:col-span-2">
                 <div className="flex items-center">
-                  <span className="inline-block px-2.5 py-1 rounded-xl text-xs font-bold uppercase tracking-wider bg-blue-100 text-blue-800">CLV Score (Dự đoán giá trị vòng đời)</span>
+                  <span className="inline-block px-2.5 py-1 rounded-xl text-xs font-bold uppercase tracking-wider bg-blue-100 text-blue-800">CLV (Chi tiêu dự đoán)</span>
                 </div>
                 <p className="m-0 text-[13px] text-[#334155] leading-relaxed">
-                  <strong>Định nghĩa:</strong> Tổng giá trị kinh tế (số tiền chi tiêu) mà khách hàng dự kiến sẽ mang lại cho cửa hàng trong toàn bộ vòng đời mua sắm tương lai của họ.
+                  <strong>Định nghĩa:</strong> Tổng giá trị đơn hoàn tất khách dự kiến mang lại trong <strong>60 ngày tới</strong> (cột "Chi tiêu dự đoán"). <strong>CLV Score</strong> là thứ hạng phần trăm của con số này so với các khách khác (100 = chi tiêu dự đoán cao nhất).
                 </p>
                 <p className="m-0 text-[13px] text-[#334155] leading-relaxed">
-                  <strong>Cách tính:</strong> Sử dụng mô hình <strong>Gradient Boosting Regressor</strong> kết hợp với các chỉ số RFM thực tế để dự báo tổng chi tiêu dài hạn dựa trên: Monetary (tổng số tiền đã chi tiêu), Frequency (tần suất mua hàng), và Recency (mức độ gần đây của đơn hàng cuối).
+                  <strong>Cách tính:</strong> Mô hình <strong>Gradient Boosting Regressor</strong> (hàm mất mát Poisson, phù hợp số tiền không âm) học từ chi tiêu thật của khách trong 60 ngày sau mỗi mốc thời gian quá khứ.
                 </p>
                 <p className="m-0 text-[12.5px] text-[#475569] leading-relaxed bg-[#eff6ff] p-3 border-l-3 border-blue-500 rounded-lg">
                   💡 <strong>Ứng dụng:</strong> Giúp tối ưu hóa ngân sách tiếp thị. Chỉ tự động gửi Voucher giảm giá cao cho khách hàng có CLV lớn để giữ chân nguồn doanh thu cốt lõi, tránh lãng phí ngân sách đối với nhóm có CLV thấp.
@@ -89,32 +89,32 @@ function IntelligenceGuideModal({ setShowGuideModal, showGuideModal }) {
                 <tbody className="divide-y divide-[#e2e8f0]">
                   <tr className="[&>td]:p-3.5 [&>td]:text-[#334155] [&>td]:leading-relaxed [&>td]:align-middle">
                     <td className="whitespace-nowrap"><span className="inline-block px-2.5 py-1 text-xs font-bold rounded-full border border-green-500 text-green-500 bg-green-50">🏆 Champion</span></td>
-                    <td>Nghỉ mua ≤ 14 ngày, tần suất mua ≥ 5 lần và nằm trong nhóm 20% chi tiêu cao nhất.</td>
+                    <td>Nghỉ mua ≤ 14 ngày, tần suất mua ≥ 5 lần, thuộc nhóm 20% chi tiêu cao nhất và Churn Risk ≤ 50%.</td>
                     <td>Khách hàng giá trị nhất. Mua thường xuyên, chi tiêu cực nhiều và mới hoạt động gần đây.</td>
                   </tr>
                   <tr className="[&>td]:p-3.5 [&>td]:text-[#334155] [&>td]:leading-relaxed [&>td]:align-middle">
                     <td className="whitespace-nowrap"><span className="inline-block px-2.5 py-1 text-xs font-bold rounded-full border border-blue-500 text-blue-500 bg-blue-50">💎 Loyal</span></td>
-                    <td>Nghỉ mua ≤ 30 ngày, tần suất mua ≥ 3 lần.</td>
+                    <td>Nghỉ mua ≤ 30 ngày, tần suất mua ≥ 3 lần và Churn Risk ≤ 50% (hoặc mua đều ≥ 3 lần, chưa quá 45 ngày, vẫn dự đoán ở lại).</td>
                     <td>Mua sắm đều đặn, gắn bó lâu dài và phản hồi tốt với các chiến dịch.</td>
                   </tr>
                   <tr className="[&>td]:p-3.5 [&>td]:text-[#334155] [&>td]:leading-relaxed [&>td]:align-middle">
                     <td className="whitespace-nowrap"><span className="inline-block px-2.5 py-1 text-xs font-bold rounded-full border border-purple-500 text-purple-500 bg-purple-50">🌟 Potential Loyalist</span></td>
-                    <td>Nghỉ mua ≤ 30 ngày, số đơn từ 1-2 lần, và có điểm tiềm năng AI (CLV) ≥ 50.</td>
+                    <td>Nghỉ mua ≤ 30 ngày, 1–2 đơn, Potential ≥ 50 và Churn Risk ≤ 50%; gồm cả khách mới chưa mua nhưng Potential ≥ 50.</td>
                     <td>Khách hàng mới tiềm năng. Mua gần đây, số lượng ít nhưng có điểm tiềm năng cao.</td>
                   </tr>
                   <tr className="[&>td]:p-3.5 [&>td]:text-[#334155] [&>td]:leading-relaxed [&>td]:align-middle">
                     <td className="whitespace-nowrap"><span className="inline-block px-2.5 py-1 text-xs font-bold rounded-full border border-orange-500 text-orange-500 bg-orange-50">⚠️ At Risk</span></td>
-                    <td>Điểm rời bỏ Churn Risk từ 31% đến 70%, đã mua ít nhất 2 đơn.</td>
+                    <td>Đã mua trong 45 ngày gần đây nhưng Churn Risk &gt; 50%, hoặc Churn Risk 30–70% và đã mua ít nhất 2 đơn.</td>
                     <td>Khách hàng có nguy cơ. Từng mua nhiều nhưng đang giảm dần tần suất hoạt động.</td>
                   </tr>
                   <tr className="[&>td]:p-3.5 [&>td]:text-[#334155] [&>td]:leading-relaxed [&>td]:align-middle">
                     <td className="whitespace-nowrap"><span className="inline-block px-2.5 py-1 text-xs font-bold rounded-full border border-yellow-500 text-yellow-500 bg-yellow-50">😴 Hibernating</span></td>
-                    <td>Điểm rời bỏ Churn Risk từ 71% đến 90% hoặc đã ngừng hoạt động trên 45 ngày.</td>
+                    <td>Churn Risk 70–90% hoặc đã mua nhưng ngừng mua trên 45 ngày.</td>
                     <td>Khách hàng ngủ đông. Đã lâu không mua sắm, ít tương tác, khả năng cao sẽ rời đi.</td>
                   </tr>
                   <tr className="[&>td]:p-3.5 [&>td]:text-[#334155] [&>td]:leading-relaxed [&>td]:align-middle">
                     <td className="whitespace-nowrap"><span className="inline-block px-2.5 py-1 text-xs font-bold rounded-full border border-red-500 text-red-500 bg-red-50">❌ Lost</span></td>
-                    <td>Khách hàng không thuộc các nhóm trên (mặc định của hệ thống).</td>
+                    <td>Còn lại: chưa từng mua và tiềm năng thấp, hoặc gần như chắc chắn đã rời bỏ.</td>
                     <td>Mất liên lạc hoàn toàn hoặc khách hàng mới ít hoạt động, tiềm năng thấp.</td>
                   </tr>
                 </tbody>

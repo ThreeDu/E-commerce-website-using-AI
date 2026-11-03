@@ -36,7 +36,7 @@ jobs:
       - run: npm run build
 
   ml:
-    name: ML service import check
+    name: ML service tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -56,3 +56,8 @@ jobs:
       - name: Import Flask app
         working-directory: ml-service
         run: python -c "import app"
+
+      # Unit test: đặc trưng point-in-time, nhãn theo thời gian, mô hình (dữ liệu giả lập, không cần MongoDB)
+      - name: Unit tests
+        working-directory: ml-service
+        run: python -m unittest discover -s tests -v

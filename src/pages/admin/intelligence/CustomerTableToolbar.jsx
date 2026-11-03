@@ -55,6 +55,7 @@ function CustomerTableToolbar({ handleOrderToggle, handleSortChange, searchTerm,
           <option value="churn_score">Churn Risk</option>
           <option value="potential_score">Potential Score</option>
           <option value="clv_score">CLV Score</option>
+          <option value="predicted_spend">Chi tiêu dự đoán</option>
           <option value="monetary">Chi tiêu</option>
           <option value="recency_days">Lần cuối</option>
           <option value="frequency">Tần suất</option>

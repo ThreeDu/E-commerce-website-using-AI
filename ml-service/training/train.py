@@ -6,163 +6,98 @@ Usage:
     python -m training.train
 
 Workflow:
-    1. Extract features from MongoDB for all customers.
-    2. Auto-generate churn and potential labels.
-    3. Train both models.
-    4. Save trained models to saved_models/.
-    5. Print metrics and feature importance.
+    1. Nạp dữ liệu khách hàng từ MongoDB.
+    2. Dựng tập snapshot theo thời gian cho từng mục tiêu (đặc trưng trước mốc T,
+       nhãn = hành vi thật sau T): rời bỏ, khả năng mua (tiềm năng), chi tiêu (CLV).
+    3. Đánh giá out-of-fold theo khách hàng rồi huấn luyện mô hình cuối, lưu vào saved_models/.
+    4. Huấn luyện lại mô hình gợi ý sản phẩm (logic giữ nguyên).
+    5. Ghi metrics vào saved_models/last_training_metrics.json.
 """
 
-import sys
-import os
 import json
-from datetime import datetime, timezone
+import os
+import sys
 
-# Ensure ml-service root is in path
+# Cho phép chạy trực tiếp: python ml-service/training/train.py
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from features.feature_engineering import (
-    FEATURE_NAMES,
-    RECOMMEND_FEATURE_NAMES,
-    extract_features_for_all_users,
-    generate_churn_labels,
-    generate_potential_labels,
-    generate_clv_labels,
-    extract_recommendation_dataset,
-)
-from models.churn_model import ChurnPredictor
-from models.potential_model import PotentialScorer
-from models.clv_model import CLVPredictor
+from config import CHURN_HORIZON_DAYS, CLV_HORIZON_DAYS, MODEL_DIR, POTENTIAL_HORIZON_DAYS
+from data.mongo import load_customer_data, utcnow
+from features.recommendation_dataset import RECOMMEND_FEATURE_NAMES, extract_recommendation_dataset
 from models.recommendation_model import RecommendationPredictor
-from config import MODEL_DIR
+from services.scoring import create_models
+from training.datasets import TARGETS, build_snapshot_dataset
+
+MIN_CUSTOMERS = 5
+
+# tên mô hình -> (mục tiêu nhãn, horizon ngày)
+PLAN = {
+    "churn": ("churn", CHURN_HORIZON_DAYS),
+    "potential": ("purchase", POTENTIAL_HORIZON_DAYS),
+    "clv": ("spend", CLV_HORIZON_DAYS),
+}
 
 
+def _train_model(model, raw, target, horizon, now):
+    data = build_snapshot_dataset(raw, target, horizon, now)
+    if data.empty or data["_id"].nunique() < 2:
+        return {"error": "Không đủ dữ liệu lịch sử để dựng snapshot."}
+    if model.kind == "classifier" and data["target"].nunique() < 2:
+        return {"error": "Nhãn chỉ có một lớp trong dữ liệu lịch sử."}
 
-def run_training():
-    """Run full training pipeline. Returns metrics dict."""
-    print("=" * 60)
-    print("  Customer Intelligence — Training Pipeline")
-    print("=" * 60)
-    print()
+    metrics = model.fit_evaluate(data, data["target"].to_numpy(), groups=data["_id"].to_numpy())
+    model.save()
+    metrics.update({
+        "label": TARGETS[target],
+        "horizon_days": horizon,
+        "snapshots": int(data["snapshot"].nunique()),
+        "first_snapshot": data["snapshot"].min().isoformat(),
+        "last_snapshot": data["snapshot"].max().isoformat(),
+    })
+    return metrics
 
-    # Step 1: Extract features
-    print("[1/5] Extracting features from MongoDB...")
-    df = extract_features_for_all_users()
 
-    if df.empty or len(df) < 5:
-        print(f"  [WARN] Only {len(df)} customers found. Need at least 5 to train.")
-        print("  Saving empty metrics.")
-        return {"error": "Not enough data", "customer_count": len(df)}
+def run_training(now=None):
+    """Chạy toàn bộ pipeline. Trả về dict kết quả (có khóa "error" nếu không đủ dữ liệu)."""
+    now = now or utcnow()
+    print("[1/4] Loading customer data from MongoDB...")
+    raw = load_customer_data()
+    customer_count = len(raw["users"])
+    if customer_count < MIN_CUSTOMERS:
+        print(f"  [WARN] Only {customer_count} customers found. Need at least {MIN_CUSTOMERS} to train.")
+        return {"error": "Not enough data", "customer_count": customer_count}
+    print(f"  [OK] {customer_count} customers, {len(raw['orders'])} orders, {len(raw['events'])} events.")
 
-    print(f"  [OK] Found {len(df)} customers with {len(FEATURE_NAMES)} features each.")
-    print()
+    results = {"trained_at": now.isoformat() + "Z", "customer_count": customer_count}
+    models = create_models()
+    for step, (name, (target, horizon)) in enumerate(PLAN.items(), start=1):
+        print(f"[2/4] ({step}/{len(PLAN)}) Training {name} model ({target}, {horizon}-day horizon)...")
+        metrics = _train_model(models[name], raw, target, horizon, now)
+        results[f"{name}_metrics"] = metrics
+        results[f"{name}_feature_importance"] = models[name].importance
+        print(f"  {json.dumps(metrics)}")  # ASCII: console Windows (cp1252) không in được tiếng Việt
 
-    X = df[FEATURE_NAMES].fillna(0).values
-
-    # Step 2: Generate labels
-    print("[2/5] Generating auto-labels...")
-    churn_labels = generate_churn_labels(df)
-    potential_labels = generate_potential_labels(df)
-    clv_labels = generate_clv_labels(df)
-
-    # Step 2b: Extract recommendation dataset
-    print("[2b/5] Extracting recommendation dataset...")
+    print("[3/4] Training recommendation model...")
     X_recommend, y_recommend = extract_recommendation_dataset()
-
-    churn_positive = int(churn_labels.sum())
-    print(f"  Churn: {churn_positive} churned / {len(churn_labels)} total ({100 * churn_positive / len(churn_labels):.1f}%)")
-    print(f"  Potential: min={potential_labels.min():.1f}, max={potential_labels.max():.1f}, mean={potential_labels.mean():.1f}")
-    print(f"  CLV: min={clv_labels.min():.1f}, max={clv_labels.max():.1f}, mean={clv_labels.mean():.1f}")
-    print(f"  Recommendation Pairs: {len(X_recommend)} total, positive={int(y_recommend.sum())}")
-    print()
-
-    # Step 3: Train churn model
-    print("[3/5] Training Churn Predictor (Random Forest)...")
-    churn_model = ChurnPredictor()
-    churn_metrics = churn_model.train(X, churn_labels)
-    print(f"  [OK] Churn metrics: {json.dumps(churn_metrics, indent=2)}")
-    print()
-
-    # Step 4: Train potential model
-    print("[4/5] Training Potential Scorer (Gradient Boosting)...")
-    potential_model = PotentialScorer()
-    potential_metrics = potential_model.train(X, potential_labels)
-    print(f"  [OK] Potential metrics: {json.dumps(potential_metrics, indent=2)}")
-    print()
-
-    # Step 4b: Train CLV model
-    print("[4b/5] Training CLV Predictor (Gradient Boosting)...")
-    clv_model = CLVPredictor()
-    clv_metrics = clv_model.train(X, clv_labels)
-    print(f"  [OK] CLV metrics: {json.dumps(clv_metrics, indent=2)}")
-    print()
-
-    # Step 4c: Train Recommendation model
-    print("[4c/5] Training Recommendation Predictor (Random Forest)...")
     recommend_model = RecommendationPredictor()
     if len(X_recommend) > 0:
-        recommend_metrics = recommend_model.train(X_recommend, y_recommend)
+        results["recommendation_metrics"] = recommend_model.train(X_recommend, y_recommend)
+        recommend_model.save()
     else:
-        recommend_metrics = {"f1_mean": 0.0, "accuracy": 0.0, "note": "No data"}
-    print(f"  [OK] Recommendation metrics: {json.dumps(recommend_metrics, indent=2)}")
-    print()
+        results["recommendation_metrics"] = {"f1_mean": 0.0, "accuracy": 0.0, "note": "No data"}
+    results["recommendation_feature_importance"] = recommend_model.feature_importance(RECOMMEND_FEATURE_NAMES)
+    print(f"  {json.dumps(results['recommendation_metrics'])}")
 
-    # Step 5: Save models
-    print("[5/5] Saving models...")
-    churn_model.save()
-    potential_model.save()
-    clv_model.save()
-    recommend_model.save()
-    print(f"  [OK] Models saved to {MODEL_DIR}")
-    print()
-
-    # Feature importance
-    churn_importance = churn_model.feature_importance(FEATURE_NAMES)
-    potential_importance = potential_model.feature_importance(FEATURE_NAMES)
-    clv_importance = clv_model.feature_importance(FEATURE_NAMES)
-    recommend_importance = recommend_model.feature_importance(RECOMMEND_FEATURE_NAMES)
-
-    print("--- Churn Feature Importance (top 5) ---")
-    for name, score in sorted(churn_importance.items(), key=lambda x: x[1], reverse=True)[:5]:
-        print(f"  {name:.<30} {score:.4f}")
-
-    print()
-    print("--- Potential Feature Importance (top 5) ---")
-    for name, score in sorted(potential_importance.items(), key=lambda x: x[1], reverse=True)[:5]:
-        print(f"  {name:.<30} {score:.4f}")
-
-    print()
-    print("--- CLV Feature Importance (top 5) ---")
-    for name, score in sorted(clv_importance.items(), key=lambda x: x[1], reverse=True)[:5]:
-        print(f"  {name:.<30} {score:.4f}")
-
-    print()
-    print("--- Recommendation Feature Importance (top 5) ---")
-    for name, score in sorted(recommend_importance.items(), key=lambda x: x[1], reverse=True)[:5]:
-        print(f"  {name:.<30} {score:.4f}")
-
-    print()
-    print("[SUCCESS] Training completed successfully!")
-
-    results = {
-        "trained_at": datetime.now(timezone.utc).isoformat(),
-        "customer_count": len(df),
-        "churn_metrics": churn_metrics,
-        "potential_metrics": potential_metrics,
-        "clv_metrics": clv_metrics,
-        "recommendation_metrics": recommend_metrics,
-        "churn_feature_importance": churn_importance,
-        "potential_feature_importance": potential_importance,
-        "clv_feature_importance": clv_importance,
-        "recommendation_feature_importance": recommend_importance,
-    }
-
-
-    # Save metrics to file
-    metrics_path = os.path.join(MODEL_DIR, "last_training_metrics.json")
-    with open(metrics_path, "w", encoding="utf-8") as f:
+    print("[4/4] Saving metrics...")
+    with open(os.path.join(MODEL_DIR, "last_training_metrics.json"), "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
 
+    failed = [name for name in PLAN if "error" in results[f"{name}_metrics"]]
+    if failed:
+        results["error"] = f"Không huấn luyện được: {', '.join(failed)}"
+        print(f"[WARN] {results['error']}")
+    else:
+        print("[SUCCESS] Training completed.")
     return results
 
 

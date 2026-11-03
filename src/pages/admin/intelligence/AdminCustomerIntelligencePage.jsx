@@ -23,6 +23,8 @@ import CustomerTablePagination from "./CustomerTablePagination";
 import CustomerTable from "./CustomerTable";
 import CustomerTableToolbar from "./CustomerTableToolbar";
 import SegmentDistributionChart from "./SegmentDistributionChart";
+import ModelQualityPanel from "./ModelQualityPanel";
+import { formatPrice } from "../../../utils/priceUtils";
 
 function AdminCustomerIntelligencePage() {
   const { auth } = useAuth();
@@ -166,20 +168,25 @@ function AdminCustomerIntelligencePage() {
     );
   }
 
+  const lastTraining = overview?.last_training;
+  const churnHorizon = lastTraining?.churn_metrics?.horizon_days || 45;
+  const potentialHorizon = lastTraining?.potential_metrics?.horizon_days || 30;
+  const clvHorizon = lastTraining?.clv_metrics?.horizon_days || 60;
+
   // Distribution chart data
   const churnChartData = overview
     ? [
-        { name: "Thấp (0-30)", value: overview.churn_distribution.low, color: "#22c55e" },
-        { name: "Trung bình (31-60)", value: overview.churn_distribution.medium, color: "#eab308" },
-        { name: "Cao (61-100)", value: overview.churn_distribution.high, color: "#ef4444" },
+        { name: "Thấp (≤30)", value: overview.churn_distribution.low, color: "#22c55e" },
+        { name: "Trung bình (30–60)", value: overview.churn_distribution.medium, color: "#eab308" },
+        { name: "Cao (>60)", value: overview.churn_distribution.high, color: "#ef4444" },
       ]
     : [];
 
   const potentialChartData = overview
     ? [
-        { name: "Thấp (0-30)", value: overview.potential_distribution.low, color: "#94a3b8" },
-        { name: "Trung bình (31-60)", value: overview.potential_distribution.medium, color: "#3b82f6" },
-        { name: "Cao (61-100)", value: overview.potential_distribution.high, color: "#8b5cf6" },
+        { name: "Thấp (≤30)", value: overview.potential_distribution.low, color: "#94a3b8" },
+        { name: "Trung bình (30–60)", value: overview.potential_distribution.medium, color: "#3b82f6" },
+        { name: "Cao (>60)", value: overview.potential_distribution.high, color: "#8b5cf6" },
       ]
     : [];
 
@@ -348,10 +355,11 @@ function AdminCustomerIntelligencePage() {
               </strong>
             </div>
             <div className="bg-white border border-[#e2e8f0] rounded-xl p-5 text-center shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-sm">
-              <p className="m-0 mb-1 text-[11px] text-[#64748b] font-bold uppercase tracking-wider">CLV Trung bình</p>
-              <strong className="m-0 text-3xl font-extrabold leading-none text-purple-600">
-                {clvData?.avg_clv_score || 0}
+              <p className="m-0 mb-1 text-[11px] text-[#64748b] font-bold uppercase tracking-wider">Chi tiêu dự đoán TB</p>
+              <strong className="m-0 text-lg font-extrabold leading-none text-purple-600 whitespace-nowrap">
+                {formatPrice(clvData?.avg_predicted_spend || 0)}
               </strong>
+              <p className="m-0 mt-1 text-[11px] text-admin-muted">/ khách, {clvHorizon} ngày tới</p>
             </div>
             <div className="bg-white border border-[#e2e8f0] rounded-xl p-5 text-center shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-sm">
               <p className="m-0 mb-1 text-[11px] text-[#64748b] font-bold uppercase tracking-wider">KH At Risk</p>
@@ -371,7 +379,10 @@ function AdminCustomerIntelligencePage() {
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-7">
             <div className="bg-white border border-[#e2e8f0] rounded-2xl p-5 shadow-xs">
-              <h3 className="m-0 mb-4 text-base font-bold text-[#1e293b]">Phân bố Churn Risk</h3>
+              <h3 className="m-0 mb-1 text-base font-bold text-[#1e293b]">Phân bố Churn Risk</h3>
+              <p className="m-0 mb-4 text-xs text-admin-muted">
+                Xác suất khách đã từng mua không mua lại trong {churnHorizon} ngày tới.
+              </p>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={churnChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -388,7 +399,10 @@ function AdminCustomerIntelligencePage() {
             </div>
 
             <div className="bg-white border border-[#e2e8f0] rounded-2xl p-5 shadow-xs">
-              <h3 className="m-0 mb-4 text-base font-bold text-[#1e293b]">Phân bố Potential Score</h3>
+              <h3 className="m-0 mb-1 text-base font-bold text-[#1e293b]">Phân bố Potential Score</h3>
+              <p className="m-0 mb-4 text-xs text-admin-muted">
+                Xác suất khách phát sinh đơn hàng trong {potentialHorizon} ngày tới.
+              </p>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={potentialChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -405,10 +419,13 @@ function AdminCustomerIntelligencePage() {
             </div>
           </div>
 
+          <ModelQualityPanel lastTraining={overview?.last_training} />
+
           {/* Feature Importance */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-7">
             <div className="bg-white border border-[#e2e8f0] rounded-2xl p-5 shadow-xs">
-              <h3 className="m-0 mb-4 text-base font-bold text-[#1e293b]">Churn — Feature Importance</h3>
+              <h3 className="m-0 mb-1 text-base font-bold text-[#1e293b]">Churn — Mức ảnh hưởng của đặc trưng</h3>
+              <p className="m-0 mb-4 text-xs text-admin-muted">Permutation importance: độ giảm chất lượng dự đoán khi xáo trộn đặc trưng (tổng 100%).</p>
               <ul className="list-none p-0 m-0">
                 {(overview?.churn_feature_importance || []).map(([name, score]) => (
                   <li key={name} className="flex items-center gap-2.5 py-1.5 text-[13px] text-[#334155]">
@@ -426,7 +443,8 @@ function AdminCustomerIntelligencePage() {
             </div>
 
             <div className="bg-white border border-[#e2e8f0] rounded-2xl p-5 shadow-xs">
-              <h3 className="m-0 mb-4 text-base font-bold text-[#1e293b]">Potential — Feature Importance</h3>
+              <h3 className="m-0 mb-1 text-base font-bold text-[#1e293b]">Potential — Mức ảnh hưởng của đặc trưng</h3>
+              <p className="m-0 mb-4 text-xs text-admin-muted">Permutation importance: độ giảm chất lượng dự đoán khi xáo trộn đặc trưng (tổng 100%).</p>
               <ul className="list-none p-0 m-0">
                 {(overview?.potential_feature_importance || []).map(([name, score]) => (
                   <li key={name} className="flex items-center gap-2.5 py-1.5 text-[13px] text-[#334155]">

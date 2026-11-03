@@ -1,16 +1,13 @@
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
-from features.segmentation import segment_customers
 
-def select_intervention_targets(db, df, churn_scores, clv_scores, churn_threshold=50, cooldown_days=7, max_targets=20):
+def select_intervention_targets(db, df, churn_threshold=50, cooldown_days=7, max_targets=20):
     """
     Identify at-risk customers for retention intervention campaigns.
     
     Parameters:
     - db: MongoDB database instance
-    - df: Customer features DataFrame
-    - churn_scores: 1D array/series of churn scores (0 to 100)
-    - clv_scores: 1D array/series of CLV scores (0 to 100)
+    - df: Customer DataFrame đã chấm điểm (churn_score, clv_score, segment, frequency, ...)
     - churn_threshold: Minimum churn score to trigger intervention
     - cooldown_days: Min days between interventions for the same user
     - max_targets: Max number of targets to return (Comment 2 limit = 20)
@@ -18,17 +15,14 @@ def select_intervention_targets(db, df, churn_scores, clv_scores, churn_threshol
     Returns:
     - List of target customers dicts
     """
-    # 1. Segment customers first using segmentation rules
-    df_segmented = segment_customers(df, churn_scores, clv_scores)
-    
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     cooldown_cutoff = now - timedelta(days=cooldown_days)
     
     targets = []
-    for _, row in df_segmented.iterrows():
+    for _, row in df.iterrows():
         user_id_str = str(row["_id"])
         churn_score = float(row["churn_score"])
-        clv_score = float(row["potential_score"])  # CLV score was stored as potential_score in segmentation copy
+        clv_score = float(row["clv_score"])
         segment = row["segment"]
         freq = int(row.get("frequency", 0))
         

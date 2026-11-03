@@ -10,6 +10,7 @@ function CustomerTable({ currentCustomers, segmentNames }) {
           <th>Churn Risk</th>
           <th>Potential</th>
           <th>CLV Score</th>
+          <th>Chi tiêu dự đoán</th>
           <th>Đơn hàng</th>
           <th>Chi tiêu</th>
           <th>Views (30d)</th>
@@ -62,6 +63,7 @@ function CustomerTable({ currentCustomers, segmentNames }) {
                 {c.clv_score || 0}
               </span>
             </td>
+            <td>{formatPrice(c.predicted_spend || 0)}</td>
             <td>{c.frequency}</td>
             <td>{formatPrice(c.monetary || 0)}</td>
             <td>{c.product_views_30d}</td>
@@ -71,7 +73,7 @@ function CustomerTable({ currentCustomers, segmentNames }) {
         ))}
         {currentCustomers.length === 0 ? (
           <tr>
-            <td colSpan={10} className="text-center! p-8! text-admin-muted font-medium">
+            <td colSpan={11} className="text-center! p-8! text-admin-muted font-medium">
               Không tìm thấy khách hàng phù hợp.
             </td>
           </tr>
