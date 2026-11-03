@@ -1,5 +1,5 @@
 const express = require("express");
-const { verifyAdminRequest } = require("../helpers/authHelpers");
+const { requireAdmin } = require("../helpers/authHelpers");
 const {
   getIntelligenceOverview,
   getIntelligenceCustomers,
@@ -15,16 +15,6 @@ const {
 } = require("../../controllers/admin/retentionController");
 
 const router = express.Router();
-
-const requireAdmin = async (req, res, next) => {
-  const adminUser = await verifyAdminRequest(req, res);
-  if (!adminUser) {
-    return;
-  }
-
-  req.adminUser = adminUser;
-  next();
-};
 
 router.use(requireAdmin);
 

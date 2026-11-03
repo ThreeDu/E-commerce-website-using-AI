@@ -2,36 +2,18 @@
  * chatbotController.js — Request handling & response formatting
  */
 
-const jwt = require('jsonwebtoken');
 const { processMessage, processMessageStream } = require('./chatbotService');
 const { callLLMWithImage } = require('./llmHelper');
 const { executeTool } = require('./chatbotToolExecutor');
-const ChatbotEvent = require('./models/ChatbotEvent');
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-/**
- * Extract optional userId from Authorization header.
- * Chatbot works for both anonymous and authenticated users.
- */
-function extractUserId(req) {
-  try {
-    const auth = req.headers.authorization;
-    if (!auth?.startsWith('Bearer ')) return null;
-    const token = auth.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    return decoded.userId || decoded.id || null;
-  } catch {
-    return null;
-  }
-}
+const ChatbotEvent = require('../models/ChatbotEvent');
+const { getOptionalUserId } = require('../routes/helpers/authHelpers');
 
 /**
  * POST /api/chatbot/message
  */
 async function chatWithAssistant(req, res) {
   try {
-    const userId = extractUserId(req);
+    const userId = getOptionalUserId(req);
     const { message, sessionId, history, context } = req.body;
 
     if (!message || typeof message !== 'string' || !message.trim()) {
@@ -67,7 +49,7 @@ async function chatWithAssistant(req, res) {
  */
 async function trackEvent(req, res) {
   try {
-    const userId = extractUserId(req);
+    const userId = getOptionalUserId(req);
     const { sessionId, eventType, productId, category, queryText, metadata } = req.body;
 
     if (!sessionId || !eventType) {
@@ -108,7 +90,7 @@ async function chatWithAssistantStream(req, res) {
   };
 
   try {
-    const userId = extractUserId(req);
+    const userId = getOptionalUserId(req);
     const { message, sessionId, context } = req.body;
 
     if (!message || typeof message !== 'string' || !message.trim()) {
@@ -140,7 +122,7 @@ async function chatWithAssistantStream(req, res) {
  */
 async function chatWithImage(req, res) {
   try {
-    const userId = extractUserId(req);
+    const userId = getOptionalUserId(req);
     const { message, imageBase64, mimeType, sessionId } = req.body;
 
     if (!imageBase64) {

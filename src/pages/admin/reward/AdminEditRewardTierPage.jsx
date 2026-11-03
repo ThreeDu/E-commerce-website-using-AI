@@ -4,7 +4,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { useNotification } from "../../../context/NotificationContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSave, faGift } from "@fortawesome/free-solid-svg-icons";
-const API_BASE = "/api/auth/admin/rewards";
+import { getAdminRewardTierById, updateAdminRewardTier } from "../../../services/admin/adminRewardTierService";
 
 function AdminEditRewardTierPage() {
   const { id } = useParams();
@@ -31,15 +31,7 @@ function AdminEditRewardTierPage() {
 
       try {
         setFetching(true);
-        const res = await fetch(`${API_BASE}/${id}`, {
-          headers: { Authorization: `Bearer ${auth.token}` },
-        });
-
-        if (!res.ok) {
-          throw new Error("Không thể lấy thông tin chi tiết mức đổi thưởng.");
-        }
-
-        const data = await res.json();
+        const data = await getAdminRewardTierById(auth.token, id);
         const tier = data.tier || data;
 
         setForm({
@@ -107,19 +99,7 @@ function AdminEditRewardTierPage() {
 
     try {
       setSubmitting(true);
-      const res = await fetch(`${API_BASE}/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${auth?.token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        throw new Error(errData?.message || "Không thể cập nhật mức đổi thưởng.");
-      }
+      await updateAdminRewardTier(auth?.token, id, payload);
 
       success("Cập nhật mức đổi thưởng thành công.");
       navigate("/admin/rewards");

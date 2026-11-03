@@ -1,4 +1,5 @@
 const express = require("express");
+const { requireUser } = require("./helpers/authHelpers");
 const {
   listProducts,
   trackProductView,
@@ -6,7 +7,6 @@ const {
   createReview,
   updateReview,
   deleteReview,
-  seedProducts,
   getProductById,
 } = require("../controllers/productController");
 
@@ -39,20 +39,15 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.post("/:id/view", trackProductView);
+router.post("/:id/view", requireUser, trackProductView);
 
-router.get("/:id/review-eligibility", getReviewEligibility);
+router.get("/:id/review-eligibility", requireUser, getReviewEligibility);
 
-router.post("/:id/reviews", createReview);
+router.post("/:id/reviews", requireUser, createReview);
 
-router.put("/:id/reviews/:reviewId", updateReview);
+router.put("/:id/reviews/:reviewId", requireUser, updateReview);
 
-router.delete("/:id/reviews/:reviewId", deleteReview);
-
-// @route   GET /api/products/seed
-// @desc    Nạp dữ liệu mẫu
-// @access  Public
-router.get("/seed", seedProducts);
+router.delete("/:id/reviews/:reviewId", requireUser, deleteReview);
 
 // @route   GET /api/products/:id
 // @desc    Lấy thông tin chi tiết một sản phẩm

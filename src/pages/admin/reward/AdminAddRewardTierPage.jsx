@@ -4,7 +4,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { useNotification } from "../../../context/NotificationContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faGift } from "@fortawesome/free-solid-svg-icons";
-const API_BASE = "/api/auth/admin/rewards";
+import { createAdminRewardTier } from "../../../services/admin/adminRewardTierService";
 
 const EMPTY_FORM = {
   name: "",
@@ -69,19 +69,7 @@ function AdminAddRewardTierPage() {
 
     try {
       setSubmitting(true);
-      const res = await fetch(API_BASE, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${auth?.token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        throw new Error(errData?.message || "Không thể thêm mức đổi thưởng.");
-      }
+      await createAdminRewardTier(auth?.token, payload);
 
       success("Thêm mức đổi thưởng thành công.");
       navigate("/admin/rewards");

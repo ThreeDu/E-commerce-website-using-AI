@@ -43,6 +43,7 @@ htmlcov/
 .hallmark/
 .gemini/
 .antigravity/
+.claude/
 
 # ─── Generated Reports & Dynamic Uploads ───
 /public/reports/*

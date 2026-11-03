@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { useStatusMessageBridge } from "../../../hooks/useStatusMessageBridge";
-import { createAdminCategory, getAdminCategories } from "../../../services/admin/categoryService";
+import { createAdminCategory, getAdminCategories } from "../../../services/admin/adminCategoryService";
 function AdminAddCategoryPage() {
   const navigate = useNavigate();
   const { auth } = useAuth();

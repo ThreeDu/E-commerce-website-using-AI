@@ -1,14 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
 import { trackEvent } from "../services/analyticsService";
-import { getProductImageSrc, getProductPricing, isOutOfStock } from "../utils/productUtils";
 import { fetchProducts } from "../services/productService";
 import { fetchCategories } from "../services/categoryService";
 import { fetchWishlist, addToWishlist, removeFromWishlist } from "../services/wishlistService";
-
+import ProductPagination from "../components/product/ProductPagination";
+import ProductGrid from "../components/product/ProductGrid";
+import ProductFilterSidebar from "../components/product/ProductFilterSidebar";
 
 function normalizeCategoryId(value) {
   return String(value || "").trim();
@@ -337,40 +338,6 @@ function ProductsPage() {
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
   const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
 
-  const getPageNumbers = () => {
-    const pages = [];
-    const maxVisible = 7;
-
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push({ type: "page", value: i });
-      }
-    } else {
-      if (validCurrentPage <= 4) {
-        for (let i = 1; i <= 5; i++) {
-          pages.push({ type: "page", value: i });
-        }
-        pages.push({ type: "ellipsis", id: "right" });
-        pages.push({ type: "page", value: totalPages });
-      } else if (validCurrentPage >= totalPages - 3) {
-        pages.push({ type: "page", value: 1 });
-        pages.push({ type: "ellipsis", id: "left" });
-        for (let i = totalPages - 4; i <= totalPages; i++) {
-          pages.push({ type: "page", value: i });
-        }
-      } else {
-        pages.push({ type: "page", value: 1 });
-        pages.push({ type: "ellipsis", id: "left" });
-        pages.push({ type: "page", value: validCurrentPage - 1 });
-        pages.push({ type: "page", value: validCurrentPage });
-        pages.push({ type: "page", value: validCurrentPage + 1 });
-        pages.push({ type: "ellipsis", id: "right" });
-        pages.push({ type: "page", value: totalPages });
-      }
-    }
-    return pages;
-  };
-
   const currentProducts = useMemo(() => {
     const start = (validCurrentPage - 1) * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
@@ -450,117 +417,7 @@ function ProductsPage() {
     <main className="w-[min(1140px,92%)] mx-auto flex-1 py-7 text-slate-800">
       <div className="grid grid-cols-[260px_minmax(0,1fr)] gap-6 max-[960px]:grid-cols-1">
         {/* Sticky Filter Sidebar */}
-        <aside className="sticky top-[86px] self-start p-5 bg-white border border-slate-200/90 rounded-2xl shadow-xs max-[960px]:static">
-          <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
-            <h3 className="m-0 text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-              <span>⚙️</span>
-              <span>Bộ lọc tìm kiếm</span>
-            </h3>
-            {(categoryLevel1 !== "all" || sortBy !== "best-selling" || maxPrice < maxPossiblePrice) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setCategoryLevel1("all");
-                  setCategoryLevel2("all");
-                  setCategoryLevel3("all");
-                  setSortBy("best-selling");
-                  setMaxPrice(maxPossiblePrice);
-                }}
-                className="text-[11px] text-teal-700 hover:text-teal-800 font-bold border-none bg-transparent cursor-pointer p-0"
-              >
-                Đặt lại
-              </button>
-            )}
-          </div>
-
-          {/* Sắp xếp */}
-          <div className="grid gap-1.5 mb-4">
-            <label className="text-xs font-bold text-slate-700">Sắp xếp theo</label>
-            <select
-              className="w-full border border-slate-200 rounded-xl p-2.5 text-xs bg-slate-50 text-slate-800 focus:outline-none focus:bg-white focus:border-teal-600 focus:ring-2 focus:ring-teal-100 transition-all"
-              value={sortBy}
-              onChange={(event) => setSortBy(event.target.value)}
-            >
-              <option value="best-selling">Bán chạy nhất</option>
-              <option value="most-viewed">Xem nhiều nhất</option>
-              <option value="top-rated">Đánh giá cao nhất</option>
-            </select>
-          </div>
-
-          {/* Danh mục 3 cấp */}
-          <div className="grid gap-1.5 mb-4">
-            <label className="text-xs font-bold text-slate-700">Danh mục sản phẩm</label>
-            <select
-              className="w-full border border-slate-200 rounded-xl p-2.5 text-xs bg-slate-50 text-slate-800 focus:outline-none focus:bg-white focus:border-teal-600 focus:ring-2 focus:ring-teal-100 transition-all"
-              value={categoryLevel1}
-              onChange={(event) => {
-                const nextValue = event.target.value;
-                setCategoryLevel1(nextValue);
-                setCategoryLevel2("all");
-                setCategoryLevel3("all");
-              }}
-            >
-              <option value="all">Tất cả danh mục</option>
-              {level1Categories.map((cat) => (
-                <option key={cat._id} value={String(cat._id)}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-
-            {categoryLevel1 !== "all" && (
-              <select
-                className="w-full border border-slate-200 rounded-xl p-2.5 text-xs bg-slate-50 text-slate-800 focus:outline-none focus:bg-white focus:border-teal-600 focus:ring-2 focus:ring-teal-100 transition-all mt-1.5"
-                value={categoryLevel2}
-                onChange={(event) => {
-                  const nextValue = event.target.value;
-                  setCategoryLevel2(nextValue);
-                  setCategoryLevel3("all");
-                }}
-              >
-                <option value="all">Tất cả thương hiệu</option>
-                {level2Categories.map((cat) => (
-                  <option key={cat._id} value={String(cat._id)}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {categoryLevel2 !== "all" && level3Categories.length > 0 && (
-              <select
-                className="w-full border border-slate-200 rounded-xl p-2.5 text-xs bg-slate-50 text-slate-800 focus:outline-none focus:bg-white focus:border-teal-600 focus:ring-2 focus:ring-teal-100 transition-all mt-1.5"
-                value={categoryLevel3}
-                onChange={(event) => setCategoryLevel3(event.target.value)}
-              >
-                <option value="all">Tất cả dòng sản phẩm</option>
-                {level3Categories.map((cat) => (
-                  <option key={cat._id} value={String(cat._id)}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {/* Mức giá */}
-          <div className="grid gap-1.5 mb-2">
-            <label className="text-xs font-bold text-slate-700">Mức giá tối đa</label>
-            <input
-              className="w-full accent-teal-700 cursor-pointer"
-              type="range"
-              min="0"
-              max={maxPossiblePrice}
-              step={Math.max(10000, Math.round(maxPossiblePrice / 200))}
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(Number(e.target.value))}
-            />
-            <div className="flex justify-between items-center text-[11px] text-slate-500 font-semibold mt-1">
-              <span>0 đ</span>
-              <span className="text-teal-700 font-bold">{maxPrice.toLocaleString("vi-VN")} đ</span>
-            </div>
-          </div>
-        </aside>
+        <ProductFilterSidebar categoryLevel1={categoryLevel1} categoryLevel2={categoryLevel2} categoryLevel3={categoryLevel3} level1Categories={level1Categories} level2Categories={level2Categories} level3Categories={level3Categories} maxPossiblePrice={maxPossiblePrice} maxPrice={maxPrice} setCategoryLevel1={setCategoryLevel1} setCategoryLevel2={setCategoryLevel2} setCategoryLevel3={setCategoryLevel3} setMaxPrice={setMaxPrice} setSortBy={setSortBy} sortBy={sortBy} />
 
         {/* Main Product Area */}
         <section>
@@ -583,195 +440,9 @@ function ProductsPage() {
             </div>
           ) : currentProducts.length > 0 ? (
             <>
-              <div className="grid grid-cols-3 gap-4 max-[960px]:grid-cols-2 max-[640px]:grid-cols-1">
-                {currentProducts.map((product) => {
-                  const productId = String(product._id);
-                  const isWishlisted = wishlistIds.includes(productId);
-                  const isPending = pendingWishlistIds.includes(productId);
-                  const outOfStock = isOutOfStock(product);
-                  const pricing = getProductPricing(product);
+              <ProductGrid currentProducts={currentProducts} handleAddToCart={handleAddToCart} handleToggleWishlist={handleToggleWishlist} pendingWishlistIds={pendingWishlistIds} wishlistIds={wishlistIds} />
 
-                  return (
-                    <article
-                      key={productId}
-                      className="bg-white border border-slate-200/80 rounded-2xl p-3 flex flex-col h-full transition-all duration-200 hover:border-teal-500 hover:shadow-md group"
-                    >
-                      <div className="relative rounded-xl overflow-hidden bg-slate-50 border border-slate-100 mb-3 aspect-square flex items-center justify-center">
-                        {pricing.hasDiscount ? (
-                          <span className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-black tracking-wide shadow-xs">
-                            -{pricing.discountPercent}%
-                          </span>
-                        ) : null}
-
-                        {outOfStock ? (
-                          <span className="absolute left-2 right-2 bottom-2 z-10 py-1 rounded-md bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold text-center">
-                            Tạm hết hàng
-                          </span>
-                        ) : null}
-
-                        <button
-                          type="button"
-                          aria-label={isWishlisted ? "Bỏ yêu thích" : "Thêm yêu thích"}
-                          disabled={isPending}
-                          onClick={() => handleToggleWishlist(productId)}
-                          className={`absolute top-2 right-2 z-10 w-7 h-7 rounded-full flex items-center justify-center border cursor-pointer transition-transform active:scale-90 ${
-                            isWishlisted
-                              ? "bg-rose-50 border-rose-200 text-rose-600"
-                              : "bg-white/90 border-slate-200 text-slate-400 hover:text-rose-500 hover:bg-white"
-                          }`}
-                        >
-                          <span className="text-xs">{isWishlisted ? "❤️" : "🤍"}</span>
-                        </button>
-
-                        <Link to={`/products/${product._id}`} className="w-full h-full flex items-center justify-center">
-                          <img
-                            src={getProductImageSrc(product)}
-                            alt={product.name}
-                            className={`max-w-full max-h-full object-contain p-2 transition-transform duration-200 group-hover:scale-105 ${
-                              outOfStock ? "grayscale-[40%] opacity-70" : ""
-                            }`}
-                            onError={(event) => {
-                              event.currentTarget.onerror = null;
-                              event.currentTarget.src = "/placeholder.svg";
-                            }}
-                          />
-                        </Link>
-                      </div>
-
-                      <Link to={`/products/${product._id}`} className="no-underline flex-1 flex flex-col">
-                        <h3 className="m-0 text-xs font-bold text-slate-800 line-clamp-2 leading-snug group-hover:text-teal-700 transition-colors">
-                          {product.name}
-                        </h3>
-
-                        <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-500">
-                          <span className="text-amber-500 font-bold">★ {Number(product.averageRating || 0).toFixed(1)}</span>
-                          <span>•</span>
-                          <span>{Number(product.totalPurchases || 0)} đã mua</span>
-                        </div>
-
-                        <div className="mt-2.5">
-                          <div className="text-sm font-extrabold text-slate-900">
-                            {pricing.finalPrice.toLocaleString("vi-VN")} đ
-                          </div>
-                          {pricing.hasDiscount ? (
-                            <div className="text-[11px] text-slate-400 line-through">
-                              {pricing.basePrice.toLocaleString("vi-VN")} đ
-                            </div>
-                          ) : null}
-                        </div>
-                      </Link>
-
-                      <button
-                        type="button"
-                        disabled={outOfStock}
-                        onClick={() => handleAddToCart(product)}
-                        className={`mt-3 w-full py-2 px-3 rounded-xl text-xs font-bold border cursor-pointer transition-all ${
-                          outOfStock
-                            ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
-                            : "bg-teal-700 hover:bg-teal-800 border-teal-700 text-white shadow-xs active:scale-[0.98]"
-                        }`}
-                      >
-                        {outOfStock ? "Hết hàng" : "Thêm vào giỏ"}
-                      </button>
-                    </article>
-                  );
-                })}
-              </div>
-
-                {totalPages > 1 && (
-                  <div className="flex justify-center items-center gap-2 mt-8 py-2.5">
-                    <button
-                      type="button"
-                      className="inline-flex items-center justify-center min-w-[40px] h-10 px-3.5 rounded-shop-md border border-shop-line bg-white text-shop-ink font-semibold cursor-pointer transition-all duration-200 shadow-[0_4px_10px_rgba(0,0,0,0.02)] hover:bg-shop-bg hover:border-shop-muted hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-shop-bg"
-                      disabled={validCurrentPage === 1}
-                      onClick={() => {
-                        setCurrentPage((prev) => Math.max(1, prev - 1));
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                    >
-                      Trước
-                    </button>
-                    {getPageNumbers().map((item, index) => {
-                      if (item.type === "ellipsis") {
-                        const isEditing = editingEllipsis === item.id;
-                        if (isEditing) {
-                          return (
-                            <input
-                              key={`ellipsis-input-${item.id}-${index}`}
-                              type="number"
-                              min="1"
-                              max={totalPages}
-                              value={inputPageValue}
-                              onChange={(e) => setInputPageValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  const pageNum = parseInt(inputPageValue, 10);
-                                  if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
-                                    setCurrentPage(pageNum);
-                                    window.scrollTo({ top: 0, behavior: "smooth" });
-                                  }
-                                  setEditingEllipsis(null);
-                                } else if (e.key === "Escape") {
-                                  setEditingEllipsis(null);
-                                }
-                              }}
-                              onBlur={() => {
-                                const pageNum = parseInt(inputPageValue, 10);
-                                if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
-                                  setCurrentPage(pageNum);
-                                  window.scrollTo({ top: 0, behavior: "smooth" });
-                                }
-                                setEditingEllipsis(null);
-                              }}
-                              autoFocus
-                              className="inline-flex items-center justify-center w-[60px] h-10 p-0 text-center border border-shop-primary bg-white text-shop-ink outline-none rounded-shop-md"
-                            />
-                          );
-                        }
-
-                        return (
-                          <button
-                            key={`dots-${item.id}-${index}`}
-                            type="button"
-                            className="inline-flex items-center justify-center min-w-[40px] h-10 text-shop-muted font-bold text-[15px] cursor-pointer hover:text-shop-primary"
-                            onClick={() => {
-                              setEditingEllipsis(item.id);
-                              setInputPageValue("");
-                            }}
-                            title="Nhấp để nhập trang trực tiếp"
-                          >
-                            ...
-                          </button>
-                        );
-                      }
-
-                      return (
-                        <button
-                          key={`page-${item.value}`}
-                          type="button"
-                          className={`inline-flex items-center justify-center min-w-[40px] h-10 px-3.5 rounded-shop-md border border-shop-line bg-white text-shop-ink font-semibold cursor-pointer transition-all duration-200 shadow-[0_4px_10px_rgba(0,0,0,0.02)] hover:bg-shop-bg hover:border-shop-muted hover:-translate-y-px ${validCurrentPage === item.value ? "bg-shop-primary text-white border-shop-primary hover:bg-shop-primary hover:text-white hover:border-shop-primary" : ""}`}
-                          onClick={() => {
-                            setCurrentPage(item.value);
-                            window.scrollTo({ top: 0, behavior: "smooth" });
-                          }}
-                        >
-                          {item.value}
-                        </button>
-                      );
-                    })}
-                    <button
-                      type="button"
-                      className="inline-flex items-center justify-center min-w-[40px] h-10 px-3.5 rounded-shop-md border border-shop-line bg-white text-shop-ink font-semibold cursor-pointer transition-all duration-200 shadow-[0_4px_10px_rgba(0,0,0,0.02)] hover:bg-shop-bg hover:border-shop-muted hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-shop-bg"
-                      disabled={validCurrentPage === totalPages}
-                      onClick={() => {
-                        setCurrentPage((prev) => Math.min(totalPages, prev + 1));
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                    >
-                      Sau
-                    </button>
-                  </div>
-                )}
+                <ProductPagination editingEllipsis={editingEllipsis} inputPageValue={inputPageValue} setCurrentPage={setCurrentPage} setEditingEllipsis={setEditingEllipsis} setInputPageValue={setInputPageValue} totalPages={totalPages} validCurrentPage={validCurrentPage} />
               </>
             ) : (
               <div className="text-center py-9 px-4.5 bg-white border border-dashed border-[rgba(0,0,0,0.12)] rounded-[20px] text-shop-muted text-sm leading-[1.55]">Không tìm thấy sản phẩm phù hợp.</div>

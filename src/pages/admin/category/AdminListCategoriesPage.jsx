@@ -6,8 +6,9 @@ import {
   deleteAdminCategory,
   getAdminCategories,
   updateAdminCategory,
-} from "../../../services/admin/categoryService";
+} from "../../../services/admin/adminCategoryService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
+import ConfirmDeleteModal from "../../../components/common/ConfirmDeleteModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlus,
@@ -481,34 +482,16 @@ function AdminListCategoriesPage() {
         )}
       </section>
 
-      {categoryPendingDelete && (
-        <div className="fixed inset-0 bg-[rgba(9,17,27,0.5)] flex items-center justify-center z-[999] p-4" role="presentation">
-          <div className="w-[min(460px,100%)] bg-white border border-admin-line rounded-xl p-5.5 shadow-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title">
-            <h3 id="delete-title" className="text-lg font-bold text-admin-ink m-0 mb-2">Xác nhận xóa danh mục</h3>
-            <p className="text-sm text-admin-muted m-0 mb-3.5">
-              Bạn có chắc chắn muốn xóa danh mục <strong>{categoryPendingDelete.name}</strong>?
-            </p>
-            <div className="flex justify-end gap-2.5">
-              <button
-                type="button"
-                className="py-2.5 px-3.5 rounded-lg border border-[#d0d9e4] cursor-pointer font-semibold bg-[#e8edf3] text-[#0f2233] transition-all duration-150 hover:-translate-y-px hover:shadow-md disabled:opacity-50"
-                onClick={() => setCategoryPendingDelete(null)}
-                disabled={deleting}
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                className="py-2.5 px-3.5 rounded-lg cursor-pointer font-semibold bg-gradient-to-r from-admin-primary to-[#0f314f] text-white border-0 transition-all duration-150 hover:-translate-y-px hover:shadow-md disabled:opacity-50"
-                onClick={handleDelete}
-                disabled={deleting}
-              >
-                {deleting ? "Đang xóa..." : "Xóa"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDeleteModal
+        isOpen={Boolean(categoryPendingDelete)}
+        title="Xác nhận xóa danh mục"
+        message={<>Bạn có chắc chắn muốn xóa danh mục <strong>{categoryPendingDelete?.name}</strong>?</>}
+        isLoading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setCategoryPendingDelete(null)}
+        confirmLabel="Xóa"
+        loadingLabel="Đang xóa..."
+      />
     </main>
   );
 }

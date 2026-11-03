@@ -19,10 +19,10 @@ const Product = require("../models/Product");
 const User = require("../models/User");
 const Order = require("../models/Order");
 const Cart = require("../models/Cart");
+const { requestMl } = require("./mlClient");
 
 const WINDOW_DAYS = 30;
 const DEFAULT_LIMIT = 8;
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:5001";
 
 // ── Helpers ──
 
@@ -55,19 +55,12 @@ function shuffle(array) {
  */
 async function fetchUserChurnData(userId) {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
-
-    const response = await fetch(
-      `${ML_SERVICE_URL}/api/intelligence/customers?sort=churn_score&order=desc&limit=200&page=1`,
-      { signal: controller.signal }
+    const { ok, data } = await requestMl(
+      "/api/intelligence/customers?sort=churn_score&order=desc&limit=200&page=1",
+      { timeoutMs: 3000 }
     );
+    if (!ok) return null;
 
-    clearTimeout(timeout);
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
     if (!data?.models_ready || !Array.isArray(data?.customers)) return null;
 
     const userIdStr = String(userId);

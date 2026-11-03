@@ -6,7 +6,7 @@ const User = require("../models/User");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const AnalyticsEvent = require("../models/AnalyticsEvent");
-const ChatbotEvent = require("../chatbot-service/models/ChatbotEvent");
+const ChatbotEvent = require("../models/ChatbotEvent");
 const Cart = require("../models/Cart");
 
 const MONGO_URI = process.env.MONGO_URI;

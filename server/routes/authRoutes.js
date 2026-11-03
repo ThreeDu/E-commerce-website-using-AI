@@ -1,4 +1,5 @@
 const express = require("express");
+const { requireUser } = require("./helpers/authHelpers");
 const {
   register,
   login,
@@ -30,13 +31,13 @@ router.post("/register", register);
 router.post("/login", login);
 router.get("/verify-admin", verifyAdmin);
 router.get("/verify-token", verifyToken);
-router.get("/profile", getProfile);
-router.put("/profile", updateProfile);
-router.put("/profile/avatar", uploadAvatar);
-router.put("/change-password", changePassword);
-router.get("/wishlist", getWishlist);
-router.post("/wishlist", addWishlist);
-router.delete("/wishlist/:productId", removeWishlist);
+router.get("/profile", requireUser, getProfile);
+router.put("/profile", requireUser, updateProfile);
+router.put("/profile/avatar", requireUser, uploadAvatar);
+router.put("/change-password", requireUser, changePassword);
+router.get("/wishlist", requireUser, getWishlist);
+router.post("/wishlist", requireUser, addWishlist);
+router.delete("/wishlist/:productId", requireUser, removeWishlist);
 
 router.use("/cart", cartRoutes);
 router.use("/notifications", userNotificationRoutes);

@@ -3,11 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { useAuth } from "../../../context/AuthContext";
 import { useNotification } from "../../../context/NotificationContext";
-import { getAdminCategories } from "../../../services/admin/categoryService";
+import { getAdminCategories } from "../../../services/admin/adminCategoryService";
 import {
   commitAdminProductImport,
   previewAdminProductImport,
-} from "../../../services/admin/productService";
+} from "../../../services/admin/adminProductService";
 import { getErrorMessage } from "../../../utils/adminErrorUtils";
 const TEMPLATE_COLUMNS = [
   "name",

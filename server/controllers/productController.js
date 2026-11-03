@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
-const { verifyUserRequest } = require("../routes/helpers/authHelpers");
 
 function recalculateRatings(product) {
   const totalRatings = product.reviews.length;
@@ -76,10 +75,7 @@ const listProducts = async (req, res) => {
 
 const trackProductView = async (req, res) => {
   try {
-    const authUser = await verifyUserRequest(req, res);
-    if (!authUser) {
-      return;
-    }
+    const authUser = req.user;
 
     const product = await Product.findById(req.params.id).select("_id viewedBy totalViews");
     if (!product) {
@@ -108,10 +104,7 @@ const trackProductView = async (req, res) => {
 
 const getReviewEligibility = async (req, res) => {
   try {
-    const authUser = await verifyUserRequest(req, res);
-    if (!authUser) {
-      return;
-    }
+    const authUser = req.user;
 
     const product = await Product.findById(req.params.id).select("_id reviews");
     if (!product) {
@@ -148,10 +141,7 @@ const getReviewEligibility = async (req, res) => {
 
 const createReview = async (req, res) => {
   try {
-    const authUser = await verifyUserRequest(req, res);
-    if (!authUser) {
-      return;
-    }
+    const authUser = req.user;
 
     const product = await Product.findById(req.params.id);
     if (!product) {
@@ -225,10 +215,7 @@ const createReview = async (req, res) => {
 
 const updateReview = async (req, res) => {
   try {
-    const authUser = await verifyUserRequest(req, res);
-    if (!authUser) {
-      return;
-    }
+    const authUser = req.user;
 
     const product = await Product.findById(req.params.id);
     if (!product) {
@@ -281,10 +268,7 @@ const updateReview = async (req, res) => {
 
 const deleteReview = async (req, res) => {
   try {
-    const authUser = await verifyUserRequest(req, res);
-    if (!authUser) {
-      return;
-    }
+    const authUser = req.user;
 
     const product = await Product.findById(req.params.id);
     if (!product) {
@@ -312,76 +296,6 @@ const deleteReview = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: "Lỗi máy chủ khi xóa đánh giá" });
-  }
-};
-
-const seedProducts = async (req, res) => {
-  const mockProducts = [
-    {
-      name: "Điện thoại AI Pro",
-      price: 25000000,
-      category: "Điện thoại",
-      description: "Điện thoại thông minh tích hợp AI mới nhất, camera siêu nét 108MP, pin trâu 5000mAh.",
-      stock: 50,
-    },
-    {
-      name: "Laptop DevBook 16",
-      price: 40000000,
-      category: "Laptop",
-      description: "Cỗ máy làm việc với chip hiệu năng cao, RAM 32GB, ổ cứng SSD 1TB chuẩn PCIe 4.0.",
-      stock: 30,
-    },
-    {
-      name: "Tai nghe Noise Cancel",
-      price: 3500000,
-      category: "Phụ kiện",
-      description: "Tai nghe chống ồn chủ động ANC, âm thanh Hi-Res chân thực, pin sử dụng liên tục 30 giờ.",
-      stock: 100,
-    },
-    {
-      name: "Đồng hồ thông minh",
-      price: 5000000,
-      category: "Phụ kiện",
-      description: "Theo dõi sức khỏe toàn diện, đo nhịp tim, nồng độ oxy trong máu, chống nước chuẩn 5ATM.",
-      stock: 80,
-    },
-    {
-      name: "Bàn phím cơ RGB",
-      price: 2100000,
-      category: "Phụ kiện",
-      description: "Bàn phím cơ sử dụng switch cao cấp, tích hợp LED RGB 16.8 triệu màu tùy chỉnh, gõ cực êm.",
-      stock: 45,
-    },
-    {
-      name: "Chuột không dây Ergonomic",
-      price: 950000,
-      category: "Phụ kiện",
-      description: "Thiết kế công thái học chống mỏi tay khi dùng lâu, kết nối wireless độ trễ thấp, pin sạc dùng 3 tháng.",
-      stock: 120,
-    },
-    {
-      name: "Màn hình 4K 27 inch",
-      price: 12500000,
-      category: "Phụ kiện",
-      description: "Màn hình độ phân giải 4K sắc nét, chuẩn màu 99% sRGB dành cho dân thiết kế, tích hợp công nghệ bảo vệ mắt.",
-      stock: 15,
-    },
-    {
-      name: "Webcam Full HD",
-      price: 1200000,
-      category: "Phụ kiện",
-      description: "Webcam 1080p sắc nét lý tưởng cho học tập và họp trực tuyến, tích hợp micro chống ồn kép.",
-      stock: 60,
-    },
-  ];
-
-  try {
-    await Product.deleteMany({});
-    const createdProducts = await Product.insertMany(mockProducts);
-    return res.status(201).json({ message: "Seed data thành công!", count: createdProducts.length });
-  } catch (error) {
-    console.error("Lỗi khi seed data:", error.message);
-    return res.status(500).json({ message: "Lỗi khi seed data", error: error.message });
   }
 };
 
@@ -430,6 +344,5 @@ module.exports = {
   createReview,
   updateReview,
   deleteReview,
-  seedProducts,
   getProductById,
 };

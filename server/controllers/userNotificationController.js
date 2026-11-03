@@ -1,15 +1,12 @@
 const Notification = require("../models/Notification");
-const { verifyUserRequest } = require("../routes/helpers/authHelpers");
+const { parsePagination } = require("../helpers/pagination");
 
 // GET /api/auth/notifications
 const getNotifications = async (req, res) => {
-  const user = await verifyUserRequest(req, res);
-  if (!user) return;
+  const user = req.user;
 
   try {
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 20));
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = parsePagination(req.query);
 
     const query = { user: user._id };
 
@@ -38,8 +35,7 @@ const getNotifications = async (req, res) => {
 
 // GET /api/auth/notifications/unread-count
 const getUnreadCount = async (req, res) => {
-  const user = await verifyUserRequest(req, res);
-  if (!user) return;
+  const user = req.user;
 
   try {
     const count = await Notification.countDocuments({ user: user._id, isRead: false });
@@ -51,8 +47,7 @@ const getUnreadCount = async (req, res) => {
 
 // PUT /api/auth/notifications/:id/read
 const markAsRead = async (req, res) => {
-  const user = await verifyUserRequest(req, res);
-  if (!user) return;
+  const user = req.user;
 
   try {
     const notification = await Notification.findOneAndUpdate(
@@ -73,8 +68,7 @@ const markAsRead = async (req, res) => {
 
 // PUT /api/auth/notifications/read-all
 const markAllAsRead = async (req, res) => {
-  const user = await verifyUserRequest(req, res);
-  if (!user) return;
+  const user = req.user;
 
   try {
     await Notification.updateMany(
@@ -90,8 +84,7 @@ const markAllAsRead = async (req, res) => {
 
 // DELETE /api/auth/notifications/:id
 const deleteNotification = async (req, res) => {
-  const user = await verifyUserRequest(req, res);
-  if (!user) return;
+  const user = req.user;
 
   try {
     const notification = await Notification.findOneAndDelete({

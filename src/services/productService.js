@@ -7,6 +7,13 @@ export async function fetchProducts() {
   return apiClient("/api/products");
 }
 
+export async function fetchProductsByIds(ids) {
+  return apiClient("/api/products", {
+    method: "POST",
+    body: { ids },
+  });
+}
+
 export async function fetchProductById(id) {
   return apiClient(`/api/products/${id}`);
 }

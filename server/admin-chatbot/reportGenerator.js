@@ -5,6 +5,7 @@
 const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const REPORTS_DIR = path.join(__dirname, '../../public/reports');
 if (!fs.existsSync(REPORTS_DIR)) {
@@ -12,7 +13,8 @@ if (!fs.existsSync(REPORTS_DIR)) {
 }
 
 function generateExcelReport(data, fileNamePrefix = 'Report') {
-  const filename = `${fileNamePrefix}_${Date.now()}.xlsx`;
+  // /reports được phục vụ public, nên tên file phải không đoán được.
+  const filename = `${fileNamePrefix}_${Date.now()}_${crypto.randomUUID()}.xlsx`;
   const filePath = path.join(REPORTS_DIR, filename);
 
   const worksheet = XLSX.utils.json_to_sheet(data);

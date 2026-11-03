@@ -1,5 +1,5 @@
 const express = require("express");
-const { verifyAdminRequest } = require("../helpers/authHelpers");
+const { requireAdmin } = require("../helpers/authHelpers");
 const {
   listProducts,
   getProductById,
@@ -11,16 +11,6 @@ const {
 } = require("../../controllers/admin/productController");
 
 const router = express.Router();
-
-const requireAdmin = async (req, res, next) => {
-  const adminUser = await verifyAdminRequest(req, res);
-  if (!adminUser) {
-    return;
-  }
-
-  req.adminUser = adminUser;
-  next();
-};
 
 router.get("/", requireAdmin, listProducts);
 router.get("/:id", requireAdmin, getProductById);

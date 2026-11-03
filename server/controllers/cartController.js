@@ -1,11 +1,7 @@
 const Cart = require("../models/Cart");
-const { verifyUserRequest } = require("../routes/helpers/authHelpers");
 
 const getCart = async (req, res) => {
-  const user = await verifyUserRequest(req, res);
-  if (!user) {
-    return;
-  }
+  const user = req.user;
 
   try {
     const cart = await Cart.findOne({ user: user._id }).populate({
@@ -37,17 +33,14 @@ const getCart = async (req, res) => {
 };
 
 const syncCart = async (req, res) => {
-  const user = await verifyUserRequest(req, res);
-  if (!user) {
-    return;
-  }
+  const user = req.user;
 
   try {
     const { items } = req.body;
 
     const cartItems = (items || []).map((item) => ({
       product: item.productId || item.product,
-      quantity: Number(item.quantity) || 1,
+      quantity: Math.max(1, Math.floor(Number(item.quantity) || 1)),
     }));
 
     await Cart.findOneAndUpdate(

@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { normalizeText, slugify } = require("../helpers/textHelpers");
 
 const KNOWN_BRANDS = [
   "samsung", "iphone", "xiaomi", "oppo", "vivo", "realme", "macbook", "ipad",
@@ -6,21 +7,6 @@ const KNOWN_BRANDS = [
   "google", "oneplus", "huawei", "honor", "nokia", "sony",
   "nothing", "motorola", "rog",
 ];
-
-function normalizeText(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/đ/g, "d")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function slugify(value) {
-  return normalizeText(value).replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-}
 
 function deriveStructuredFields({ name, category }) {
   const normalizedName = normalizeText(name);

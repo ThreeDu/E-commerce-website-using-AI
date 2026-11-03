@@ -1,49 +1,42 @@
+import { apiClient } from "../apiClient";
+
 export async function registerUser(payload) {
-  const response = await fetch("/api/auth/register", {
+  return apiClient("/api/auth/register", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
+    body: payload,
+    errorMessage: "Register failed",
   });
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || "Register failed");
-  }
-
-  return data;
 }
 
 export async function loginUser(payload) {
-  const response = await fetch("/api/auth/login", {
+  return apiClient("/api/auth/login", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
+    body: payload,
+    errorMessage: "Login failed",
   });
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || "Login failed");
-  }
-
-  return data;
 }
 
 export async function verifyAdminToken(token) {
-  const response = await fetch("/api/auth/verify-admin", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+  return apiClient("/api/auth/verify-admin", {
+    token,
+    errorMessage: "Xác thực admin thất bại",
   });
+}
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || "Xác thực admin thất bại");
-  }
+export async function changePassword(payload, token) {
+  return apiClient("/api/auth/change-password", {
+    method: "PUT",
+    body: payload,
+    token,
+    errorMessage: "Không thể đổi mật khẩu.",
+  });
+}
 
-  return data;
+export async function updateProfile(payload, token) {
+  return apiClient("/api/auth/profile", {
+    method: "PUT",
+    body: payload,
+    token,
+    errorMessage: "Không thể cập nhật thông tin cá nhân.",
+  });
 }

@@ -13,12 +13,15 @@ const handleBeepayWebhook = async (req, res) => {
     const hashValue = signature.startsWith("sha256=") ? signature.split("=")[1] : signature;
     const payload = req.rawBody || JSON.stringify(req.body);
 
-    const secret = process.env.BEEPAY_HMAC_SECRET || "819444abb8ccfcd60fcc18583e9cff2b706e8e57d10dcb80101b570cd1b563c8";
-    const hmac = crypto.createHmac("sha256", secret);
-    hmac.update(payload);
-    const expectedSignature = hmac.digest("hex");
+    const secret = process.env.BEEPAY_HMAC_SECRET;
+    if (!secret) {
+      console.error("[BeePay Webhook] BEEPAY_HMAC_SECRET chưa được cấu hình.");
+      return res.status(500).json({ message: "Webhook not configured" });
+    }
+    const expected = crypto.createHmac("sha256", secret).update(payload).digest();
+    const received = Buffer.from(String(hashValue), "hex");
 
-    if (hashValue !== expectedSignature) {
+    if (received.length !== expected.length || !crypto.timingSafeEqual(received, expected)) {
       console.warn("[BeePay Webhook] Signature verification failed.");
       return res.status(403).json({ message: "Invalid signature" });
     }

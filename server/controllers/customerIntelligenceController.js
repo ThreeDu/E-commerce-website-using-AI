@@ -6,19 +6,7 @@
  */
 
 const { logAdminAction } = require("../utils/adminAuditLogger");
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:5001";
-
-const proxyToMlService = async (path, options = {}) => {
-  const url = `${ML_SERVICE_URL}${path}`;
-  const response = await fetch(url, {
-    method: options.method || "GET",
-    headers: { "Content-Type": "application/json" },
-    ...(options.body ? { body: JSON.stringify(options.body) } : {}),
-  });
-
-  const data = await response.json();
-  return { status: response.status, data };
-};
+const { requestMl: proxyToMlService } = require("../services/mlClient");
 
 const getIntelligenceOverview = async (req, res) => {
   try {

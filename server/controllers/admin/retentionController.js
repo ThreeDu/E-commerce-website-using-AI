@@ -4,20 +4,14 @@ const User = require("../../models/User");
 const { notifyChurnIntervention, notifyAbandonedCart } = require("../../helpers/notificationHelper");
 const { logAdminAction } = require("../../utils/adminAuditLogger");
 
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:5001";
+const { requestMl } = require("../../services/mlClient");
 
 const callMlService = async (path, method = "GET", body = null) => {
-  const url = `${ML_SERVICE_URL}${path}`;
-  const response = await fetch(url, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`ML Service error (${response.status}): ${errorText}`);
+  const { ok, status, data } = await requestMl(path, { method, body });
+  if (!ok) {
+    throw new Error(`ML Service error (${status}): ${typeof data === "string" ? data : JSON.stringify(data)}`);
   }
-  return await response.json();
+  return data;
 };
 
 const generateRandomCode = (prefix = "WINBACK", length = 8) => {

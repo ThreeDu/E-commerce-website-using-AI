@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useAuth } from "./AuthContext";
 import { useNotification } from "./NotificationContext";
 import { trackEvent } from "../services/analyticsService";
+import { fetchCart, syncCart } from "../services/cartService";
 
 const CartContext = createContext();
 
@@ -47,15 +48,7 @@ export function CartProvider({ children }) {
 
     if (token) {
       // User is logged in, fetch from DB
-      fetch("/api/auth/cart", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-        .then((res) => {
-          if (!res.ok) throw new Error("Không thể lấy giỏ hàng từ server");
-          return res.json();
-        })
+      fetchCart(token)
         .then((data) => {
           const items = data.items || [];
           setCart(items);
@@ -97,17 +90,7 @@ export function CartProvider({ children }) {
         quantity: item.quantity,
       }));
 
-      fetch("/api/auth/cart/sync", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ items: syncItems }),
-      })
-        .then((res) => {
-          if (!res.ok) console.error("Lỗi đồng bộ giỏ hàng:", res.statusText);
-        })
+      syncCart(syncItems, token)
         .catch((err) => console.error("Lỗi đồng bộ giỏ hàng:", err));
     }, 2000);
 
@@ -120,15 +103,7 @@ export function CartProvider({ children }) {
     const token = authRef.current?.token;
     if (token) {
       isLoadingRef.current = true;
-      return fetch("/api/auth/cart", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-        .then((res) => {
-          if (!res.ok) throw new Error("Không thể lấy giỏ hàng từ server");
-          return res.json();
-        })
+      return fetchCart(token)
         .then((data) => {
           const items = data.items || [];
           setCart(items);

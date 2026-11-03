@@ -5,7 +5,8 @@ import { useNotification } from "../context/NotificationContext";
 import { trackEvent } from "../services/analyticsService";
 import { getStatusInfo } from "../utils/orderStatusUtils";
 import { getProductImageSrc } from "../utils/productUtils";
-import { cancelMyOrder } from "../services/orderService";
+import { cancelMyOrder, fetchMyOrderById } from "../services/orderService";
+import { getAdminOrderById } from "../services/admin/adminOrderService";
 function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -21,7 +22,6 @@ function OrderDetailPage() {
   const [cancelling, setCancelling] = useState(false);
 
   const isAdminView = auth?.user?.role === "admin" && location.pathname.startsWith("/admin/orders/");
-  const detailEndpoint = isAdminView ? `/api/auth/admin/orders/${id}` : `/api/orders/my-orders/${id}`;
   const backHref = isAdminView ? "/admin/orders" : "/order-history";
 
   const cancellable = useMemo(() => {
@@ -37,28 +37,24 @@ function OrderDetailPage() {
 
       try {
         setError("");
-        const response = await fetch(detailEndpoint, {
-          headers: {
-            Authorization: `Bearer ${auth.token}`,
-          },
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-          setError(data?.message || "Không thể tải chi tiết đơn hàng.");
-          return;
-        }
+        const data = isAdminView
+          ? await getAdminOrderById(auth.token, id)
+          : await fetchMyOrderById(id, auth.token);
 
         setOrder(data?.order || data || null);
       } catch (fetchError) {
-        setError("Không thể kết nối tới máy chủ.");
+        setError(
+          fetchError.status
+            ? fetchError.data?.message || "Không thể tải chi tiết đơn hàng."
+            : "Không thể kết nối tới máy chủ."
+        );
       } finally {
         setLoading(false);
       }
     };
 
     fetchOrderDetail();
-  }, [auth?.token, detailEndpoint]);
+  }, [auth?.token, id, isAdminView]);
 
   const orderStatus = order?.status;
 
@@ -70,22 +66,14 @@ function OrderDetailPage() {
 
     const intervalId = setInterval(async () => {
       try {
-        const response = await fetch(detailEndpoint, {
-          headers: {
-            Authorization: `Bearer ${auth.token}`,
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const fetchedOrder = data?.order || data;
-          if (fetchedOrder && fetchedOrder.status !== "pending") {
-            setOrder(fetchedOrder);
-            success("Đơn hàng của bạn đã được xác nhận thanh toán thành công!", {
-              title: "Thanh toán thành công",
-            });
-            clearInterval(intervalId);
-          }
+        const data = await fetchMyOrderById(id, auth.token);
+        const fetchedOrder = data?.order || data;
+        if (fetchedOrder && fetchedOrder.status !== "pending") {
+          setOrder(fetchedOrder);
+          success("Đơn hàng của bạn đã được xác nhận thanh toán thành công!", {
+            title: "Thanh toán thành công",
+          });
+          clearInterval(intervalId);
         }
       } catch (err) {
         console.error("Lỗi khi kiểm tra trạng thái đơn hàng:", err);
@@ -93,7 +81,7 @@ function OrderDetailPage() {
     }, 5000);
 
     return () => clearInterval(intervalId);
-  }, [orderStatus, auth?.token, detailEndpoint, isAdminView, success]);
+  }, [orderStatus, auth?.token, id, isAdminView, success]);
 
   const handleCopyText = (text, fieldName) => {
     navigator.clipboard.writeText(text);

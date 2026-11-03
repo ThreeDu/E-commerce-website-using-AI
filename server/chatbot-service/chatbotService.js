@@ -4,12 +4,46 @@
  * Flow: User message → Build context → LLM with tools → Tool calling loop → Response
  */
 
-const ChatSession = require('./models/ChatSession');
+const crypto = require('crypto');
+const ChatSession = require('../models/ChatSession');
 const { callLLMWithTools, callLLMStreaming } = require('./llmHelper');
 const { TOOL_DEFINITIONS, executeTool } = require('./chatbotToolExecutor');
 
 const MAX_TOOL_ITERATIONS = 5;
 const MAX_HISTORY_MESSAGES = 16; // Keep last 16 messages for context
+
+// ─── Session ────────────────────────────────────────────────────────────────
+/**
+ * Load or create a chat session. A session owned by another user (or an owned
+ * session reused while logged out) is never reused: a new sessionId is issued instead,
+ * so nobody can read someone else's history by guessing/reusing its id.
+ */
+async function loadSession(sessionId, userId, context) {
+  let session = await ChatSession.findOne({ sessionId });
+
+  if (session && session.userId && String(session.userId) !== String(userId || '')) {
+    session = null;
+    sessionId = `session_${crypto.randomUUID()}`;
+  }
+
+  if (!session) {
+    session = new ChatSession({
+      sessionId,
+      userId: userId || null,
+      messages: [],
+      context: context || {},
+    });
+  } else if (userId && !session.userId) {
+    // Associate anonymous session with newly logged-in user
+    session.userId = userId;
+  }
+
+  if (context) {
+    session.context = { ...session.context, ...context };
+  }
+
+  return session;
+}
 
 // ─── System Prompt ──────────────────────────────────────────────────────────
 function buildSystemPrompt(context) {
@@ -166,24 +200,7 @@ async function fetchProductCards(productIds) {
  */
 async function processMessage({ message, sessionId, userId, history, context }) {
   // 1. Load or create session from MongoDB
-  let session = await ChatSession.findOne({ sessionId });
-
-  if (!session) {
-    session = new ChatSession({
-      sessionId,
-      userId: userId || null,
-      messages: [],
-      context: context || {},
-    });
-  } else if (userId && !session.userId) {
-    // Associate anonymous session with newly logged-in user
-    session.userId = userId;
-  }
-
-  // Update context
-  if (context) {
-    session.context = { ...session.context, ...context };
-  }
+  const session = await loadSession(sessionId, userId, context);
 
   // 2. Build system prompt with user context
   const systemPrompt = buildSystemPrompt({
@@ -286,7 +303,7 @@ async function processMessage({ message, sessionId, userId, history, context }) 
     reply: cleanText,
     products,
     quickReplies,
-    sessionId,
+    sessionId: session.sessionId,
     cartUpdated,
   };
 }
@@ -302,22 +319,7 @@ async function processMessage({ message, sessionId, userId, history, context }) 
  * @returns {Promise<{sessionId, cartUpdated}>}
  */
 async function processMessageStream({ message, sessionId, userId, context, onChunk, onProducts }) {
-  let session = await ChatSession.findOne({ sessionId });
-
-  if (!session) {
-    session = new ChatSession({
-      sessionId,
-      userId: userId || null,
-      messages: [],
-      context: context || {},
-    });
-  } else if (userId && !session.userId) {
-    session.userId = userId;
-  }
-
-  if (context) {
-    session.context = { ...session.context, ...context };
-  }
+  const session = await loadSession(sessionId, userId, context);
 
   const systemPrompt = buildSystemPrompt({
     userId,
@@ -412,7 +414,7 @@ async function processMessageStream({ message, sessionId, userId, context, onChu
   }
   await session.save();
 
-  return { sessionId, cartUpdated };
+  return { sessionId: session.sessionId, cartUpdated };
 }
 
 module.exports = { processMessage, processMessageStream };

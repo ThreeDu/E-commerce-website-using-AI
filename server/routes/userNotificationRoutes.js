@@ -1,4 +1,5 @@
 const express = require("express");
+const { requireUser } = require("./helpers/authHelpers");
 const {
   getNotifications,
   getUnreadCount,
@@ -9,10 +10,10 @@ const {
 
 const router = express.Router();
 
-router.get("/", getNotifications);
-router.get("/unread-count", getUnreadCount);
-router.put("/read-all", markAllAsRead);
-router.put("/:id/read", markAsRead);
-router.delete("/:id", deleteNotification);
+router.get("/", requireUser, getNotifications);
+router.get("/unread-count", requireUser, getUnreadCount);
+router.put("/read-all", requireUser, markAllAsRead);
+router.put("/:id/read", requireUser, markAsRead);
+router.delete("/:id", requireUser, deleteNotification);
 
 module.exports = router;

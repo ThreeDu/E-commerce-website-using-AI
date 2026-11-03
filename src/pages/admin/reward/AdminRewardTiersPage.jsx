@@ -9,7 +9,8 @@ import {
   faTrash,
   faGift,
 } from "@fortawesome/free-solid-svg-icons";
-const API_BASE = "/api/auth/admin/rewards";
+import { deleteAdminRewardTier, getAdminRewardTiers } from "../../../services/admin/adminRewardTierService";
+import ConfirmDeleteModal from "../../../components/common/ConfirmDeleteModal";
 
 function AdminRewardTiersPage() {
   const { auth } = useAuth();
@@ -28,15 +29,7 @@ function AdminRewardTiersPage() {
 
     try {
       setLoading(true);
-      const res = await fetch(API_BASE, {
-        headers: { Authorization: `Bearer ${auth.token}` },
-      });
-
-      if (!res.ok) {
-        throw new Error("Không thể tải danh sách mức đổi thưởng.");
-      }
-
-      const data = await res.json();
+      const data = await getAdminRewardTiers(auth.token);
       setTiers(Array.isArray(data.tiers) ? data.tiers : (Array.isArray(data) ? data : []));
     } catch (err) {
       error(err.message || "Không thể tải danh sách mức đổi thưởng.");
@@ -56,15 +49,7 @@ function AdminRewardTiersPage() {
 
     try {
       setDeleting(true);
-      const res = await fetch(`${API_BASE}/${tierPendingDelete._id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${auth?.token}` },
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        throw new Error(errData?.message || "Không thể xóa mức đổi thưởng.");
-      }
+      await deleteAdminRewardTier(auth?.token, tierPendingDelete._id);
 
       setTiers((prev) => prev.filter((tier) => tier._id !== tierPendingDelete._id));
       success("Xóa mức đổi thưởng thành công.");
@@ -185,35 +170,16 @@ function AdminRewardTiersPage() {
         )}
       </section>
 
-      {/* Delete confirmation modal */}
-      {tierPendingDelete && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-[999] p-4" role="presentation">
-          <div className="w-full max-w-[460px] bg-admin-surface rounded-xl border border-admin-line p-6 shadow-modal animate-admin-rise" role="dialog" aria-modal="true" aria-labelledby="delete-title">
-            <h3 id="delete-title" className="text-lg font-bold text-admin-ink mt-0 mb-2">Xác nhận xóa mức đổi thưởng</h3>
-            <p className="text-admin-muted text-sm mt-0 mb-4">
-              Bạn có chắc chắn muốn xóa <strong>{tierPendingDelete.name}</strong>?
-            </p>
-            <div className="flex justify-end gap-2.5">
-              <button
-                type="button"
-                className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-[#e8edf3] text-admin-ink border border-[#d2dce8] hover:bg-[#dce3ec] transition-colors cursor-pointer"
-                onClick={() => setTierPendingDelete(null)}
-                disabled={deleting}
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-gradient-to-r from-admin-primary to-admin-sidebar-end text-white border-0 hover:brightness-110 transition-all cursor-pointer"
-                onClick={handleDelete}
-                disabled={deleting}
-              >
-                {deleting ? "Đang xóa..." : "Xóa"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDeleteModal
+        isOpen={Boolean(tierPendingDelete)}
+        title="Xác nhận xóa mức đổi thưởng"
+        message={<>Bạn có chắc chắn muốn xóa <strong>{tierPendingDelete?.name}</strong>?</>}
+        isLoading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setTierPendingDelete(null)}
+        confirmLabel="Xóa"
+        loadingLabel="Đang xóa..."
+      />
     </main>
   );
 }
