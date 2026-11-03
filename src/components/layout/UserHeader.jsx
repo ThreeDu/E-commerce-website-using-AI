@@ -9,7 +9,8 @@ import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { getProductImageSrc } from "../../utils/productUtils";
 import { fetchProducts } from "../../services/productService";
-import NotificationBell from "../notification/NotificationBell";
+import NotificationBell from "../notification/NotificationBell";
+import { formatPrice } from "../../utils/priceUtils";
 
 function IconCart() {
   return (
@@ -210,7 +211,7 @@ function UserHeader() {
                       <span className="text-xs font-bold text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">{product.name}</span>
                     </span>
                     <span className="text-xs font-bold text-teal-700 whitespace-nowrap">
-                      {Number(product.finalPrice || product.price || 0).toLocaleString("vi-VN")} đ
+                      {formatPrice(product.finalPrice || product.price || 0)}
                     </span>
                   </button>
                 ))

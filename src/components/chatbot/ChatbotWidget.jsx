@@ -7,11 +7,29 @@ import { postStream, readSseEvents } from "../../services/streamClient";
 import ChatInputForm from "./ChatInputForm";
 import ChatMessageList from "./ChatMessageList";
 import { getOrCreateSessionId, readBehavior, writeBehavior, createMessage, SESSION_STORAGE_KEY, looksLikeCompareQuery } from "./chatbotHelpers";
+
+const OPEN_STORAGE_KEY = "chatbot_open";
+
 function ChatbotWidget() {
   const location = useLocation();
   const { cart, addToCart, reloadCart } = useCart();
   const { auth } = useAuth();
-  const [open, setOpen] = useState(true);
+  // Mặc định đóng để không che nội dung; nhớ lựa chọn mở/đóng của người dùng giữa các lần tải trang.
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(OPEN_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(OPEN_STORAGE_KEY, open ? "1" : "0");
+    } catch {
+      // localStorage bị chặn: chỉ mất phần ghi nhớ trạng thái
+    }
+  }, [open]);
   const [pending, setPending] = useState(false);
   const [input, setInput] = useState("");
   const textareaRef = useRef(null);

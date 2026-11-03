@@ -1,4 +1,11 @@
+import { formatPrice } from "../../utils/priceUtils";
+
 function ProductFilterSidebar({ categoryLevel1, categoryLevel2, categoryLevel3, level1Categories, level2Categories, level3Categories, maxPossiblePrice, maxPrice, setCategoryLevel1, setCategoryLevel2, setCategoryLevel3, setMaxPrice, setSortBy, sortBy }) {
+  const priceStep = Math.max(10000, Math.round(maxPossiblePrice / 200));
+  // Trình duyệt làm tròn giá trị thanh kéo về bội số của step, nên max được làm tròn lên
+  // và vị trí cuối thanh kéo được hiểu là "không giới hạn" (giá cao nhất thật).
+  const sliderMax = Math.ceil(maxPossiblePrice / priceStep) * priceStep;
+
   return (
     <aside className="sticky top-[86px] self-start p-5 bg-white border border-slate-200/90 rounded-2xl shadow-xs max-[960px]:static">
       <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
@@ -100,14 +107,17 @@ function ProductFilterSidebar({ categoryLevel1, categoryLevel2, categoryLevel3, 
           className="w-full accent-teal-700 cursor-pointer"
           type="range"
           min="0"
-          max={maxPossiblePrice}
-          step={Math.max(10000, Math.round(maxPossiblePrice / 200))}
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(Number(e.target.value))}
+          max={sliderMax}
+          step={priceStep}
+          value={maxPrice >= maxPossiblePrice ? sliderMax : maxPrice}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            setMaxPrice(value >= sliderMax ? maxPossiblePrice : value);
+          }}
         />
         <div className="flex justify-between items-center text-[11px] text-slate-500 font-semibold mt-1">
           <span>0 đ</span>
-          <span className="text-teal-700 font-bold">{maxPrice.toLocaleString("vi-VN")} đ</span>
+          <span className="text-teal-700 font-bold">{formatPrice(maxPrice)}</span>
         </div>
       </div>
     </aside>

@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowTrendUp } from "@fortawesome/free-solid-svg-icons";
-import { formatCurrency } from "../../../utils/formatUtils";
+import { formatCurrency } from "../../../utils/formatUtils";
+import { formatPrice } from "../../../utils/priceUtils";
 
 function getMonthLabel(monthNumber) {
   return `Tháng ${monthNumber}`;
@@ -99,7 +100,7 @@ function RevenueCard({ currentDate, periodType, revenue, selectedMonth, selected
             Đơn đã hoàn tất kỳ này
           </span>
           <div className="text-xl sm:text-2xl font-black text-admin-ink tracking-tight mt-1.5">
-            {Number(revenue?.totals?.selectedPeriodOrders || 0).toLocaleString("vi-VN")} đơn
+            {formatPrice(revenue?.totals?.selectedPeriodOrders || 0)}ơn
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
             Đã thanh toán và giao thành công

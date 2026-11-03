@@ -10,6 +10,7 @@ import { fetchWishlist, addToWishlist, removeFromWishlist } from "../services/wi
 import ProductPagination from "../components/product/ProductPagination";
 import ProductGrid from "../components/product/ProductGrid";
 import ProductFilterSidebar from "../components/product/ProductFilterSidebar";
+import { getProductPricing } from "../utils/productUtils";
 
 function normalizeCategoryId(value) {
   return String(value || "").trim();
@@ -74,7 +75,7 @@ function ProductsPage() {
         
         // Tự động tìm giá lớn nhất trong database để làm mốc cho thanh kéo
         if (data.length > 0) {
-          const highestPrice = Math.max(...data.map(item => item.price));
+          const highestPrice = Math.max(...data.map((item) => getProductPricing(item).finalPrice));
           setMaxPossiblePrice(highestPrice);
           setMaxPrice(highestPrice); // Mặc định thanh kéo sẽ nằm ở mức cao nhất
         }
@@ -306,7 +307,8 @@ function ProductsPage() {
         );
       })();
 
-      const matchPrice = product.price <= maxPrice;
+      // So với giá đang hiển thị trên thẻ (đã giảm), không phải giá gốc
+      const matchPrice = getProductPricing(product).finalPrice <= maxPrice;
       return matchSearch && matchCategory && matchPrice;
     });
 

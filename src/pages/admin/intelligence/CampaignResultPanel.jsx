@@ -1,5 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTimes, faUserTag } from "@fortawesome/free-solid-svg-icons";
+import { faTimes, faUserTag } from "@fortawesome/free-solid-svg-icons";
+import { formatPrice } from "../../../utils/priceUtils";
 
 function CampaignResultPanel({ campaignResult, setCampaignResult }) {
   if (!campaignResult) {
@@ -74,7 +75,7 @@ function CampaignResultPanel({ campaignResult, setCampaignResult }) {
                 ) : (
                   <>
                     <td>{r.hoursAbandoned} giờ</td>
-                    <td>{r.estimatedValue.toLocaleString("vi-VN")} đ</td>
+                    <td>{formatPrice(r.estimatedValue)}</td>
                     <td><span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-700">{r.priorityScore}</span></td>
                   </>
                 )}

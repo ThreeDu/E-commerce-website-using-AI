@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { getProductImageSrc } from "../../../utils/productUtils";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPen, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faPen, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { formatPrice } from "../../../utils/priceUtils";
 
 function ProductTable({ getStockStatus, getStockStatusLabel, isAllOnPageSelected, paginatedProducts, selectedProductIds, setProductPendingDelete, toggleProductSelect, toggleSelectAllOnPage }) {
   return (
@@ -71,10 +72,10 @@ function ProductTable({ getStockStatus, getStockStatusLabel, isAllOnPageSelected
                   <td className="text-left p-2 break-words whitespace-normal align-middle border-b border-[#edf2f8]">
                     <div className="grid gap-1 min-w-0">
                       <span className="inline-flex items-center rounded-full p-[3px_6px] font-bold text-[11px] text-[#166534] bg-[#e7f9ef]">
-                        {Number(product.finalPrice ?? product.price).toLocaleString("vi-VN")} đ
+                        {formatPrice(product.finalPrice ?? product.price)}
                       </span>
-                      <span className="mt-1 text-[#62728a] text-[13px] block whitespace-normal overflow-visible break-words" title={`Giá gốc: ${Number(product.price).toLocaleString("vi-VN")} đ`}>
-                        Giá gốc: {Number(product.price).toLocaleString("vi-VN")} đ
+                      <span className="mt-1 text-[#62728a] text-[13px] block whitespace-normal overflow-visible break-words" title={`Giá gốc: ${formatPrice(product.price)}`}>
+                        Giá gốc: {formatPrice(product.price)}
                       </span>
                       <span className="mt-1 text-[#62728a] text-[13px]">Giảm: {product.discountPercent ?? 0}%</span>
                     </div>

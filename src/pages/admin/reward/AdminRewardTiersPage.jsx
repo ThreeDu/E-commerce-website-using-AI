@@ -10,7 +10,8 @@ import {
   faGift,
 } from "@fortawesome/free-solid-svg-icons";
 import { deleteAdminRewardTier, getAdminRewardTiers } from "../../../services/admin/adminRewardTierService";
-import ConfirmDeleteModal from "../../../components/common/ConfirmDeleteModal";
+import ConfirmDeleteModal from "../../../components/common/ConfirmDeleteModal";
+import { formatPrice } from "../../../utils/priceUtils";
 
 function AdminRewardTiersPage() {
   const { auth } = useAuth();
@@ -117,9 +118,9 @@ function AdminRewardTiersPage() {
                       <td>
                         {tier.discountType === "percent"
                           ? `${Number(tier.discountValue || 0).toLocaleString("vi-VN")}%`
-                          : `${Number(tier.discountValue || 0).toLocaleString("vi-VN")} đ`}
+                          : `${formatPrice(tier.discountValue || 0)}`}
                       </td>
-                      <td>{Number(tier.minOrderValue || 0).toLocaleString("vi-VN")} đ</td>
+                      <td>{formatPrice(tier.minOrderValue || 0)}</td>
                       <td className="text-center">{Number(tier.voucherValidDays || 0).toLocaleString("vi-VN")}</td>
                       <td className="text-center">
                         <span

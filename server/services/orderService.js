@@ -11,8 +11,9 @@ const REVENUE_ORDER_FILTER = Object.freeze({ status: "delivered" });
 function getUnitPrice(product) {
   const basePrice = Math.max(0, Number(product?.price || 0));
   const finalPrice = Math.max(0, Number(product?.finalPrice || 0));
+  // VND không có phần lẻ: làm tròn để tổng đơn khớp với số tiền hiển thị/chuyển khoản
   if (finalPrice > 0 && finalPrice < basePrice) {
-    return finalPrice;
+    return Math.round(finalPrice);
   }
   const discountPercent = Math.max(0, Math.min(100, Number(product?.discountPercent || 0)));
   return Math.round(basePrice * (1 - discountPercent / 100));

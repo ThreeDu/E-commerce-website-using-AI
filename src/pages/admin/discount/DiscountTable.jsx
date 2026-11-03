@@ -1,7 +1,8 @@
 import { formatDateTime } from "../../../utils/formatUtils";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPen, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faPen, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { formatPrice } from "../../../utils/priceUtils";
 
 function DiscountTable({ getDiscountStatus, getRemainingQuantity, isAllOnPageSelected, paginatedDiscounts, selectedDiscountIds, setDiscountPendingDelete, toggleDiscountSelect, toggleSelectAllOnPage }) {
   return (
@@ -50,10 +51,10 @@ function DiscountTable({ getDiscountStatus, getRemainingQuantity, isAllOnPageSel
                       <span className="inline-flex items-center rounded-full font-bold text-[11px] py-0.5 px-1.5 bg-[#e7f0ff] text-[#1749a6] w-max">
                         {discount.type === "percent"
                           ? `${discount.value}%`
-                          : `${Number(discount.value).toLocaleString("vi-VN")} đ`}
+                          : `${formatPrice(discount.value)}`}
                       </span>
-                      <span className="text-xs text-admin-muted mt-1 block break-words whitespace-normal" title={`Đơn tối thiểu: ${Number(discount.minOrderValue || 0).toLocaleString("vi-VN")} đ`}>
-                        Đơn tối thiểu: {Number(discount.minOrderValue || 0).toLocaleString("vi-VN")} đ
+                      <span className="text-xs text-admin-muted mt-1 block break-words whitespace-normal" title={`Đơn tối thiểu: ${formatPrice(discount.minOrderValue || 0)}`}>
+                        Đơn tối thiểu: {formatPrice(discount.minOrderValue || 0)}
                       </span>
                       <span className="text-xs text-admin-muted mt-1 block break-words whitespace-normal">
                         Số lượng còn lại: {getRemainingQuantity(discount).toLocaleString("vi-VN")}

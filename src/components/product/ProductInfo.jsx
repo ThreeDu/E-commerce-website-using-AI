@@ -4,7 +4,8 @@
  *
  * Extracted from ProductDetailPage to follow Single Responsibility Principle.
  */
-import { getProductImageSrc, getProductPricing, isOutOfStock } from "../../utils/productUtils";
+import { getProductImageSrc, getProductPricing, isOutOfStock } from "../../utils/productUtils";
+import { formatPrice } from "../../utils/priceUtils";
 
 function buildSummaryBullets(description) {
   const raw = String(description || "").replace(/\r/g, "\n").trim();
@@ -91,11 +92,11 @@ function ProductInfo({
         {/* Pricing */}
         <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/80">
           <div className="text-2xl sm:text-3xl font-black text-slate-900">
-            {pricing.finalPrice.toLocaleString("vi-VN")} đ
+            {formatPrice(pricing.finalPrice)}
           </div>
           {pricing.hasDiscount ? (
             <div className="mt-1 text-xs text-slate-400 line-through font-semibold">
-              Giá niêm yết: {pricing.basePrice.toLocaleString("vi-VN")} đ
+              Giá niêm yết: {formatPrice(pricing.basePrice)}
             </div>
           ) : null}
         </div>

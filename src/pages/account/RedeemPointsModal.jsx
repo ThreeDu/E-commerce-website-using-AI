@@ -1,3 +1,5 @@
+import { formatPrice } from "../../utils/priceUtils";
+
 function RedeemPointsModal({ handleRedeem, isRedeemModalOpen, isRedeeming, loyaltyPoints, pointHistory, rewardTiers, setIsRedeemModalOpen }) {
   if (!isRedeemModalOpen) {
     return null;
@@ -36,18 +38,18 @@ function RedeemPointsModal({ handleRedeem, isRedeemModalOpen, isRedeeming, loyal
                   <div>
                     <h4 className={`m-0 mb-1 font-bold ${canRedeem ? "text-profile-primary" : "text-[#888]"}`}>{tier.name}</h4>
                     <p className="m-0 text-[0.85rem] text-[#62728a]">
-                      {tier.pointsRequired.toLocaleString("vi-VN")} điểm →{" "}
-                      Giảm {tier.discountType === "percent" ? `${tier.discountValue}%` : `${Number(tier.discountValue).toLocaleString("vi-VN")}đ`}
-                      {Number(tier.maxDiscountValue) > 0 && ` (tối đa ${Number(tier.maxDiscountValue).toLocaleString("vi-VN")}đ)`}
+                      {formatPrice(tier.pointsRequired)}iểm →{" "}
+                      Giảm {tier.discountType === "percent" ? `${tier.discountValue}%` : `${formatPrice(tier.discountValue)}`}
+                      {Number(tier.maxDiscountValue) > 0 && ` (tối đa ${formatPrice(tier.maxDiscountValue)})`}
                     </p>
                     {Number(tier.minOrderValue) > 0 && (
                       <p className="mt-0.5 text-[0.8rem] text-[#888]">
-                        Đơn tối thiểu {Number(tier.minOrderValue).toLocaleString("vi-VN")}đ · Hiệu lực {tier.voucherValidDays} ngày
+                        Đơn tối thiểu {formatPrice(tier.minOrderValue)} · Hiệu lực {tier.voucherValidDays} ngày
                       </p>
                     )}
                     {!canRedeem && (
                       <p className="mt-1 text-[0.8rem] text-[#b42318] font-semibold">
-                        Còn thiếu {missingPoints.toLocaleString("vi-VN")} điểm
+                        Còn thiếu {formatPrice(missingPoints)}iểm
                       </p>
                     )}
                   </div>

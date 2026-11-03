@@ -399,13 +399,13 @@ function CheckoutPage() {
                       <div className="flex flex-col gap-1">
                         <h4 className={`text-base font-bold m-0 ${isEligible ? "text-profile-primary" : "text-[#64748b]"}`}>{v.code}</h4>
                         <p className="text-xs text-[#64748b] m-0">
-                          Giảm {v.type === "percent" ? `${v.value}%` : `${Number(v.value).toLocaleString("vi-VN")}đ`} 
-                          {minRequired > 0 && ` cho đơn từ ${minRequired.toLocaleString("vi-VN")}đ`}
-                          {Number(v.maxDiscountValue) > 0 && ` (Tối đa ${Number(v.maxDiscountValue).toLocaleString("vi-VN")}đ)`}
+                          Giảm {v.type === "percent" ? `${v.value}%` : `${formatPrice(v.value)}`} 
+                          {minRequired > 0 && ` cho đơn từ ${formatPrice(minRequired)}`}
+                          {Number(v.maxDiscountValue) > 0 && ` (Tối đa ${formatPrice(v.maxDiscountValue)})`}
                         </p>
                         {!isEligible && (
                           <p className="text-[11px] text-[#b42318] font-semibold m-0 mt-0.5">
-                            Mua thêm {missingAmount.toLocaleString("vi-VN")}đ để dùng mã
+                            Mua thêm {formatPrice(missingAmount)} để dùng mã
                           </p>
                         )}
                         {v.endDate && isEligible && (

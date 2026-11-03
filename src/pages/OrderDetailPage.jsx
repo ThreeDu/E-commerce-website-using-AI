@@ -6,7 +6,8 @@ import { trackEvent } from "../services/analyticsService";
 import { getStatusInfo } from "../utils/orderStatusUtils";
 import { getProductImageSrc } from "../utils/productUtils";
 import { cancelMyOrder, fetchMyOrderById } from "../services/orderService";
-import { getAdminOrderById } from "../services/admin/adminOrderService";
+import { getAdminOrderById } from "../services/admin/adminOrderService";
+import { formatPrice } from "../utils/priceUtils";
 function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -192,7 +193,7 @@ function OrderDetailPage() {
             {order.discountCode ? (
               <p className="m-0 mb-2.5 text-[#16a34a] font-bold">Mã giảm: {order.discountCode}</p>
             ) : null}
-            <p className="m-0 text-2xl text-[#dc2626] font-bold">{Number(order.totalPrice || 0).toLocaleString("vi-VN")} đ</p>
+            <p className="m-0 text-2xl text-[#dc2626] font-bold">{formatPrice(order.totalPrice || 0)}</p>
           </div>
         </div>
       </section>
@@ -262,7 +263,7 @@ function OrderDetailPage() {
                 <div className="flex items-center justify-between border-b border-[#cbd5e1]/30 pb-2">
                   <span className="text-[#64748b]">Số tiền chuyển:</span>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-[#dc2626]">{Number(order.totalPrice || 0).toLocaleString("vi-VN")} đ</span>
+                    <span className="font-bold text-[#dc2626]">{formatPrice(order.totalPrice || 0)}</span>
                     <button 
                       type="button" 
                       onClick={() => handleCopyText(order.totalPrice.toString(), "Số tiền")}
@@ -321,10 +322,10 @@ function OrderDetailPage() {
                     <p className="m-0 text-[#111827] font-bold">{item.name}</p>
                   )}
                   <p className="mt-1 mb-0 text-[#6b7280] text-sm">
-                    Số lượng: {item.quantity} • Đơn giá: {Number(item.price || 0).toLocaleString("vi-VN")} đ
+                    Số lượng: {item.quantity} • Đơn giá: {formatPrice(item.price || 0)}
                   </p>
                 </div>
-                <strong className="text-[#111827] font-bold">{Number(item.price * item.quantity).toLocaleString("vi-VN")} đ</strong>
+                <strong className="text-[#111827] font-bold">{formatPrice(item.price * item.quantity)}</strong>
               </div>
             );
           })}
@@ -333,15 +334,15 @@ function OrderDetailPage() {
         <div className="mt-[18px] border-t border-[#e5e7eb] pt-3 text-[15px]">
           <div className="flex justify-between mb-2">
             <span>Tạm tính</span>
-            <span>{Number(order.subtotalPrice || order.totalPrice || 0).toLocaleString("vi-VN")} đ</span>
+            <span>{formatPrice(order.subtotalPrice || order.totalPrice || 0)}</span>
           </div>
           <div className="flex justify-between mb-2 text-[#16a34a]">
             <span>Giảm giá</span>
-            <span>- {Number(order.discountAmount || 0).toLocaleString("vi-VN")} đ</span>
+            <span>- {formatPrice(order.discountAmount || 0)}</span>
           </div>
           <div className="flex justify-between font-bold text-lg">
             <span>Tổng thanh toán</span>
-            <span className="text-[#dc2626]">{Number(order.totalPrice || 0).toLocaleString("vi-VN")} đ</span>
+            <span className="text-[#dc2626]">{formatPrice(order.totalPrice || 0)}</span>
           </div>
         </div>
 

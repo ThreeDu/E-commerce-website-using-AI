@@ -41,16 +41,37 @@ export function CartProvider({ children }) {
     }
   });
 
+  // Cờ "còn thay đổi chưa đồng bộ lên server": nếu trang bị tải lại trước khi debounce
+  // kịp gửi, giỏ local được giữ và đẩy lên server thay vì bị giỏ cũ trên server ghi đè.
+  const unsyncedKey = `${storageKey}:unsynced`;
+  const fromServerRef = useRef(false);
+
   // Reload cart when user changes (login / logout)
   useEffect(() => {
     const token = auth?.token;
     isLoadingRef.current = true;
 
     if (token) {
+      let unsyncedLocal = null;
+      try {
+        if (localStorage.getItem(unsyncedKey) === "1") {
+          unsyncedLocal = JSON.parse(localStorage.getItem(storageKey) || "[]");
+        }
+      } catch (error) {
+        unsyncedLocal = null;
+      }
+
+      if (unsyncedLocal) {
+        // Giữ giỏ local; effect đồng bộ bên dưới sẽ đẩy lên server
+        setCart(unsyncedLocal);
+        return;
+      }
+
       // User is logged in, fetch from DB
       fetchCart(token)
         .then((data) => {
           const items = data.items || [];
+          fromServerRef.current = true;
           setCart(items);
           localStorage.setItem(storageKey, JSON.stringify(items));
         })
@@ -64,7 +85,7 @@ export function CartProvider({ children }) {
       // User is logged out, clear cart
       setCart([]);
     }
-  }, [storageKey, auth?.token]);
+  }, [storageKey, unsyncedKey, auth?.token]);
 
   // Persist cart to localStorage
   // Guard: skip writing when the reload effect just triggered setCart,
@@ -77,7 +98,13 @@ export function CartProvider({ children }) {
     }
     localStorage.setItem(storageKey, JSON.stringify(cart));
     cartRef.current = cart;
-  }, [storageKey, cart]);
+
+    if (fromServerRef.current) {
+      fromServerRef.current = false;
+    } else if (authRef.current?.token) {
+      localStorage.setItem(unsyncedKey, "1");
+    }
+  }, [storageKey, unsyncedKey, cart]);
 
   // Đồng bộ giỏ hàng lên server với debounce 2 giây
   useEffect(() => {
@@ -91,11 +118,17 @@ export function CartProvider({ children }) {
       }));
 
       syncCart(syncItems, token)
+        .then(() => {
+          // Chỉ xóa cờ khi không có thay đổi mới hơn trong lúc chờ server
+          if (cartRef.current === cart) {
+            localStorage.removeItem(unsyncedKey);
+          }
+        })
         .catch((err) => console.error("Lỗi đồng bộ giỏ hàng:", err));
     }, 2000);
 
     return () => clearTimeout(delayDebounce);
-  }, [cart, auth?.token]);
+  }, [cart, auth?.token, unsyncedKey]);
 
   // ── Stable callbacks (never re-created) ──
 

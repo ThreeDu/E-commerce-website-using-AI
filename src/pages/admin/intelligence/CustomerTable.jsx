@@ -1,3 +1,5 @@
+import { formatPrice } from "../../../utils/priceUtils";
+
 function CustomerTable({ currentCustomers, segmentNames }) {
   return (
     <table className="w-full text-left border-collapse table-auto text-sm">
@@ -61,7 +63,7 @@ function CustomerTable({ currentCustomers, segmentNames }) {
               </span>
             </td>
             <td>{c.frequency}</td>
-            <td>{Number(c.monetary || 0).toLocaleString("vi-VN")} đ</td>
+            <td>{formatPrice(c.monetary || 0)}</td>
             <td>{c.product_views_30d}</td>
             <td>{c.wishlist_size}</td>
             <td>{c.recency_days > 900 ? "—" : c.recency_days}</td>

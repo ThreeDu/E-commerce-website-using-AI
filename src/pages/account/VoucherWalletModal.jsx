@@ -1,3 +1,5 @@
+import { formatPrice } from "../../utils/priceUtils";
+
 function VoucherWalletModal({ isVoucherModalOpen, setIsVoucherModalOpen, success, vouchers }) {
   if (!isVoucherModalOpen) {
     return null;
@@ -30,9 +32,9 @@ function VoucherWalletModal({ isVoucherModalOpen, setIsVoucherModalOpen, success
                 <div>
                   <h4 className="m-0 mb-1 text-profile-primary font-bold">{v.code}</h4>
                   <p className="m-0 text-[0.85rem] text-[#6b7280]">
-                    Giảm {v.type === "percent" ? `${v.value}%` : `${Number(v.value).toLocaleString("vi-VN")}đ`} 
-                    {Number(v.minOrderValue) > 0 && ` cho đơn từ ${Number(v.minOrderValue).toLocaleString("vi-VN")}đ`}
-                    {Number(v.maxDiscountValue) > 0 && ` (Tối đa ${Number(v.maxDiscountValue).toLocaleString("vi-VN")}đ)`}
+                    Giảm {v.type === "percent" ? `${v.value}%` : `${formatPrice(v.value)}`} 
+                    {Number(v.minOrderValue) > 0 && ` cho đơn từ ${formatPrice(v.minOrderValue)}`}
+                    {Number(v.maxDiscountValue) > 0 && ` (Tối đa ${formatPrice(v.maxDiscountValue)})`}
                   </p>
                   {v.endDate && (
                     <p className="mt-1 text-[0.8rem] text-accent-amber font-semibold">

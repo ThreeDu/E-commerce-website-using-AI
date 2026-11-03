@@ -5,6 +5,7 @@ const { canTransition } = require("../services/orderStatusService");
 
 test("getUnitPrice dùng giá từ DB, ưu tiên finalPrice hợp lệ", () => {
   assert.strictEqual(getUnitPrice({ price: 1000, finalPrice: 800 }), 800);
+  assert.strictEqual(getUnitPrice({ price: 5064668, finalPrice: 4558201.2 }), 4558201);
   assert.strictEqual(getUnitPrice({ price: 1000, finalPrice: 0, discountPercent: 25 }), 750);
   // finalPrice >= price bị bỏ qua, quay về discountPercent
   assert.strictEqual(getUnitPrice({ price: 1000, finalPrice: 1200, discountPercent: 0 }), 1000);

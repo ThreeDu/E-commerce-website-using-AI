@@ -60,6 +60,7 @@
     ]
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.0",
     "@tailwindcss/postcss": "^4.3.0",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.0"

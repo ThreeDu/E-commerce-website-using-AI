@@ -1,5 +1,6 @@
 import { getProductImageSrc, getProductPricing, isOutOfStock } from "../../utils/productUtils";
-import { Link } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { formatPrice } from "../../utils/priceUtils";
 
 function ProductGrid({ currentProducts, handleAddToCart, handleToggleWishlist, pendingWishlistIds, wishlistIds }) {
   return (
@@ -71,11 +72,11 @@ function ProductGrid({ currentProducts, handleAddToCart, handleToggleWishlist, p
 
               <div className="mt-2.5">
                 <div className="text-sm font-extrabold text-slate-900">
-                  {pricing.finalPrice.toLocaleString("vi-VN")} đ
+                  {formatPrice(pricing.finalPrice)}
                 </div>
                 {pricing.hasDiscount ? (
                   <div className="text-[11px] text-slate-400 line-through">
-                    {pricing.basePrice.toLocaleString("vi-VN")} đ
+                    {formatPrice(pricing.basePrice)}
                   </div>
                 ) : null}
               </div>
