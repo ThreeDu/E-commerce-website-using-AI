@@ -67,3 +67,5 @@ Desktop.ini
 .vscode/
 *.sublime-workspace
 *.sublime-project
+.codemem/
+claude.md
