@@ -1,0 +1,4 @@
+# Không cần khi chạy trên Vercel (chỉ nạp model có sẵn trong saved_models/)
+tests/
+__pycache__/
+**/__pycache__/

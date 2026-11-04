@@ -11,6 +11,13 @@ EVENTS_WINDOW_DAYS = 60
 ML_PORT = int(os.getenv("ML_SERVICE_PORT", "5001"))
 FLASK_DEBUG = os.getenv("FLASK_DEBUG") == "1"
 
+# Vercel (biến VERCEL do Vercel tự đặt): ổ đĩa chỉ đọc nên chỉ nạp model đã commit trong saved_models/;
+# huấn luyện lại chạy local (python ml-service/training/train.py) rồi commit + deploy lại.
+ON_VERCEL = bool(os.getenv("VERCEL"))
+TRAINING_ENABLED = not ON_VERCEL
+# Khóa dùng chung với server Node (header X-ML-Key). Bắt buộc khi chạy trên Vercel vì API trả dữ liệu khách.
+ML_API_KEY = os.getenv("ML_API_KEY", "")
+
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "saved_models")
 os.makedirs(MODEL_DIR, exist_ok=True)
 
