@@ -1,5 +1,4 @@
 require("dotenv").config({ path: __dirname + "/../../.env" });
-const mongoose = require("mongoose");
 
 const User = require("../models/User");
 const Product = require("../models/Product");
@@ -10,17 +9,9 @@ const Cart = require("../models/Cart");
 const PointHistory = require("../models/PointHistory");
 const Notification = require("../models/Notification");
 
-const MONGO_URI = process.env.MONGO_URI;
-if (!MONGO_URI) {
-  console.error("MONGO_URI not configured in env");
-  process.exit(1);
-}
 
 async function clearMockData() {
   try {
-    console.log("Kết nối MongoDB...");
-    await mongoose.connect(MONGO_URI);
-    console.log("Đã kết nối MongoDB.");
 
     // 1. Tìm tất cả User mock (email kết thúc bằng @mock.com)
     console.log("Tìm kiếm tài khoản mock...");

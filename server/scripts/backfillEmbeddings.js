@@ -1,4 +1,3 @@
-const mongoose = require("mongoose");
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "../../.env") });
 
@@ -47,13 +46,6 @@ function compileProductTextForEmbedding(product) {
 }
 
 async function run() {
-  const uri = process.env.MONGO_URI;
-  if (!uri) {
-    console.error("MONGO_URI not configured in env");
-    process.exit(1);
-  }
-  console.log("Connecting to MongoDB...");
-  await mongoose.connect(uri);
 
   const products = await Product.find({
     $or: [{ embedding: { $exists: false } }, { embedding: null }],
@@ -94,11 +86,9 @@ async function run() {
   console.log("Embedding backfill complete.");
   console.log(`Success: ${successCount}`);
   console.log(`Failed: ${errorCount}`);
-  
-  await mongoose.disconnect();
 }
 
-run().catch((err) => {
+run().then(() => process.exit(0)).catch((err) => {
   console.error("Backfill Script Error:", err);
-  mongoose.disconnect();
+  process.exit(1);
 });

@@ -318,7 +318,7 @@ const uploadAvatar = async (req, res) => {
     }
 
     // Limit avatar size (base64 encoded image, ~2MB max)
-    if (avatar.length > 5242880) {
+    if (avatar.length > 3 * 1024 * 1024) { // ảnh 2MB ≈ 2.7MB base64; body Vercel tối đa 4.5MB
       return res.status(400).json({ message: "Ảnh quá lớn (tối đa 2MB)." });
     }
 

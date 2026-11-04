@@ -29,7 +29,7 @@ jobs:
 
       - run: npm ci
 
-      # node:test, không cần MongoDB (chỉ kiểm tra logic giá / trạng thái đơn)
+      # node:test, không cần database (chỉ kiểm tra logic giá / trạng thái đơn)
       - run: npm run test:server
 
       # GitHub Actions đặt CI=true nên warning ESLint cũng làm build thất bại
@@ -52,12 +52,12 @@ jobs:
 
       - run: python -m compileall -q ml-service
 
-      # Import app.py: kiểm tra phụ thuộc và nạp model đã lưu trong saved_models/ (không kết nối MongoDB)
+      # Import app.py: kiểm tra phụ thuộc và nạp model đã lưu trong saved_models/ (không kết nối Firestore)
       - name: Import Flask app
         working-directory: ml-service
         run: python -c "import app"
 
-      # Unit test: đặc trưng point-in-time, nhãn theo thời gian, mô hình (dữ liệu giả lập, không cần MongoDB)
+      # Unit test: đặc trưng point-in-time, nhãn theo thời gian, mô hình (dữ liệu giả lập, không cần database)
       - name: Unit tests
         working-directory: ml-service
         run: python -m unittest discover -s tests -v

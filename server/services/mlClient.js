@@ -10,7 +10,11 @@ const ML_SERVICE_URL = () => process.env.ML_SERVICE_URL || "http://localhost:500
 async function requestMl(path, { method = "GET", body, timeoutMs } = {}) {
   const response = await fetch(`${ML_SERVICE_URL()}${path}`, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      // ml-service trên Vercel bắt buộc khóa này (app.py check_api_key)
+      ...(process.env.ML_API_KEY ? { "X-ML-Key": process.env.ML_API_KEY } : {}),
+    },
     ...(body ? { body: JSON.stringify(body) } : {}),
     ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
   });

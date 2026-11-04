@@ -1,6 +1,6 @@
 """
 Chạy: cd ml-service && python -m unittest discover -s tests
-Không cần MongoDB: dữ liệu thô được dựng trong bộ nhớ.
+Không cần database: dữ liệu thô được dựng trong bộ nhớ.
 """
 
 import tempfile
@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
-from bson import ObjectId
 
 from features.customer_features import FEATURE_NAMES, NO_ORDER_RECENCY, build_customer_features
 from features.segmentation import segment_customers
@@ -25,7 +24,7 @@ def day(n):
 
 
 def make_raw():
-    loyal, lapsed, newbie, late = ObjectId(), ObjectId(), ObjectId(), ObjectId()
+    loyal, lapsed, newbie, late = ("a" * 24, "b" * 24, "c" * 24, "d" * 24)
     users = [
         {"_id": loyal, "name": "Loyal", "email": "l@x", "phone": "1", "address": "a", "createdAt": day(-200)},
         {"_id": lapsed, "name": "Lapsed", "email": "p@x", "createdAt": day(-200)},

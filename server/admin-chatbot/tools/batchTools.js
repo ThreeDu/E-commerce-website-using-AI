@@ -46,7 +46,7 @@ async function exportReport({ reportType }) {
       return { error: 'Loại báo cáo không hợp lệ. Chọn: orders, products, revenue.' };
     }
 
-    const report = generateExcelReport(data, `Report_${type}`);
+    const report = await generateExcelReport(data, `Report_${type}`);
     return {
       success: true,
       filename: report.filename,

@@ -1,12 +1,22 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+load_dotenv(os.path.join(ROOT_DIR, ".env"))
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/e-commerce-app")
-DB_NAME = os.getenv("ML_DB_NAME", "e-commerce-app")
+# Firestore (gói Spark: 50k lượt đọc/ngày): cache dữ liệu đọc cho toàn bộ khách và chỉ đọc
+# sự kiện hành vi trong cửa sổ gần nhất khi chấm điểm (đủ cho cửa sổ đặc trưng 30/60 ngày)
+CACHE_SECONDS = int(os.getenv("ML_CACHE_SECONDS", "600"))
+EVENTS_WINDOW_DAYS = 60
 ML_PORT = int(os.getenv("ML_SERVICE_PORT", "5001"))
 FLASK_DEBUG = os.getenv("FLASK_DEBUG") == "1"
+
+# Vercel (biến VERCEL do Vercel tự đặt): ổ đĩa chỉ đọc nên chỉ nạp model đã commit trong saved_models/;
+# huấn luyện lại chạy local (python ml-service/training/train.py) rồi commit + deploy lại.
+ON_VERCEL = bool(os.getenv("VERCEL"))
+TRAINING_ENABLED = not ON_VERCEL
+# Khóa dùng chung với server Node (header X-ML-Key). Bắt buộc khi chạy trên Vercel vì API trả dữ liệu khách.
+ML_API_KEY = os.getenv("ML_API_KEY", "")
 
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "saved_models")
 os.makedirs(MODEL_DIR, exist_ok=True)

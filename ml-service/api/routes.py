@@ -9,8 +9,7 @@ from functools import wraps
 
 from flask import Blueprint, jsonify, request
 
-from config import MODEL_DIR
-from data.mongo import get_db
+from config import MODEL_DIR, TRAINING_ENABLED
 from features.abandoned_cart import detect_abandoned_carts
 from features.retention_engine import select_intervention_targets
 from features.segmentation import get_segment_distribution
@@ -160,6 +159,11 @@ def get_customer(user_id):
 @bp.post("/train")
 @json_errors
 def trigger_training():
+    if not TRAINING_ENABLED:
+        return jsonify({
+            "message": "Bản deploy chỉ nạp model có sẵn. Huấn luyện lại ở local: python ml-service/training/train.py, "
+                       "rồi commit thư mục ml-service/saved_models/ và deploy lại.",
+        }), 403
     results = run_training()
     scoring.load_models()  # nạp cả các mô hình đã lưu được nếu một mô hình khác thất bại
     if "error" in results:
@@ -243,7 +247,7 @@ def get_abandoned_carts_list():
         except Exception as e:
             print(f"Error preparing real-time churn scores for carts: {e}")
 
-    carts = detect_abandoned_carts(get_db(), churn_scores_dict=churn_dict, hours_threshold=hours)
+    carts = detect_abandoned_carts(churn_scores_dict=churn_dict, hours_threshold=hours)
     return jsonify({"total": len(carts), "carts": carts})
 
 
@@ -257,7 +261,6 @@ def get_auto_intervention_targets():
         return jsonify({"targets_found": 0, "targets": []})
 
     targets = select_intervention_targets(
-        get_db(),
         df,
         churn_threshold=int(body.get("churn_threshold", 50)),
         cooldown_days=int(body.get("cooldown_days", 7)),

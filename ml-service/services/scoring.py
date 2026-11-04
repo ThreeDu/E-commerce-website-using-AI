@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from config import LEVEL_HIGH_ABOVE, LEVEL_MEDIUM_ABOVE
-from data.mongo import load_customer_data, utcnow
+from data.firestore import load_customer_data, utcnow
 from features.customer_features import MODEL_FEATURES, build_customer_features
 from features.segmentation import segment_customers
 from models.recommendation_model import RecommendationPredictor

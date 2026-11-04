@@ -1,12 +1,11 @@
 from datetime import datetime, timezone, timedelta
-from bson import ObjectId
+from data.firestore import load
 
-def select_intervention_targets(db, df, churn_threshold=50, cooldown_days=7, max_targets=20):
+def select_intervention_targets(df, churn_threshold=50, cooldown_days=7, max_targets=20):
     """
     Identify at-risk customers for retention intervention campaigns.
     
     Parameters:
-    - db: MongoDB database instance
     - df: Customer DataFrame đã chấm điểm (churn_score, clv_score, segment, frequency, ...)
     - churn_threshold: Minimum churn score to trigger intervention
     - cooldown_days: Min days between interventions for the same user
@@ -18,6 +17,16 @@ def select_intervention_targets(db, df, churn_threshold=50, cooldown_days=7, max
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     cooldown_cutoff = now - timedelta(days=cooldown_days)
     
+    # Người đã nhận thông báo giữ chân trong thời gian cooldown (đọc một lần thay vì đếm theo từng khách)
+    try:
+        recently_contacted = {
+            str(n.get("user")) for n in load("notifications", [("type", "==", "churn_intervention")], ("user", "createdAt"))
+            if n.get("createdAt") and n["createdAt"] >= cooldown_cutoff
+        }
+    except Exception as e:
+        print(f"Error querying churn_intervention notifications for cooldown: {e}")
+        recently_contacted = set()
+
     targets = []
     for _, row in df.iterrows():
         user_id_str = str(row["_id"])
@@ -34,19 +43,10 @@ def select_intervention_targets(db, df, churn_threshold=50, cooldown_days=7, max
         if freq < 1:
             continue
             
-        # Condition C: Cooldown check — query notifications collection in MongoDB
+        # Condition C: Cooldown check — notifications đã nạp sẵn từ Firestore
         # Check if user has received a churn_intervention notification in the last N days
-        try:
-            recent_intervention_count = db.notifications.count_documents({
-                "user": ObjectId(user_id_str),
-                "type": "churn_intervention",
-                "createdAt": {"$gte": cooldown_cutoff}
-            })
-            if recent_intervention_count > 0:
-                continue
-        except Exception as e:
-            # Fallback if query fails
-            print(f"Error querying notifications for cooldown of {user_id_str}: {e}")
+        if user_id_str in recently_contacted:
+            continue
             
         # Determine recommended action and voucher details based on Churn and CLV (ML self-decision)
         recommended_action = "notification_only"

@@ -1,51 +1,7 @@
-const mongoose = require("mongoose");
+const { defineModel, NOW, EMPTY_OBJECT } = require("../db/model");
 
-const rewardTierSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    pointsRequired: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-    discountType: {
-      type: String,
-      required: true,
-      enum: ["percent", "fixed"],
-      default: "fixed",
-    },
-    discountValue: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    maxDiscountValue: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    minOrderValue: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    voucherValidDays: {
-      type: Number,
-      default: 30,
-      min: 1,
-    },
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
-
-module.exports = mongoose.model("RewardTier", rewardTierSchema);
+module.exports = defineModel("RewardTier", {
+  collection: "rewardtiers",
+  defaults: { discountType: "fixed", maxDiscountValue: 0, minOrderValue: 0, voucherValidDays: 30, isActive: true },
+  trim: ["name"],
+});

@@ -3,9 +3,8 @@ Tập dữ liệu (khách, sản phẩm) cho mô hình gợi ý: nhãn 1 nếu k
 """
 
 import numpy as np
-from bson import ObjectId
 
-from data.mongo import get_db, load_customer_data, utcnow
+from data.firestore import load, load_customer_data, load_orders, load_products, load_users, utcnow
 from features.customer_features import FEATURE_NAMES, build_customer_features
 
 RECOMMEND_FEATURE_NAMES = FEATURE_NAMES + [
@@ -24,29 +23,21 @@ def extract_recommendation_dataset():
     """
     Generate user-product pairs dataset for training the Recommendation Model.
     """
-    db = get_db()
-    
     # 1. Get all users and their user feature DataFrame
-    user_df = build_customer_features(load_customer_data(db), utcnow())
+    user_df = build_customer_features(load_customer_data(), utcnow())
     if user_df.empty:
         return np.empty((0, len(RECOMMEND_FEATURE_NAMES))), np.empty((0,))
-        
+
     # 2. Get all products
-    products = list(db.products.find({}, {
-        "category": 1,
-        "price": 1,
-        "finalPrice": 1,
-        "discountPercent": 1,
-        "averageRating": 1,
-        "totalViews": 1
-    }))
+    products = load_products()
     if not products:
         return np.empty((0, len(RECOMMEND_FEATURE_NAMES))), np.empty((0,))
 
-    product_ids = [p["_id"] for p in products]
-    
+    product_map = {p["_id"]: p for p in products}
+
     # Pre-calculate purchases for each product from non-cancelled orders
-    orders = list(db.orders.find({"status": {"$ne": "cancelled"}}, {"orderItems": 1}))
+    all_orders = load_orders()
+    orders = [o for o in all_orders if o.get("status") != "cancelled"]
     purchase_counts = {}
     for o in orders:
         for item in o.get("orderItems", []):
@@ -55,15 +46,14 @@ def extract_recommendation_dataset():
                 purchase_counts[pid] = purchase_counts.get(pid, 0) + int(item.get("quantity", 1))
 
     # 3. Load interactions: AnalyticsEvents and ChatbotEvents
-    analytics_events = list(db.analyticsevents.find(
-        {"userId": {"$ne": None}, "productId": {"$in": product_ids}},
-        {"userId": 1, "productId": 1, "eventName": 1}
-    ))
-    
-    chatbot_events = list(db.chatbotevents.find(
-        {"user": {"$ne": None}, "product": {"$in": product_ids}},
-        {"user": 1, "product": 1, "eventType": 1}
-    ))
+    # AnalyticsEvent (schema server) không có field productId nên truy vấn cũ luôn rỗng;
+    # bỏ hẳn để không tốn ~10k lượt đọc Firestore mỗi lần huấn luyện.
+    analytics_events = []
+
+    chatbot_events = [
+        e for e in load("chatbotevents", fields=("user", "product", "eventType"))
+        if e.get("user") is not None and str(e.get("product")) in product_map
+    ]
 
     # Pre-aggregate interactions
     view_interactions = {} # (uid, pid) -> count
@@ -93,10 +83,7 @@ def extract_recommendation_dataset():
             cart_interactions[(uid, pid)] = cart_interactions.get((uid, pid), 0) + 1
 
     # Order item records (explicit interaction)
-    user_completed_orders = list(db.orders.find(
-        {"user": {"$ne": None}},
-        {"user": 1, "orderItems": 1}
-    ))
+    user_completed_orders = [o for o in all_orders if o.get("user") is not None]
     for o in user_completed_orders:
         uid = str(o["user"])
         for item in o.get("orderItems", []):
@@ -105,7 +92,7 @@ def extract_recommendation_dataset():
                 interacted_pairs.add((uid, pid))
 
     # 4. Preferred categories per user
-    users_raw = list(db.users.find({"role": {"$ne": "admin"}}, {"wishlist": 1}))
+    users_raw = [u for u in load_users() if u.get("role") != "admin"]
     user_wishlists = {str(u["_id"]): [str(pid) for pid in u.get("wishlist", [])] for u in users_raw}
 
     # Construct the dataset rows
@@ -119,18 +106,18 @@ def extract_recommendation_dataset():
         user_feats = [float(user_row[col]) for col in FEATURE_NAMES]
         
         # Determine preferred categories based on user's completed orders
-        user_orders = list(db.orders.find({"user": ObjectId(uid), "status": {"$ne": "cancelled"}}, {"orderItems": 1}))
+        user_orders = [o for o in orders if str(o.get("user")) == uid]
         preferred_cats = set()
         for o in user_orders:
             for item in o.get("orderItems", []):
-                p_cat = db.products.find_one({"_id": item.get("product")}, {"category": 1})
+                p_cat = product_map.get(str(item.get("product")))
                 if p_cat:
                     preferred_cats.add(p_cat.get("category", "").lower().strip())
                     
         # Add wishlist categories
         wish_pids = user_wishlists.get(uid, [])
         for wpid in wish_pids:
-            wp = db.products.find_one({"_id": ObjectId(wpid)}, {"category": 1})
+            wp = product_map.get(wpid)
             if wp:
                 preferred_cats.add(wp.get("category", "").lower().strip())
 

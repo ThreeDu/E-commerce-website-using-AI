@@ -45,31 +45,19 @@ async function getDashboardStats({ period = 'today' }) {
     const { start, end } = getDateRange(period);
     const dateFilter = { createdAt: { $gte: start, $lte: end } };
 
-    // Count orders by status
-    const statusCounts = await Order.aggregate([
-      { $match: dateFilter },
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-    ]);
+    // Đếm theo trạng thái và doanh thu bằng JS (Firestore không có aggregate)
+    const periodOrders = await Order.find(dateFilter).select('status totalPrice');
 
     const statusMap = {};
-    let totalOrders = 0;
-    for (const item of statusCounts) {
-      statusMap[item._id] = item.count;
-      totalOrders += item.count;
+    for (const order of periodOrders) {
+      statusMap[order.status] = (statusMap[order.status] || 0) + 1;
     }
+    const totalOrders = periodOrders.length;
 
     // Revenue: định nghĩa dùng chung trong orderService
-    const revenueResult = await Order.aggregate([
-      {
-        $match: {
-          ...dateFilter,
-          ...REVENUE_ORDER_FILTER,
-        },
-      },
-      { $group: { _id: null, total: { $sum: '$totalPrice' } } },
-    ]);
-
-    const revenue = revenueResult.length > 0 ? revenueResult[0].total : 0;
+    const revenue = periodOrders
+      .filter((order) => Order.matches(order, REVENUE_ORDER_FILTER))
+      .reduce((sum, order) => sum + Number(order.totalPrice || 0), 0);
 
     // New users
     const newUsers = await User.countDocuments(dateFilter);
@@ -246,20 +234,13 @@ async function searchUsers({ query, limit = 10 }) {
     // Aggregate order stats for each user
     const userIds = users.map((u) => u._id);
 
-    const orderStats = await Order.aggregate([
-      { $match: { user: { $in: userIds } } },
-      {
-        $group: {
-          _id: '$user',
-          totalOrders: { $sum: 1 },
-          totalSpent: { $sum: '$totalPrice' },
-        },
-      },
-    ]);
+    const userOrders = await Order.find({ user: { $in: userIds } }).select('user totalPrice');
 
     const statsMap = {};
-    for (const stat of orderStats) {
-      statsMap[String(stat._id)] = stat;
+    for (const order of userOrders) {
+      const stat = (statsMap[String(order.user)] ||= { totalOrders: 0, totalSpent: 0 });
+      stat.totalOrders += 1;
+      stat.totalSpent += Number(order.totalPrice || 0);
     }
 
     const total = await User.countDocuments(filter);

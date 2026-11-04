@@ -4,9 +4,8 @@ Chấm điểm gợi ý sản phẩm cho một khách (logic giữ nguyên từ 
 
 import numpy as np
 import pandas as pd
-from bson import ObjectId
 
-from data.mongo import get_db
+from data.firestore import get, load, load_orders, load_products
 from features.customer_features import FEATURE_NAMES
 from services import scoring
 from services.scoring import customer_features
@@ -17,8 +16,9 @@ def score_products(user_id, product_ids):
     if not product_ids:
         return {}
         
-    db = get_db()
-    
+    all_products = {p["_id"]: p for p in load_products()}
+    wanted = {str(pid) for pid in product_ids}
+
     # Get user feature vector
     user_df = pd.DataFrame()
     if user_id:
@@ -36,37 +36,26 @@ def score_products(user_id, product_ids):
         user_feats = [float(user_row[col]) for col in FEATURE_NAMES]
         
         # Fetch preferred categories and wishlist for user
-        uid_obj = ObjectId(str(user_id))
-        user_orders = list(db.orders.find({"user": uid_obj, "status": {"$ne": "cancelled"}}, {"orderItems": 1}))
+        user_orders = [o for o in load("orders", [("user", "==", str(user_id))]) if o.get("status") != "cancelled"]
         preferred_cats = set()
         for o in user_orders:
             for item in o.get("orderItems", []):
-                p_cat = db.products.find_one({"_id": item.get("product")}, {"category": 1})
+                p_cat = all_products.get(str(item.get("product")))
                 if p_cat:
                     preferred_cats.add(p_cat.get("category", "").lower().strip())
-                    
-        user_raw = db.users.find_one({"_id": uid_obj}, {"wishlist": 1})
+
+        user_raw = get("users", user_id)
         user_wishlist = [str(pid) for pid in user_raw.get("wishlist", [])] if user_raw else []
         for wpid in user_wishlist:
-            try:
-                wp = db.products.find_one({"_id": ObjectId(wpid)}, {"category": 1})
-                if wp:
-                    preferred_cats.add(wp.get("category", "").lower().strip())
-            except Exception:
-                pass
+            wp = all_products.get(wpid)
+            if wp:
+                preferred_cats.add(wp.get("category", "").lower().strip())
 
     # Pre-calculate purchases for each product
-    product_object_ids = []
-    for pid in product_ids:
-        try:
-            product_object_ids.append(ObjectId(str(pid)))
-        except Exception:
-            pass
-            
-    orders = list(db.orders.find(
-        {"status": {"$ne": "cancelled"}, "orderItems.product": {"$in": product_object_ids}},
-        {"orderItems": 1}
-    ))
+    orders = [
+        o for o in load_orders()
+        if o.get("status") != "cancelled" and any(str(i.get("product")) in wanted for i in o.get("orderItems", []))
+    ]
     purchase_counts = {}
     for o in orders:
         for item in o.get("orderItems", []):
@@ -74,11 +63,7 @@ def score_products(user_id, product_ids):
             purchase_counts[p_id_str] = purchase_counts.get(p_id_str, 0) + int(item.get("quantity", 1))
 
     # Fetch all candidate products
-    products = list(db.products.find(
-        {"_id": {"$in": product_object_ids}},
-        {"category": 1, "price": 1, "finalPrice": 1, "discountPercent": 1, "averageRating": 1, "totalViews": 1}
-    ))
-    product_map = {str(p["_id"]): p for p in products}
+    product_map = {pid: p for pid, p in all_products.items() if pid in wanted}
 
     # Load user specific interactions with these products if user exists
     view_counts = {}
@@ -86,10 +71,10 @@ def score_products(user_id, product_ids):
     if user_id:
         try:
             # AnalyticsEvents
-            ae_list = list(db.analyticsevents.find(
-                {"userId": ObjectId(user_id), "productId": {"$in": product_object_ids}},
-                {"productId": 1, "eventName": 1}
-            ))
+            ae_list = [
+                e for e in load("analyticsevents", [("userId", "==", str(user_id))])
+                if str(e.get("productId")) in wanted
+            ]
             for e in ae_list:
                 pid_str = str(e["productId"])
                 evt = e.get("eventName", "")
@@ -102,10 +87,10 @@ def score_products(user_id, product_ids):
             
         try:
             # ChatbotEvents
-            ce_list = list(db.chatbotevents.find(
-                {"user": ObjectId(user_id), "product": {"$in": product_object_ids}},
-                {"product": 1, "eventType": 1}
-            ))
+            ce_list = [
+                e for e in load("chatbotevents", [("user", "==", str(user_id))])
+                if str(e.get("product")) in wanted
+            ]
             for e in ce_list:
                 pid_str = str(e["product"])
                 evt = e.get("eventType", "")
