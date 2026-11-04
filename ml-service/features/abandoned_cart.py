@@ -1,11 +1,11 @@
+from data.firestore import load, load_orders, load_products, load_users
 from datetime import datetime, timezone, timedelta
 
-def detect_abandoned_carts(db, churn_scores_dict=None, hours_threshold=24):
+def detect_abandoned_carts(churn_scores_dict=None, hours_threshold=24):
     """
-    Detect abandoned carts from MongoDB.
+    Detect abandoned carts from Firestore.
     
     Parameters:
-    - db: MongoDB database instance
     - churn_scores_dict: Dict of user_id (str) -> churn_score (float)
     - hours_threshold: Number of hours to consider a cart stale/abandoned
     
@@ -18,31 +18,24 @@ def detect_abandoned_carts(db, churn_scores_dict=None, hours_threshold=24):
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     threshold_time = now - timedelta(hours=hours_threshold)
     
-    # Query Cart collection where updatedAt is older than threshold and items array is not empty
-    carts = list(db.carts.find({
-        "updatedAt": {"$lt": threshold_time},
-        "items": {"$exists": True, "$ne": []}
-    }))
+    # Giỏ chưa cập nhật từ trước ngưỡng và còn sản phẩm
+    carts = [
+        c for c in load("carts")
+        if c.get("updatedAt") and c["updatedAt"] < threshold_time and c.get("items")
+    ]
     
     results = []
     
     if not carts:
         return results
 
-    # Get all unique user IDs and product IDs
-    user_ids = [c["user"] for c in carts]
-    product_ids = []
-    for c in carts:
-        for item in c.get("items", []):
-            if "product" in item:
-                product_ids.append(item["product"])
-                
-    # Fetch all users and products in bulk to optimize performance
-    users = list(db.users.find({"_id": {"$in": user_ids}}, {"name": 1, "email": 1}))
-    products = list(db.products.find({"_id": {"$in": product_ids}}, {"name": 1, "price": 1}))
-    
-    user_map = {str(u["_id"]): u for u in users}
-    product_map = {str(p["_id"]): p for p in products}
+    # Users / products / orders nạp một lần (có cache) rồi tra bằng dict, thay vì truy vấn theo từng giỏ
+    user_map = {u["_id"]: u for u in load_users()}
+    product_map = {p["_id"]: p for p in load_products()}
+    order_times_by_user = {}
+    for o in load_orders():
+        if o.get("createdAt"):
+            order_times_by_user.setdefault(str(o.get("user")), []).append(o["createdAt"])
     
     for cart in carts:
         user_id_str = str(cart["user"])
@@ -54,10 +47,7 @@ def detect_abandoned_carts(db, churn_scores_dict=None, hours_threshold=24):
             
         # Check if the user has created any orders after the cart was last updated
         cart_updated_at = cart["updatedAt"]
-        new_orders_count = db.orders.count_documents({
-            "user": cart["user"],
-            "createdAt": {"$gt": cart_updated_at}
-        })
+        new_orders_count = sum(1 for t in order_times_by_user.get(user_id_str, []) if t > cart_updated_at)
         
         if new_orders_count > 0:
             # User completed a purchase or ordered something else after this cart update

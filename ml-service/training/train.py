@@ -6,7 +6,7 @@ Usage:
     python -m training.train
 
 Workflow:
-    1. Nạp dữ liệu khách hàng từ MongoDB.
+    1. Nạp dữ liệu khách hàng từ Firestore.
     2. Dựng tập snapshot theo thời gian cho từng mục tiêu (đặc trưng trước mốc T,
        nhãn = hành vi thật sau T): rời bỏ, khả năng mua (tiềm năng), chi tiêu (CLV).
     3. Đánh giá out-of-fold theo khách hàng rồi huấn luyện mô hình cuối, lưu vào saved_models/.
@@ -22,7 +22,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from config import CHURN_HORIZON_DAYS, CLV_HORIZON_DAYS, MODEL_DIR, POTENTIAL_HORIZON_DAYS
-from data.mongo import load_customer_data, utcnow
+from data.firestore import load_customer_data, utcnow
 from features.recommendation_dataset import RECOMMEND_FEATURE_NAMES, extract_recommendation_dataset
 from models.recommendation_model import RecommendationPredictor
 from services.scoring import create_models
@@ -60,8 +60,8 @@ def _train_model(model, raw, target, horizon, now):
 def run_training(now=None):
     """Chạy toàn bộ pipeline. Trả về dict kết quả (có khóa "error" nếu không đủ dữ liệu)."""
     now = now or utcnow()
-    print("[1/4] Loading customer data from MongoDB...")
-    raw = load_customer_data()
+    print("[1/4] Loading customer data from Firestore...")
+    raw = load_customer_data(events_since_days=None)  # snapshot quá khứ cần toàn bộ lịch sử sự kiện
     customer_count = len(raw["users"])
     if customer_count < MIN_CUSTOMERS:
         print(f"  [WARN] Only {customer_count} customers found. Need at least {MIN_CUSTOMERS} to train.")

@@ -1,10 +1,13 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+load_dotenv(os.path.join(ROOT_DIR, ".env"))
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/e-commerce-app")
-DB_NAME = os.getenv("ML_DB_NAME", "e-commerce-app")
+# Firestore (gói Spark: 50k lượt đọc/ngày): cache dữ liệu đọc cho toàn bộ khách và chỉ đọc
+# sự kiện hành vi trong cửa sổ gần nhất khi chấm điểm (đủ cho cửa sổ đặc trưng 30/60 ngày)
+CACHE_SECONDS = int(os.getenv("ML_CACHE_SECONDS", "600"))
+EVENTS_WINDOW_DAYS = 60
 ML_PORT = int(os.getenv("ML_SERVICE_PORT", "5001"))
 FLASK_DEBUG = os.getenv("FLASK_DEBUG") == "1"
 

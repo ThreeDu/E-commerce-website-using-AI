@@ -340,10 +340,11 @@ async function getOrderStatus({ orderId, userId }) {
 async function getCategories() {
   try {
     // Get distinct categories that have actual products
-    const categories = await Product.aggregate([
-      { $group: { _id: '$category', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-    ]);
+    const counts = new Map();
+    (await Product.find({}).select('category')).forEach((p) => counts.set(p.category, (counts.get(p.category) || 0) + 1));
+    const categories = [...counts]
+      .map(([_id, count]) => ({ _id, count }))
+      .sort((a, b) => b.count - a.count);
 
     return {
       categories: categories.map((c) => ({

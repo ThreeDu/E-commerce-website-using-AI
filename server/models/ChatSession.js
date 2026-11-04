@@ -1,54 +1,13 @@
-const mongoose = require('mongoose');
+const { defineModel, NOW, EMPTY_OBJECT } = require("../db/model");
 
-const chatMessageSchema = new mongoose.Schema({
-  role: {
-    type: String,
-    enum: ['user', 'assistant', 'tool'],
-    required: true,
-  },
-  content: {
-    type: String,
-    default: '',
-  },
-  toolName: {
-    type: String,
-    default: null,
-  },
-  // Sản phẩm gợi ý kèm câu trả lời của assistant, để dựng lại thẻ sản phẩm khi khôi phục lịch sử
-  productIds: {
-    type: [String],
-    default: undefined,
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now,
-  },
+// expireAt = updatedAt + 7 ngày: bật TTL policy trên field expireAt (collection chatsessions) trong Firebase Console
+module.exports = defineModel("ChatSession", {
+  collection: "chatsessions",
+  defaults: { userId: null, context: EMPTY_OBJECT },
+  subdocArrays: ["messages"],
+  arrays: ["messages"],
+  subDefaults: { messages: { content: "", toolName: null, timestamp: NOW } },
+  refs: { userId: "User" },
+  unique: [["sessionId"]],
+  ttl: { field: "updatedAt", seconds: 7 * 24 * 60 * 60 },
 });
-
-const chatSessionSchema = new mongoose.Schema(
-  {
-    sessionId: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      default: null,
-      index: true,
-    },
-    messages: [chatMessageSchema],
-    context: {
-      type: mongoose.Schema.Types.Mixed,
-      default: {},
-    },
-  },
-  { timestamps: true }
-);
-
-// TTL index: auto-delete sessions after 7 days of inactivity
-chatSessionSchema.index({ updatedAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
-
-module.exports = mongoose.model('ChatSession', chatSessionSchema);

@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const { defineModel } = require("../db/model");
 const { normalizeText, slugify } = require("../helpers/textHelpers");
 
 const KNOWN_BRANDS = [
@@ -78,200 +78,40 @@ function deriveStructuredFields({ name, category }) {
   };
 }
 
-const reviewSchema = new mongoose.Schema(
-  {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    order: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Order",
-      required: true,
-    },
-    rating: {
-      type: Number,
-      required: true,
-      min: 1,
-      max: 5,
-    },
-    comment: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 1000,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
-
-const productSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: [true, "Tên sản phẩm là bắt buộc"],
-      trim: true,
-    },
-    price: {
-      type: Number,
-      required: [true, "Giá sản phẩm là bắt buộc"],
-    },
-    description: {
-      type: String,
-      required: [true, "Mô tả sản phẩm là bắt buộc"],
-    },
-    category: {
-      type: String, // Sau này có thể nâng cấp thành: mongoose.Schema.Types.ObjectId, ref: 'Category'
-      required: [true, "Danh mục sản phẩm là bắt buộc"],
-    },
-    brand: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      default: "",
-      index: true,
-    },
-    series: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      default: "",
-      index: true,
-    },
-    model: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      default: "",
-      index: true,
-    },
-    variant: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      default: "",
-      index: true,
-    },
-    sku: {
-      type: String,
-      trim: true,
-      uppercase: true,
-      default: "",
-    },
-    slug: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      default: "",
-      index: true,
-    },
-    image: {
-      type: String,
-      default: "/placeholder.svg", // URL ảnh mặc định
-    },
-    discountPercent: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100,
-    },
-    finalPrice: {
-      // Giá này có thể được tính toán lại trước khi lưu
-      // hoặc để frontend tự tính và gửi lên
-      type: Number,
-    },
-    stock: {
-      type: Number,
-      required: true,
-      default: 0,
-    },
-    reviews: {
-      type: [reviewSchema],
-      default: [],
-    },
-    averageRating: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 5,
-    },
-    totalRatings: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    embedding: {
-      type: [Number],
-      default: undefined,
-    },
-    viewedBy: {
-      type: [mongoose.Schema.Types.ObjectId],
-      ref: "User",
-      default: [],
-      select: false,
-    },
-    totalViews: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
-
-productSchema.pre("validate", function prepareStructuredFields(next) {
-  const structured = deriveStructuredFields({
-    name: this.name,
-    category: this.category,
-  });
-
-  if (!String(this.brand || "").trim()) {
-    this.brand = structured.brand;
-  }
-
-  if (!String(this.series || "").trim()) {
-    this.series = structured.series;
-  }
-
-  if (!String(this.model || "").trim()) {
-    this.model = structured.model;
-  }
-
-  if (!String(this.variant || "").trim()) {
-    this.variant = structured.variant;
-  }
-
-  if (!String(this.slug || "").trim()) {
-    this.slug = structured.inferredSlug;
-  }
-
-  if (!String(this.sku || "").trim()) {
-    const skuParts = [structured.brand, structured.series, structured.model, structured.variant]
+// Điền các trường cấu trúc còn trống từ tên/danh mục (trước đây là hook pre("validate") của Mongoose)
+function fillStructuredFields(doc) {
+  const structured = deriveStructuredFields({ name: doc.name, category: doc.category });
+  if (!String(doc.brand || "").trim()) doc.brand = structured.brand;
+  if (!String(doc.series || "").trim()) doc.series = structured.series;
+  if (!String(doc.model || "").trim()) doc.model = structured.model;
+  if (!String(doc.variant || "").trim()) doc.variant = structured.variant;
+  if (!String(doc.slug || "").trim()) doc.slug = structured.inferredSlug;
+  if (!String(doc.sku || "").trim()) {
+    doc.sku = [structured.brand, structured.series, structured.model, structured.variant]
       .filter(Boolean)
       .join("-")
       .replace(/\s+/g, "-")
       .replace(/-+/g, "-")
       .replace(/^-|-$/g, "")
       .toUpperCase();
-    this.sku = skuParts;
   }
+}
 
-  next();
+module.exports = defineModel("Product", {
+  collection: "products",
+  defaults: {
+    brand: "", series: "", model: "", variant: "", sku: "", slug: "", image: "/placeholder.svg",
+    discountPercent: 0, stock: 0, reviews: [], averageRating: 0, totalRatings: 0, viewedBy: [], totalViews: 0,
+  },
+  lower: ["brand", "series", "model", "variant", "slug"],
+  upper: ["sku"],
+  trim: ["name", "brand", "series", "model", "variant", "sku", "slug"],
+  hidden: ["viewedBy"],
+  subdocArrays: ["reviews"],
+  subTimestamps: { reviews: true },
+  arrays: ["reviews", "embedding", "viewedBy"],
+  refs: { viewedBy: "User", "reviews.user": "User" },
+  // Không ép sku unique: index unique trên MongoDB cũ chưa bao giờ được tạo (dữ liệu mẫu có 12 sku trùng),
+  // nên ép bây giờ sẽ làm hỏng việc lưu các sản phẩm đã chuyển sang. Import Excel vẫn upsert theo sku.
+  normalize: fillStructuredFields,
 });
-
-productSchema.index(
-  { sku: 1 },
-  {
-    unique: true,
-    partialFilterExpression: {
-      sku: { $type: "string", $exists: true, $ne: "" },
-    },
-  }
-);
-
-module.exports = mongoose.model("Product", productSchema);

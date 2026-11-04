@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
+const { isId } = require("../db/firestore");
 
 function recalculateRatings(product) {
   const totalRatings = product.reviews.length;
@@ -15,46 +15,32 @@ function recalculateRatings(product) {
   product.averageRating = Number((sum / totalRatings).toFixed(1));
 }
 
+// shortcut: tổng lượt mua được tính từ toàn bộ đơn chưa huỷ và cache 5 phút theo instance để không
+// đọc lại ~nghìn đơn mỗi lần mở trang sản phẩm (hạn mức đọc Firestore). Khi lớn hơn: lưu bộ đếm trên Product.
+const PURCHASE_CACHE_MS = 5 * 60 * 1000;
+let purchaseCache = { at: 0, totals: null };
+
+async function getPurchaseTotals() {
+  if (purchaseCache.totals && Date.now() - purchaseCache.at < PURCHASE_CACHE_MS) {
+    return purchaseCache.totals;
+  }
+  const totals = new Map();
+  const orders = await Order.find({ status: { $ne: "cancelled" } }).select("orderItems");
+  orders.forEach((order) => (order.orderItems || []).forEach((item) => {
+    const key = String(item.product);
+    totals.set(key, (totals.get(key) || 0) + Number(item.quantity || 0));
+  }));
+  purchaseCache = { at: Date.now(), totals };
+  return totals;
+}
+
 async function getPurchaseMapByProductIds(productIds = []) {
-  if (!Array.isArray(productIds) || productIds.length === 0) {
+  const ids = (Array.isArray(productIds) ? productIds : []).map((id) => String(id || "").trim()).filter(isId);
+  if (ids.length === 0) {
     return new Map();
   }
-
-  const objectIds = productIds
-    .map((id) => String(id || "").trim())
-    .filter(Boolean)
-    .filter((id) => mongoose.Types.ObjectId.isValid(id))
-    .map((id) => new mongoose.Types.ObjectId(id));
-
-  if (objectIds.length === 0) {
-    return new Map();
-  }
-
-  const purchaseStats = await Order.aggregate([
-    {
-      $match: {
-        status: { $ne: "cancelled" },
-      },
-    },
-    {
-      $unwind: "$orderItems",
-    },
-    {
-      $match: {
-        "orderItems.product": { $in: objectIds },
-      },
-    },
-    {
-      $group: {
-        _id: "$orderItems.product",
-        totalPurchases: {
-          $sum: "$orderItems.quantity",
-        },
-      },
-    },
-  ]);
-
-  return new Map(purchaseStats.map((item) => [String(item._id), Number(item.totalPurchases || 0)]));
+  const totals = await getPurchaseTotals();
+  return new Map(ids.map((id) => [id, totals.get(id) || 0]));
 }
 
 const listProducts = async (req, res) => {

@@ -70,3 +70,5 @@ Desktop.ini
 *.sublime-project
 .codemem/
 claude.md
+# Firebase service account key (khai báo FIREBASE_SERVICE_ACCOUNT trên Vercel thay vì commit)
+*firebase-adminsdk*.json

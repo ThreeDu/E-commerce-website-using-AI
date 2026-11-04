@@ -118,141 +118,49 @@ const getRevenueOverview = async (req, res) => {
       ? new Date(selectedYear + 1, 0, 1)
       : new Date(selectedYear, selectedMonth, 1);
 
-    const deliveredMatch = REVENUE_ORDER_FILTER;
+    // Firestore không có aggregate: đọc một lần các đơn tính doanh thu rồi gom nhóm bằng JS.
+    // shortcut: đọc toàn bộ đơn đã giao mỗi lần mở dashboard; khi đơn lên hàng chục nghìn nên lưu bộ đếm theo tháng.
+    const deliveredOrders = await Order.find(REVENUE_ORDER_FILTER).select("totalPrice createdAt orderItems");
+    const inRange = (order, start, end) => order.createdAt >= start && order.createdAt < end;
+    const sumUp = (orders) => ({
+      revenue: orders.reduce((sum, o) => sum + Number(o.totalPrice || 0), 0),
+      orders: orders.length,
+    });
+    const groupBy = (orders, keyOf) => {
+      const groups = new Map();
+      orders.forEach((o) => {
+        const key = keyOf(o);
+        groups.set(key, [...(groups.get(key) || []), o]);
+      });
+      return groups;
+    };
 
-    const [monthlyAggregation, yearlyAggregation, allTimeAggregation, periodAggregation, productSoldAggregation] = await Promise.all([
-      Order.aggregate([
-        {
-          $match: {
-            ...deliveredMatch,
-            createdAt: {
-              $gte: new Date(currentYear, 0, 1),
-              $lt: new Date(currentYear + 1, 0, 1),
-            },
-          },
-        },
-        {
-          $group: {
-            _id: { $month: "$createdAt" },
-            revenue: { $sum: "$totalPrice" },
-            orders: { $sum: 1 },
-          },
-        },
-        {
-          $project: {
-            _id: 0,
-            month: "$_id",
-            revenue: 1,
-            orders: 1,
-          },
-        },
-      ]),
-      Order.aggregate([
-        {
-          $match: deliveredMatch,
-        },
-        {
-          $group: {
-            _id: { $year: "$createdAt" },
-            revenue: { $sum: "$totalPrice" },
-            orders: { $sum: 1 },
-          },
-        },
-        {
-          $sort: {
-            _id: 1,
-          },
-        },
-        {
-          $project: {
-            _id: 0,
-            year: "$_id",
-            revenue: 1,
-            orders: 1,
-          },
-        },
-      ]),
-      Order.aggregate([
-        {
-          $match: deliveredMatch,
-        },
-        {
-          $group: {
-            _id: null,
-            revenue: { $sum: "$totalPrice" },
-            orders: { $sum: 1 },
-          },
-        },
-      ]),
-      Order.aggregate([
-        {
-          $match: {
-            ...deliveredMatch,
-            createdAt: {
-              $gte: periodStart,
-              $lt: periodEnd,
-            },
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            revenue: { $sum: "$totalPrice" },
-            orders: { $sum: 1 },
-          },
-        },
-      ]),
-      Order.aggregate([
-        {
-          $match: {
-            ...deliveredMatch,
-            createdAt: {
-              $gte: periodStart,
-              $lt: periodEnd,
-            },
-          },
-        },
-        {
-          $unwind: "$orderItems",
-        },
-        {
-          $group: {
-            _id: {
-              productId: "$orderItems.product",
-              name: "$orderItems.name",
-            },
-            soldQuantity: { $sum: "$orderItems.quantity" },
-            revenue: {
-              $sum: {
-                $multiply: ["$orderItems.quantity", "$orderItems.price"],
-              },
-            },
-          },
-        },
-        {
-          $sort: {
-            soldQuantity: -1,
-            revenue: -1,
-          },
-        },
-        {
-          $project: {
-            _id: 0,
-            key: {
-              $ifNull: [
-                { $toString: "$_id.productId" },
-                "unknown-product",
-              ],
-            },
-            label: {
-              $ifNull: ["$_id.name", "Sản phẩm không xác định"],
-            },
-            soldQuantity: 1,
-            revenue: 1,
-          },
-        },
-      ]),
-    ]);
+    // $month / $year của Mongo tính theo UTC
+    const thisYearOrders = deliveredOrders.filter((o) => inRange(o, new Date(currentYear, 0, 1), new Date(currentYear + 1, 0, 1)));
+    const monthlyAggregation = [...groupBy(thisYearOrders, (o) => o.createdAt.getUTCMonth() + 1)]
+      .map(([month, orders]) => ({ month, ...sumUp(orders) }));
+    const yearlyAggregation = [...groupBy(deliveredOrders, (o) => o.createdAt.getUTCFullYear())]
+      .map(([year, orders]) => ({ year, ...sumUp(orders) }))
+      .sort((a, b) => a.year - b.year);
+    const allTimeAggregation = deliveredOrders.length ? [sumUp(deliveredOrders)] : [];
+    const periodOrders = deliveredOrders.filter((o) => inRange(o, periodStart, periodEnd));
+    const periodAggregation = periodOrders.length ? [sumUp(periodOrders)] : [];
+
+    const soldByProduct = new Map();
+    periodOrders.forEach((o) => (o.orderItems || []).forEach((item) => {
+      const key = `${item.product ?? ""}|${item.name ?? ""}`;
+      const entry = soldByProduct.get(key) || {
+        key: item.product ? String(item.product) : "unknown-product",
+        label: item.name ?? "Sản phẩm không xác định",
+        soldQuantity: 0,
+        revenue: 0,
+      };
+      entry.soldQuantity += Number(item.quantity || 0);
+      entry.revenue += Number(item.quantity || 0) * Number(item.price || 0);
+      soldByProduct.set(key, entry);
+    }));
+    const productSoldAggregation = [...soldByProduct.values()]
+      .sort((a, b) => b.soldQuantity - a.soldQuantity || b.revenue - a.revenue);
 
     const monthlyMap = new Map(monthlyAggregation.map((item) => [Number(item.month || 0), item]));
     const monthlyBreakdown = Array.from({ length: 12 }, (_, index) => {

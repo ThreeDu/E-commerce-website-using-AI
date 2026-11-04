@@ -1,5 +1,4 @@
 require("dotenv").config({ path: __dirname + "/../../.env" });
-const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
 const User = require("../models/User");
@@ -8,12 +7,12 @@ const Order = require("../models/Order");
 const AnalyticsEvent = require("../models/AnalyticsEvent");
 const ChatbotEvent = require("../models/ChatbotEvent");
 const Cart = require("../models/Cart");
+const { newId } = require("../db/firestore");
 
-const MONGO_URI = process.env.MONGO_URI;
-if (!MONGO_URI) {
-  console.error("MONGO_URI not configured in env");
-  process.exit(1);
-}
+// Firestore: kết nối theo GOOGLE_APPLICATION_CREDENTIALS / FIREBASE_SERVICE_ACCOUNT / FIRESTORE_EMULATOR_HOST
+// Gói Spark chỉ cho 20.000 lượt ghi/ngày: chỉ ghi sự kiện hành vi trong EVENTS_WINDOW_DAYS ngày gần nhất
+// (đủ cho cửa sổ đặc trưng 30/60 ngày của ml-service); lịch sử đơn hàng vẫn đủ 240 ngày.
+const EVENTS_WINDOW_DAYS = Number(process.env.SEED_EVENTS_WINDOW_DAYS || 60);
 
 const NUM_PRODUCTS = 50;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -212,9 +211,6 @@ Thông số kỹ thuật chi tiết:
 
 async function seed() {
   try {
-    console.log("Kết nối MongoDB...");
-    await mongoose.connect(MONGO_URI);
-    console.log("Đã kết nối MongoDB.");
 
     // Chỉ xoá user có email @mock.com (và dữ liệu của họ) để không đụng dữ liệu thật
     console.log("Xoá dữ liệu mock cũ...");
@@ -284,15 +280,18 @@ async function seed() {
         await u.save();
 
         // productId chỉ dùng nội bộ để dựng wishlist; AnalyticsEvent không có field này
-        if (events.length) await AnalyticsEvent.insertMany(events.map(({ productId, ...e }) => e));
+        const eventsSince = now - EVENTS_WINDOW_DAYS * DAY_MS;
+        const recentEvents = events.filter((e) => e.occurredAt.getTime() >= eventsSince);
+        if (recentEvents.length) await AnalyticsEvent.insertMany(recentEvents.map(({ productId, ...e }) => e));
         if (orders.length) await Order.insertMany(orders);
         if (chatbot.length) await ChatbotEvent.insertMany(chatbot);
 
         if (persona.abandonedCart) {
           const staleTime = new Date(now - randInt(25, 75) * 60 * 60 * 1000);
-          await Cart.collection.insertOne({
+          // Ghi thẳng để giữ updatedAt cũ (giỏ bỏ rơi); model sẽ tự đặt updatedAt = hiện tại
+          await Cart.collectionRef().doc(newId()).set({
             user: u._id,
-            items: pickManyUnique(products, randInt(1, 3)).map((p) => ({ product: p._id, quantity: randInt(1, 2) })),
+            items: pickManyUnique(products, randInt(1, 3)).map((p) => ({ _id: newId(), product: p._id, quantity: randInt(1, 2) })),
             createdAt: staleTime,
             updatedAt: staleTime,
           });
@@ -300,7 +299,7 @@ async function seed() {
 
         totals.users += 1;
         totals.orders += orders.length;
-        totals.events += events.length;
+        totals.events += recentEvents.length;
         totals.chatbot += chatbot.length;
       }
     }

@@ -1,107 +1,15 @@
-const mongoose = require("mongoose");
+const { defineModel, NOW, EMPTY_OBJECT } = require("../db/model");
 
-const orderSchema = new mongoose.Schema(
-  {
-    // ID của user đặt hàng (nếu có đăng nhập)
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-    // Thông tin người đặt hàng
-    shippingAddress: {
-      fullName: { type: String, required: true },
-      phone: { type: String, required: true },
-      address: { type: String, required: true },
-    },
-    // Phương thức thanh toán
-    paymentMethod: {
-      type: String,
-      required: true,
-      default: "cod",
-    },
-    // Danh sách sản phẩm trong đơn hàng
-    orderItems: [
-      {
-        name: { type: String, required: true },
-        quantity: { type: Number, required: true },
-        price: { type: Number, required: true },
-        product: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Product",
-          required: true,
-        },
-      },
-    ],
-    // Tổng tiền
-    totalPrice: {
-      type: Number,
-      required: true,
-      default: 0.0,
-    },
-    subtotalPrice: {
-      type: Number,
-      required: true,
-      default: 0.0,
-    },
-    discountCode: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    discountAmount: {
-      type: Number,
-      required: true,
-      default: 0.0,
-    },
-    discount: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Discount",
-      default: null,
-    },
-    // Trạng thái đơn hàng
-    status: {
-      type: String,
-      enum: ["pending", "confirmed", "shipping", "delivered", "cancelled"],
-      default: "pending",
-      index: true,
-    },
-    isDelivered: {
-      type: Boolean,
-      required: true,
-      default: false,
-    },
-    deliveredAt: {
-      type: Date,
-      default: null,
-    },
-    isPaid: {
-      type: Boolean,
-      required: true,
-      default: false,
-    },
-    paidAt: {
-      type: Date,
-      default: null,
-    },
-    paymentDetails: {
-      transactionRef: { type: String, default: "" },
-      bankCode: { type: String, default: "" },
-      amount: { type: Number, default: 0 },
-      counterpartName: { type: String, default: "" },
-    },
-    cancelledReason: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    cancelledAt: {
-      type: Date,
-      default: null,
-    },
+module.exports = defineModel("Order", {
+  collection: "orders",
+  defaults: {
+    paymentMethod: "cod", totalPrice: 0, subtotalPrice: 0, discountCode: "", discountAmount: 0,
+    discount: null, status: "pending", isDelivered: false, deliveredAt: null, isPaid: false, paidAt: null,
+    "paymentDetails.transactionRef": "", "paymentDetails.bankCode": "", "paymentDetails.amount": 0,
+    "paymentDetails.counterpartName": "", cancelledReason: "", cancelledAt: null,
   },
-  {
-    timestamps: true, // Tự động thêm createdAt và updatedAt
-  }
-);
-
-module.exports = mongoose.model("Order", orderSchema);
+  trim: ["discountCode", "cancelledReason"],
+  subdocArrays: ["orderItems"],
+  arrays: ["orderItems"],
+  refs: { user: "User", discount: "Discount", "orderItems.product": "Product" },
+});

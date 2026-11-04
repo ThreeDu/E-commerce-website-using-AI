@@ -1,28 +1,9 @@
-const mongoose = require("mongoose");
+const { defineModel, NOW, EMPTY_OBJECT } = require("../db/model");
 
-const categorySchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: [true, "Tên danh mục là bắt buộc"],
-      trim: true,
-    },
-    description: {
-      type: String,
-      default: "",
-    },
-    parentId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
-      default: null,
-      index: true,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
-
-categorySchema.index({ name: 1, parentId: 1 }, { unique: true });
-
-module.exports = mongoose.model("Category", categorySchema);
+module.exports = defineModel("Category", {
+  collection: "categories",
+  defaults: { description: "", parentId: null },
+  trim: ["name"],
+  refs: { parentId: "Category" },
+  unique: [["name", "parentId"]],
+});

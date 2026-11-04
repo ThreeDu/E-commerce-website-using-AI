@@ -13,7 +13,7 @@
  *   Tier 3 — No data fallback   → trending / popular products
  */
 
-const mongoose = require("mongoose");
+const { isId } = require("../db/firestore");
 const AnalyticsEvent = require("../models/AnalyticsEvent");
 const Product = require("../models/Product");
 const User = require("../models/User");
@@ -30,12 +30,10 @@ function windowStart() {
   return new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000);
 }
 
+// ID là chuỗi 24 hex; trả null nếu không hợp lệ (giữ tên cũ để nơi gọi không đổi)
 function toObjectId(value) {
-  try {
-    return new mongoose.Types.ObjectId(String(value));
-  } catch {
-    return null;
-  }
+  const id = String(value ?? "");
+  return isId(id) ? id : null;
 }
 
 function shuffle(array) {

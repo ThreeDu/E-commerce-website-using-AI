@@ -1,4 +1,3 @@
-const mongoose = require("mongoose");
 require("dotenv").config();
 
 const Product = require("../models/Product");
@@ -14,19 +13,13 @@ function normalizeSku(value) {
 }
 
 async function run() {
-  const mongoUri = process.env.MONGO_URI;
-  if (!mongoUri) {
-    console.error("MONGO_URI not configured in env");
-    process.exit(1);
-  }
-  await mongoose.connect(mongoUri);
 
   let scanned = 0;
   let updated = 0;
   let duplicatesResolved = 0;
 
-  const cursor = Product.find({}).cursor();
-  for await (const product of cursor) {
+  const products = await Product.find({});
+  for (const product of products) {
     scanned += 1;
 
     const before = {
@@ -81,8 +74,6 @@ async function run() {
     }
   }
 
-  await mongoose.disconnect();
-
   console.log(
     JSON.stringify(
       {
@@ -96,12 +87,7 @@ async function run() {
   );
 }
 
-run().catch(async (error) => {
+run().then(() => process.exit(0)).catch((error) => {
   console.error(error);
-  try {
-    await mongoose.disconnect();
-  } catch (disconnectError) {
-    // Ignore disconnect errors in failure path.
-  }
   process.exit(1);
 });

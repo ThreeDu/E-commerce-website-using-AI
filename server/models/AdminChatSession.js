@@ -1,50 +1,11 @@
-const mongoose = require('mongoose');
+const { defineModel, NOW, EMPTY_OBJECT } = require("../db/model");
 
-const messageSchema = new mongoose.Schema({
-  role: {
-    type: String,
-    enum: ['user', 'assistant', 'tool', 'confirmation'],
-    required: true,
-  },
-  content: {
-    type: String,
-    default: '',
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now,
-  },
-  toolName: {
-    type: String,
-    default: null,
-  },
-  confirmationData: {
-    type: mongoose.Schema.Types.Mixed,
-    default: null,
-  }
+module.exports = defineModel("AdminChatSession", {
+  collection: "adminchatsessions",
+  trim: ["title"],
+  subdocArrays: ["messages"],
+  arrays: ["messages"],
+  subDefaults: { messages: { content: "", timestamp: NOW, toolName: null, confirmationData: null } },
+  refs: { adminId: "User" },
+  unique: [["sessionId"]],
 });
-
-const adminChatSessionSchema = new mongoose.Schema({
-  adminId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true,
-  },
-  sessionId: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true,
-  },
-  title: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  messages: [messageSchema],
-}, {
-  timestamps: true,
-});
-
-module.exports = mongoose.model('AdminChatSession', adminChatSessionSchema);
