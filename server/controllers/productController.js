@@ -43,8 +43,16 @@ async function getPurchaseMapByProductIds(productIds = []) {
   return new Map(ids.map((id) => [id, totals.get(id) || 0]));
 }
 
+// shortcut: danh sách sản phẩm (~50 lượt đọc) được gọi 2 lần mỗi lượt mở trang (header + trang),
+// nên cache 30 giây theo instance; tồn kho hiển thị có thể trễ tối đa 30 giây (đặt hàng vẫn kiểm tra kho thật).
+const LIST_CACHE_MS = 30 * 1000;
+let listCache = { at: 0, products: null };
+
 const listProducts = async (req, res) => {
   try {
+    if (listCache.products && Date.now() - listCache.at < LIST_CACHE_MS) {
+      return res.json(listCache.products);
+    }
     const products = await Product.find({}).lean();
     const purchaseMap = await getPurchaseMapByProductIds(products.map((product) => product._id));
     const normalizedProducts = products.map((product) => ({
@@ -52,6 +60,7 @@ const listProducts = async (req, res) => {
       totalPurchases: purchaseMap.get(String(product._id)) || 0,
     }));
 
+    listCache = { at: Date.now(), products: normalizedProducts };
     return res.json(normalizedProducts);
   } catch (error) {
     console.error("Lỗi khi lấy danh sách sản phẩm:", error.message);

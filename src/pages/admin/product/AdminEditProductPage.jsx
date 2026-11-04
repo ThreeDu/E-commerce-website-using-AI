@@ -211,7 +211,8 @@ function AdminEditProductPage() {
       errors.imageUrl = "Vui lòng nhập hoặc tải ảnh sản phẩm.";
     }
 
-    if (imageInputMode === "url" && trimmedImageUrl) {
+    // Ảnh trên chính site (vd. /placeholder.svg của dữ liệu mẫu) là hợp lệ, không cần http(s)
+    if (imageInputMode === "url" && trimmedImageUrl && !trimmedImageUrl.startsWith("/")) {
       try {
         const parsedUrl = new URL(trimmedImageUrl);
         if (!["http:", "https:"].includes(parsedUrl.protocol)) {
@@ -315,6 +316,10 @@ function AdminEditProductPage() {
             className="w-full border border-admin-line rounded-xl p-[10px_11px] text-sm bg-white focus:outline-none focus:border-admin-primary focus:shadow-[0_0_0_4px_rgba(15,118,110,0.13)] admin-select-styled"
           >
             <option value="">{loadingCategories ? "Đang tải danh mục..." : "Chọn danh mục"}</option>
+            {/* Danh mục cũ không còn trong cây danh mục: vẫn giữ để form submit được */}
+            {formData.category && !categoryOptions.some((item) => getCategoryPath(item) === formData.category) && (
+              <option value={formData.category}>{formData.category}</option>
+            )}
             {categoryOptions.map((item) => (
               <option key={item._id} value={getCategoryPath(item)}>
                 {getCategoryPath(item)}

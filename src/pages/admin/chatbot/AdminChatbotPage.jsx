@@ -33,15 +33,17 @@ function AdminChatbotPage() {
   }, [sessionId]);
 
   const fetchSessions = useCallback(async () => {
-    if (!auth?.token) return;
+    if (!auth?.token) return [];
     try {
       const data = await getAdminChatbotSessions(auth.token);
       if (data.success) {
         setSessions(data.sessions || []);
+        return data.sessions || [];
       }
     } catch (err) {
       console.error('Lỗi khi tải danh sách phiên chat:', err);
     }
+    return [];
   }, [auth?.token]);
 
   const loadActiveSessionDetail = useCallback(async (sid) => {
@@ -67,8 +69,10 @@ function AdminChatbotPage() {
   // Load chat sessions and current session detail on mount
   useEffect(() => {
     if (auth?.token) {
-      fetchSessions();
-      loadActiveSessionDetail(sessionId);
+      // Phiên mới (chưa nhắn) chưa có trên server: không gọi chi tiết để tránh 404
+      fetchSessions().then((list) => {
+        if (list.some((s) => s.sessionId === sessionId)) loadActiveSessionDetail(sessionId);
+      });
     }
   }, [auth?.token, fetchSessions, loadActiveSessionDetail, sessionId]);
 

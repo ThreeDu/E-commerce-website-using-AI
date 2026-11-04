@@ -17,14 +17,17 @@ const BREADCRUMB_MAP = {
   "/admin/notifications": "Trung tâm thông báo",
   "/admin/intelligence": "AI Phân tích dự đoán",
   "/admin/chatbot": "Trợ lý AI Admin",
+  "/admin/chatbot-analytics": "Thống kê AI Chatbot",
   "/admin/retention": "Chiến dịch giữ chân",
   "/admin/categories": "Quản lý danh mục",
+  "/admin/categories/add": "Thêm danh mục",
   "/admin/products": "Quản lý sản phẩm",
   "/admin/products/add": "Thêm sản phẩm mới",
-  "/admin/products/bulk": "Nhập hàng loạt sản phẩm",
+  "/admin/products/import": "Nhập hàng loạt sản phẩm",
   "/admin/discounts": "Quản lý mã giảm giá",
   "/admin/discounts/add": "Thêm mã giảm giá",
   "/admin/rewards": "Đổi thưởng điểm",
+  "/admin/rewards/create": "Thêm mức đổi thưởng",
   "/admin/orders": "Quản lý đơn hàng",
   "/admin/users": "Quản lý người dùng",
   "/admin/system-logs": "Log hệ thống",
@@ -35,6 +38,7 @@ function getPageTitle(pathname) {
   if (pathname.startsWith("/admin/products/edit/")) return "Chỉnh sửa sản phẩm";
   if (pathname.startsWith("/admin/discounts/edit/")) return "Chỉnh sửa mã giảm giá";
   if (pathname.startsWith("/admin/rewards/edit/")) return "Chỉnh sửa hạn mức đổi thưởng";
+  if (pathname.startsWith("/admin/orders/")) return "Chi tiết đơn hàng";
   return "Khu vực Quản trị";
 }
 

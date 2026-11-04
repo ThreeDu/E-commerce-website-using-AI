@@ -1,14 +1,14 @@
 import { formatDateTime } from "../../../utils/formatUtils";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPen, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faPen, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { formatPrice } from "../../../utils/priceUtils";
 
 function DiscountTable({ getDiscountStatus, getRemainingQuantity, isAllOnPageSelected, paginatedDiscounts, selectedDiscountIds, setDiscountPendingDelete, toggleDiscountSelect, toggleSelectAllOnPage }) {
   return (
     <div className="border border-[#e2eaf4] rounded-2xl overflow-hidden bg-admin-surface">
       <div className="w-full overflow-x-auto">
-        <table className="w-full text-left border-collapse table-fixed text-[13px] [&>thead>tr>th]:bg-[#f2f7ff] [&>thead>tr>th]:text-[#4a5c75] [&>thead>tr>th]:font-semibold [&>thead>tr>th]:p-[8px_6px] [&>thead>tr>th]:align-middle [&>tbody>tr>td]:p-[8px_6px] [&>tbody>tr>td]:align-middle [&>tbody>tr>td]:break-words [&>tbody>tr]:border-b [&>tbody>tr]:border-admin-line [&>tbody>tr]:transition-colors hover:[&>tbody>tr]:bg-[#f8fbff]">
+        <table className="w-full min-w-[720px] text-left border-collapse table-fixed text-[13px] [&>thead>tr>th]:bg-[#f2f7ff] [&>thead>tr>th]:text-[#4a5c75] [&>thead>tr>th]:font-semibold [&>thead>tr>th]:p-[8px_6px] [&>thead>tr>th]:align-middle [&>tbody>tr>td]:p-[8px_6px] [&>tbody>tr>td]:align-middle [&>tbody>tr>td]:break-words [&>tbody>tr]:border-b [&>tbody>tr]:border-admin-line [&>tbody>tr]:transition-colors hover:[&>tbody>tr]:bg-[#f8fbff]">
           <thead>
             <tr>
               <th className="w-[5%] text-center">

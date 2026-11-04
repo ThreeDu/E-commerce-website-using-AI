@@ -340,7 +340,7 @@ function AdminOrdersPage() {
 
         <div className="border border-[#e2eaf4] rounded-2xl overflow-hidden bg-white w-full max-w-full shadow-xs">
           <div className="w-full max-w-full overflow-x-auto">
-            <table className="w-full text-left border-collapse table-auto">
+            <table className="w-full min-w-[720px] text-left border-collapse table-auto">
               <thead>
                 <tr className="bg-[#f2f7ff] text-[#4a5c75] [&>th]:p-3.5 [&>th]:font-bold [&>th]:text-xs [&>th]:uppercase [&>th]:tracking-wider [&>th]:border-b [&>th]:border-admin-line">
                   <th>Mã đơn</th>

@@ -16,7 +16,7 @@ function CampaignHistory({ activePage, currentHistory, editingEllipsis, history,
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-sm">
+          <table className="w-full min-w-[720px] border-collapse text-left text-sm">
             <thead>
               <tr className="[&>th]:p-3 [&>th]:bg-[#f1f5f9] [&>th]:font-semibold [&>th]:text-xs [&>th]:text-admin-muted [&>th]:uppercase [&>th]:border-b-2 [&>th]:border-admin-line">
                 <th>Thời gian</th>

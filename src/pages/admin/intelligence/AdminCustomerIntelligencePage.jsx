@@ -34,6 +34,7 @@ function AdminCustomerIntelligencePage() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modelsReady, setModelsReady] = useState(false);
+  const [mlUnavailable, setMlUnavailable] = useState(false);
   const [training, setTraining] = useState(false);
   const [sortBy, setSortBy] = useState("churn_score");
   const [sortOrder, setSortOrder] = useState("desc");
@@ -55,6 +56,7 @@ function AdminCustomerIntelligencePage() {
   const fetchOverview = useCallback(async () => {
     try {
       const data = await getIntelligenceOverview(auth?.token);
+      setMlUnavailable(false);
 
       if (data.models_ready) {
         setModelsReady(true);
@@ -64,6 +66,8 @@ function AdminCustomerIntelligencePage() {
       }
     } catch (err) {
       setModelsReady(false);
+      // 503 = server Node không gọi được ml-service (chưa chạy / sai ML_SERVICE_URL), không phải thiếu model
+      setMlUnavailable(err?.status === 503);
     }
   }, [auth?.token]);
 
@@ -303,7 +307,18 @@ function AdminCustomerIntelligencePage() {
         </div>
       </div>
 
-      {!modelsReady ? (
+      {!modelsReady && mlUnavailable ? (
+        <div className="w-full text-center p-6 sm:p-12 bg-[#f8fafc] rounded-2xl border border-[#e2e8f0] max-w-[576px] mx-auto my-10 shadow-xs animate-admin-rise">
+          <div className="text-5xl mb-4">
+            <FontAwesomeIcon icon={faRobot} className="text-[#94a3b8]" />
+          </div>
+          <h2 className="m-0 mb-2 text-xl font-bold text-[#1e293b]">Chưa kết nối được ML service</h2>
+          <p className="m-0 text-sm text-[#64748b] leading-relaxed">
+            Server không gọi được dịch vụ phân tích (ml-service). Kiểm tra dịch vụ đang chạy và biến
+            môi trường <strong>ML_SERVICE_URL</strong>, <strong>ML_API_KEY</strong>, rồi tải lại trang.
+          </p>
+        </div>
+      ) : !modelsReady ? (
         <div className="w-full text-center p-6 sm:p-12 bg-[#f8fafc] rounded-2xl border border-[#e2e8f0] max-w-[576px] mx-auto my-10 shadow-xs animate-admin-rise">
           <div className="text-5xl mb-4">
             <FontAwesomeIcon icon={faRobot} className="text-admin-primary" />

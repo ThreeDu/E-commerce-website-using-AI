@@ -10,7 +10,7 @@ import {
   faGift,
 } from "@fortawesome/free-solid-svg-icons";
 import { deleteAdminRewardTier, getAdminRewardTiers } from "../../../services/admin/adminRewardTierService";
-import ConfirmDeleteModal from "../../../components/common/ConfirmDeleteModal";
+import ConfirmDeleteModal from "../../../components/common/ConfirmDeleteModal";
 import { formatPrice } from "../../../utils/priceUtils";
 
 function AdminRewardTiersPage() {
@@ -93,8 +93,8 @@ function AdminRewardTiersPage() {
           <p className="text-admin-muted text-sm animate-pulse">Đang tải danh sách mức đổi thưởng...</p>
         ) : (
           <div className="border border-admin-line rounded-xl shadow-admin bg-admin-surface overflow-hidden">
-            <div className="w-full max-w-full overflow-x-hidden">
-              <table className="w-full text-left border-collapse table-fixed text-[13px] [&>thead>tr>th]:bg-[#f2f7ff] [&>thead>tr>th]:text-[#4a5c75] [&>thead>tr>th]:font-semibold [&>thead>tr>th]:p-[10px_6px] [&>thead>tr>th]:break-words [&>thead>tr>th]:whitespace-normal [&>thead>tr>th]:align-middle [&>tbody>tr>td]:p-[10px_6px] [&>tbody>tr>td]:break-words [&>tbody>tr>td]:whitespace-normal [&>tbody>tr>td]:align-middle [&>tbody>tr]:border-b [&>tbody>tr]:border-admin-line [&>tbody>tr]:transition-colors hover:[&>tbody>tr]:bg-[#f8fbff]">
+            <div className="w-full max-w-full overflow-x-auto">
+              <table className="w-full min-w-[720px] text-left border-collapse table-fixed text-[13px] [&>thead>tr>th]:bg-[#f2f7ff] [&>thead>tr>th]:text-[#4a5c75] [&>thead>tr>th]:font-semibold [&>thead>tr>th]:p-[10px_6px] [&>thead>tr>th]:break-words [&>thead>tr>th]:whitespace-normal [&>thead>tr>th]:align-middle [&>tbody>tr>td]:p-[10px_6px] [&>tbody>tr>td]:break-words [&>tbody>tr>td]:whitespace-normal [&>tbody>tr>td]:align-middle [&>tbody>tr]:border-b [&>tbody>tr]:border-admin-line [&>tbody>tr]:transition-colors hover:[&>tbody>tr]:bg-[#f8fbff]">
                 <thead>
                   <tr>
                     <th className="w-[18%]">Tên</th>

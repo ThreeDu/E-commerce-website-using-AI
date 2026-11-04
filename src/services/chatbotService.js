@@ -18,7 +18,3 @@ export async function sendChatbotMessage(payload, token) {
     token,
   });
 }
-
-export async function fetchChatHistory(sessionId, token) {
-  return apiClient(`/api/chatbot/session/${encodeURIComponent(sessionId)}`, { token });
-}

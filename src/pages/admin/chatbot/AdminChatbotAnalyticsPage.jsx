@@ -33,7 +33,8 @@ function AdminChatbotAnalyticsPage() {
   }
 
   return (
-    <div className="p-6 bg-slate-900 text-slate-100 min-h-screen">
+    // min-h-dvh thay vì min-h-screen: layout admin (app.css) cộng thêm margin-left cho .min-h-screen
+    <div className="p-6 bg-slate-900 text-slate-100 min-h-dvh">
       <h1 className="text-2xl font-bold mb-6 text-emerald-400">📊 Thống Kê Hoạt Động AI Chatbot</h1>
 
       {/* Metric Cards */}
@@ -65,9 +66,9 @@ function AdminChatbotAnalyticsPage() {
           ) : (
             <ul className="divide-y divide-slate-700">
               {data.topQueries.map((q, i) => (
-                <li key={i} className="py-2.5 flex justify-between items-center text-sm">
-                  <span className="text-slate-300">"{q._id}"</span>
-                  <span className="bg-slate-700 px-2.5 py-1 rounded-full text-xs font-medium text-emerald-400">
+                <li key={i} className="py-2.5 flex justify-between items-center gap-3 text-sm">
+                  <span className="text-slate-300 min-w-0 break-words line-clamp-2" title={q._id}>"{q._id}"</span>
+                  <span className="shrink-0 bg-slate-700 px-2.5 py-1 rounded-full text-xs font-medium text-emerald-400">
                     {q.count} lượt
                   </span>
                 </li>
@@ -83,9 +84,9 @@ function AdminChatbotAnalyticsPage() {
           ) : (
             <ul className="divide-y divide-slate-700">
               {data.topProducts.map((item, i) => (
-                <li key={i} className="py-2.5 flex justify-between items-center text-sm">
-                  <span className="text-slate-300 font-medium">{item.productInfo?.name || item._id}</span>
-                  <span className="bg-slate-700 px-2.5 py-1 rounded-full text-xs font-medium text-blue-400">
+                <li key={i} className="py-2.5 flex justify-between items-center gap-3 text-sm">
+                  <span className="text-slate-300 font-medium min-w-0 break-words line-clamp-2">{item.productInfo?.name || item._id}</span>
+                  <span className="shrink-0 bg-slate-700 px-2.5 py-1 rounded-full text-xs font-medium text-blue-400">
                     {item.impressions} lần
                   </span>
                 </li>

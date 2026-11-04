@@ -34,7 +34,7 @@
     "client": "concurrently \"npx @tailwindcss/cli -i ./src/app.css -o ./src/tailwind-built.css --watch\" \"react-scripts start\"",
     "server": "nodemon server/index.js",
     "backfill:product-keys": "node server/scripts/backfillProductStructuredFields.js",
-    "build": "npx @tailwindcss/cli -i ./src/app.css -o ./src/tailwind-built.css && react-scripts build",
+    "build": "npx @tailwindcss/cli -i ./src/app.css -o ./src/tailwind-built.css --optimize && react-scripts build",
     "test": "react-scripts test",
     "test:server": "node --test --test-force-exit \"server/tests/**/*.test.js\"",
     "eject": "react-scripts eject"
