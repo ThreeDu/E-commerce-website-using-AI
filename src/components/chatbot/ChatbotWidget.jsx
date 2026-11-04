@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
-import { fetchChatHistory, sendChatbotMessage, trackChatbotEvent } from "../../services/chatbotService";
+import { sendChatbotMessage, trackChatbotEvent } from "../../services/chatbotService";
 import { postStream, readSseEvents } from "../../services/streamClient";
 import ChatInputForm from "./ChatInputForm";
 import ChatMessageList from "./ChatMessageList";
@@ -135,31 +135,6 @@ function ChatbotWidget() {
     const nextSession = getOrCreateSessionId();
     setSessionId(nextSession);
   }, [isAdminArea]);
-
-  // Khôi phục hội thoại đã lưu trên server sau khi tải lại trang
-  useEffect(() => {
-    if (isAdminArea || !sessionId) {
-      return undefined;
-    }
-
-    let cancelled = false;
-    fetchChatHistory(sessionId, auth?.token)
-      .then((data) => {
-        const restored = (data?.messages || []).map((m) => createMessage(m.role, m.text, { products: m.products }));
-        if (cancelled || restored.length === 0) {
-          return;
-        }
-        // Không ghi đè nếu người dùng đã bắt đầu nhắn trong lúc chờ tải
-        setMessages((prev) => (prev.some((m) => m.role === "user") ? prev : restored));
-      })
-      .catch(() => {
-        // Phiên hết hạn / không thuộc người dùng này: giữ lời chào mặc định
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isAdminArea, sessionId, auth?.token]);
 
   useEffect(() => {
     if (isAdminArea) {

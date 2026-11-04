@@ -417,28 +417,4 @@ async function processMessageStream({ message, sessionId, userId, context, onChu
   return { sessionId: session.sessionId, cartUpdated };
 }
 
-const HISTORY_LIMIT = 30;
-
-/**
- * Lịch sử hội thoại để widget hiển thị lại sau khi tải trang.
- * Phiên gắn với tài khoản chỉ trả cho đúng tài khoản đó; trả null nếu không có quyền
- * (controller trả 404 để không lộ việc phiên tồn tại).
- */
-async function getSessionHistory(sessionId, userId) {
-  if (!sessionId || typeof sessionId !== 'string') return null;
-  const session = await ChatSession.findOne({ sessionId }).lean();
-  if (!session) return null;
-  if (session.userId && String(session.userId) !== String(userId || '')) return null;
-
-  const visible = (session.messages || [])
-    .filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content)
-    .slice(-HISTORY_LIMIT);
-
-  return Promise.all(visible.map(async (m) => ({
-    role: m.role,
-    text: m.content,
-    products: m.role === 'assistant' && m.productIds?.length ? await fetchProductCards(m.productIds) : [],
-  })));
-}
-
-module.exports = { processMessage, processMessageStream, getSessionHistory };
+module.exports = { processMessage, processMessageStream };

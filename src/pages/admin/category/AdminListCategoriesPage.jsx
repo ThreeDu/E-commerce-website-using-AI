@@ -325,7 +325,7 @@ function AdminListCategoriesPage() {
           <p className="text-sm text-admin-muted py-4">Đang tải danh sách danh mục...</p>
         ) : (
           <div className="mt-4 overflow-x-auto border border-[#dde7f3] rounded-[14px] bg-white">
-            <table className="w-full border-collapse bg-white text-left">
+            <table className="w-full min-w-[720px] border-collapse bg-white text-left">
               <thead>
                 <tr className="border-b border-[#e6edf5]">
                   <th className="bg-[#f2f7ff] text-[#4a5c75] p-3 text-xs font-bold uppercase tracking-wider">Tên danh mục</th>

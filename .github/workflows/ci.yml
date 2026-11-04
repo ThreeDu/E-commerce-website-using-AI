@@ -1,5 +1,8 @@
 name: CI
 
+# CD do Vercel đảm nhận (Git integration): mỗi push được deploy preview, merge vào main deploy production
+# cho cả 2 project (web ở thư mục gốc, ml-service với Root Directory = ml-service). Workflow này chỉ chặn lỗi trước khi merge.
+
 on:
   push:
     branches: [main]
@@ -18,7 +21,7 @@ jobs:
   web:
     name: Frontend build + server tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -27,13 +30,39 @@ jobs:
           node-version: 24
           cache: npm
 
+      # firebase-tools 15 cần Java 21+ để chạy Firestore Emulator
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
       - run: npm ci
 
-      # node:test, không cần database (chỉ kiểm tra logic giá / trạng thái đơn)
-      - run: npm run test:server
+      # node:test chạy trên Firestore Emulator (project demo-*, không cần key, không tốn hạn mức):
+      # emulators:exec tự đặt FIRESTORE_EMULATOR_HOST nên test lớp dữ liệu Firestore không bị bỏ qua
+      - name: Server tests (Firestore Emulator)
+        run: |
+          echo '{"emulators":{"firestore":{"host":"127.0.0.1","port":8085},"ui":{"enabled":false}}}' > firebase.json
+          npx -y firebase-tools@15.34.2 emulators:exec --only firestore --project demo-ecommerce "npm run test:server"
+        env:
+          FIREBASE_PROJECT_ID: demo-ecommerce
 
       # GitHub Actions đặt CI=true nên warning ESLint cũng làm build thất bại
       - run: npm run build
+
+      # Chặn tái phát lỗi production: CSS lồng nhau / media query dạng "width <" bị minifier của CRA làm hỏng
+      # (mất toàn bộ breakpoint max-*/lg:). npm run build phải giữ cờ --optimize của Tailwind CLI.
+      - name: Check built CSS has no nested rules
+        run: |
+          node -e "
+            const fs = require('fs');
+            const dir = 'build/static/css';
+            const css = fs.readdirSync(dir).filter((f) => f.endsWith('.css')).map((f) => fs.readFileSync(dir + '/' + f, 'utf8')).join('');
+            const nested = css.match(/[{;}]\s*&[^{]{0,40}\{/g) || [];
+            const range = css.match(/@media[^{]*width\s*[<>]/g) || [];
+            if (nested.length || range.length) { console.error('CSS lồng nhau:', nested.length, '| media dạng range:', range.length); process.exit(1); }
+            console.log('OK: CSS đã được làm phẳng');
+          "
 
   ml:
     name: ML service tests
@@ -44,7 +73,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.12" # cùng phiên bản mặc định của Vercel Python runtime
           cache: pip
           cache-dependency-path: ml-service/requirements.txt
 
@@ -52,12 +81,15 @@ jobs:
 
       - run: python -m compileall -q ml-service
 
-      # Import app.py: kiểm tra phụ thuộc và nạp model đã lưu trong saved_models/ (không kết nối Firestore)
-      - name: Import Flask app
+      # Import app.py như trên Vercel: nạp model đã commit trong saved_models/ (không kết nối Firestore)
+      - name: Import Flask app (chế độ Vercel)
         working-directory: ml-service
-        run: python -c "import app"
+        run: python -c "import app; from services import scoring; assert all(scoring.load_models().values()), 'thiếu model trong saved_models/'"
+        env:
+          VERCEL: "1"
+          ML_API_KEY: ci-test-key
 
-      # Unit test: đặc trưng point-in-time, nhãn theo thời gian, mô hình (dữ liệu giả lập, không cần database)
+      # Unit test: đặc trưng point-in-time, nhãn theo thời gian, mô hình, khóa X-ML-Key (không cần database)
       - name: Unit tests
         working-directory: ml-service
         run: python -m unittest discover -s tests -v

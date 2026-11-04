@@ -2,7 +2,7 @@ import { formatPrice } from "../../../utils/priceUtils";
 
 function CustomerTable({ currentCustomers, segmentNames }) {
   return (
-    <table className="w-full text-left border-collapse table-auto text-sm">
+    <table className="w-full min-w-[720px] text-left border-collapse table-auto text-sm">
       <thead>
         <tr className="[&>th]:p-3 [&>th]:border-b-2 [&>th]:border-[#e2e8f0] [&>th]:text-xs [&>th]:font-semibold [&>th]:uppercase [&>th]:tracking-wider [&>th]:text-[#475569] [&>th]:whitespace-nowrap">
           <th>Khách hàng</th>

@@ -280,7 +280,7 @@ function AdminSystemLogsPage() {
 
         <div className="border border-[#dde7f3] rounded-2xl overflow-hidden bg-white w-full max-w-full shadow-xs">
           <div className="w-full max-w-full overflow-x-auto">
-            <table className="w-full text-left border-collapse table-fixed bg-white">
+            <table className="w-full min-w-[720px] text-left border-collapse table-fixed bg-white">
               <thead>
                 <tr className="bg-[#f2f7ff] text-[#4a5c75] [&>th]:p-3 [&>th]:font-bold [&>th]:text-xs [&>th]:uppercase [&>th]:tracking-wider [&>th]:border-b [&>th]:border-admin-line">
                   <th className="w-[15%]">Thời gian</th>
